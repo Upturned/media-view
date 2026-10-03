@@ -10,7 +10,7 @@ import { closeLibrary, openLibrary } from './services/library.ts';
 import { installWorkers } from './workers/index.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEV_WEB_PORT = 5173;
+const DEV_WEB_PORT = 2080;
 
 const config = loadConfig();
 const port = Number(process.env.PORT ?? config.port);

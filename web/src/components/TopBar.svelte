@@ -5,8 +5,9 @@
   import { openDialog } from '../stores/ui.svelte.ts';
   import { fmt } from '../media.ts';
   import { word } from '../themes/index.ts';
+  import SearchBox from './SearchBox.svelte';
 
-  // Search, Tags, Collections, Favorites, Random and the Health badge join as their milestones land.
+  // Collections, Random and the Health badge join as their milestones land.
   const scanning = $derived(live.scanning || library.info?.scan.status === 'scanning');
   const hashing = $derived(library.info?.scan.hashing ?? 0);
 </script>
@@ -14,21 +15,22 @@
 <header class="topbar">
   <a class="logo" href={href('/')} title="Hub"><span class="mark"></span>MEDIA/VIEW</a>
 
-  <div class="status" aria-live="polite">
-    {#if library.info}
-      <span class="prompt">&gt;</span>
-      {#if scanning}
-        <span>scanning the library…</span>
-      {:else if hashing > 0}
-        <span>indexing {fmt(hashing)} new {word('images')}…</span>
-      {:else}
-        <span class="dim">{library.info.name} · {fmt(library.info.stats.files)} {word('images')}</span>
-      {/if}
-    {/if}
-  </div>
+  {#if library.info}
+    <SearchBox />
+  {:else}
+    <div class="spacer"></div>
+  {/if}
+
+  {#if scanning || hashing > 0}
+    <span class="status" aria-live="polite" title={scanning ? 'Scanning the library for changes' : `Indexing ${fmt(hashing)} new ${word('images')}`}>
+      <span class="pulse"></span>{scanning ? 'scanning' : `indexing ${fmt(hashing)}`}
+    </span>
+  {/if}
 
   <nav>
     <a href={href('/images')} class:active={router.route.path.startsWith('/images')}>Images</a>
+    <a href={href('/tags')} class:active={router.route.name === 'tags' || router.route.name === 'tag-types' || router.route.name === 'tag'}>Tags</a>
+    <a href={href('/favorites')} class:active={router.route.name === 'favorites'}>Favorites</a>
     <a href={href('/recycle')} class:active={router.route.name === 'recycle'}>Bin</a>
     <a href={href('/settings')} class:active={router.route.name === 'settings'}>Settings</a>
   </nav>
@@ -61,20 +63,20 @@
   }
   .mark { width: 12px; height: 12px; background: var(--accent); }
 
+  .spacer { flex: 1; }
   .status {
-    flex: 1;
-    min-width: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 0 18px;
-    font: 13px var(--font-mono);
-    color: var(--text);
+    gap: 8px;
+    padding: 0 14px;
+    border-left: 1px solid var(--line);
+    font: 11px var(--font-mono);
+    color: var(--text2);
+    text-transform: uppercase;
     white-space: nowrap;
-    overflow: hidden;
   }
-  .prompt { color: var(--accent); font-weight: 700; }
-  .dim { color: var(--text2); overflow: hidden; text-overflow: ellipsis; }
+  .pulse { width: 8px; height: 8px; background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.25; } }
 
   nav { display: flex; align-items: stretch; font: 600 13px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
   nav a {

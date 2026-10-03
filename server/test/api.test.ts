@@ -75,6 +75,11 @@ describe('folders API', () => {
     expect(detail.ancestors.map((a: any) => a.name)).toEqual(['Fantasy', 'Elves']);
   });
 
+  it('finds folders by name, with where they are', async () => {
+    const { folders } = await getJson('/api/folders/search?q=portr');
+    expect(folders.map((f: any) => [f.name, f.path])).toEqual([['Portraits', 'Fantasy \\ Elves']]);
+  });
+
   it('creates folders on disk with a marker, enforcing the structure rules', async () => {
     const fantasy = folderByPath(lib, 'Fantasy')!;
     const res = await send('POST', '/api/folders', { parentId: fantasy.id, kind: 'album', name: 'Battle Scenes' });

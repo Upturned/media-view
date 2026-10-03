@@ -1,12 +1,13 @@
-import type { FileDetail, FileItem, SortKey } from '@media-view/shared';
+import { parseQuery, type FileDetail, type FileItem, type SortKey, type TagRef } from '@media-view/shared';
 import { badRequest, notFound } from '../lib/errors.ts';
 import { emit } from '../lib/events.ts';
 import { log } from '../lib/log.ts';
 import { escapeLike, underPrefix } from '../lib/paths.ts';
 import { folderDetail, thumbRef } from './folders.ts';
 import type { OpenLibrary } from './library.ts';
+import { resolveTerm, tagsOfFile } from './tags.ts';
 
-/** Listing and querying image files (technical doc §11.2; tags and search syntax arrive in milestone 4). */
+/** Listing and querying image files with the search syntax (technical doc §11.2). */
 
 export interface FileQuery {
   /** Folder scope; without it, the whole library. */
@@ -16,6 +17,10 @@ export interface FileQuery {
   favorites?: boolean;
   /** File name contains (case-insensitive). */
   name?: string;
+  /** A search in the search syntax: tags (must / never / any of) and words in file and folder names. */
+  q?: string;
+  /** Images carrying this tag (tag galleries). */
+  tag?: number;
   sort: SortKey;
   order: 'asc' | 'desc';
   /** Random order seed, stable across pages. */
@@ -58,9 +63,17 @@ function toItem(r: FileRow): FileItem {
   };
 }
 
-function where(lib: OpenLibrary, q: FileQuery): { sql: string; params: unknown[] } {
+interface Where {
+  sql: string;
+  params: unknown[];
+  /** Tag terms that match no tag (shown as a hint, not an error). */
+  unknown: string[];
+}
+
+function where(lib: OpenLibrary, q: FileQuery): Where {
   const parts = ["f.media_type = 'image'", 'f.recycled = 0', 'f.missing_since IS NULL'];
   const params: unknown[] = [];
+  const unknown: string[] = [];
   if (q.folder !== undefined) {
     const folder = lib.db.prepare('SELECT rel_path FROM folders WHERE id = ?').get(q.folder) as { rel_path: string } | undefined;
     if (!folder) throw notFound('FOLDER_NOT_FOUND', 'This folder no longer exists.');
@@ -79,7 +92,76 @@ function where(lib: OpenLibrary, q: FileQuery): { sql: string; params: unknown[]
     parts.push("f.filename LIKE '%' || ? || '%' ESCAPE '\\'");
     params.push(escapeLike(q.name.trim()));
   }
-  return { sql: parts.join(' AND '), params };
+  if (q.tag !== undefined) {
+    parts.push('EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id = ?)');
+    params.push(q.tag);
+  }
+  if (q.q?.trim()) searchTerms(lib, q.q, parts, params, unknown);
+  return { sql: parts.join(' AND '), params, unknown };
+}
+
+const inList = (ids: number[]) => ids.map(() => '?').join(',');
+
+/** Each term becomes one condition, all ANDed; the "any of" terms form one group (technical doc §11.2). */
+function searchTerms(lib: OpenLibrary, query: string, parts: string[], params: unknown[], unknown: string[]): void {
+  const keys = lib.db.prepare('SELECT key FROM tag_types').pluck().all() as string[];
+  const anyOf = new Set<number>();
+  let anyTerms = 0;
+  for (const t of parseQuery(query, keys)) {
+    if (t.kind === 'text') {
+      parts.push(`f.rel_path ${t.op === 'never' ? 'NOT ' : ''}LIKE '%' || ? || '%' ESCAPE '\\'`);
+      params.push(escapeLike(t.value));
+      continue;
+    }
+    if (!t.name) continue; // still being typed
+    const ids = resolveTerm(lib.db, t.type, t.name);
+    if (ids.length === 0) unknown.push(t.type ? `${t.type}:${t.name}` : t.name);
+    if (t.op === 'any') {
+      anyTerms++;
+      ids.forEach((id) => anyOf.add(id));
+    } else if (t.op === 'must') {
+      if (ids.length === 0) parts.push('0');
+      else {
+        parts.push(`EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id IN (${inList(ids)}))`);
+        params.push(...ids);
+      }
+    } else if (ids.length > 0) {
+      parts.push(`NOT EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id IN (${inList(ids)}))`);
+      params.push(...ids);
+    }
+  }
+  if (anyTerms > 0) {
+    if (anyOf.size === 0) parts.push('0');
+    else {
+      parts.push(`EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id IN (${inList([...anyOf])}))`);
+      params.push(...anyOf);
+    }
+  }
+}
+
+/**
+ * Tag counts over the images a query matches (the tag sidebar), top 100 — plus the tags the query
+ * names, so an excluded tag stays in the list to be switched off.
+ */
+export function tagCounts(lib: OpenLibrary, q: FileQuery): (TagRef & { count: number })[] {
+  const w = where(lib, q);
+  const rows = lib.db.prepare(
+    `SELECT t.id, t.type_id, t.name, COUNT(*) AS n FROM file_tags ft JOIN files f ON f.id = ft.file_id JOIN tags t ON t.id = ft.tag_id
+     WHERE ${w.sql} GROUP BY t.id ORDER BY n DESC, t.name LIMIT 100`,
+  ).all(...w.params) as { id: number; type_id: number; name: string; n: number }[];
+  const out = rows.map((r) => ({ id: r.id, typeId: r.type_id, name: r.name, count: r.n }));
+  if (q.q) {
+    const keys = lib.db.prepare('SELECT key FROM tag_types').pluck().all() as string[];
+    for (const t of parseQuery(q.q, keys)) {
+      if (t.kind !== 'tag' || !t.name) continue;
+      for (const id of resolveTerm(lib.db, t.type, t.name)) {
+        if (out.some((o) => o.id === id)) continue;
+        const tag = lib.db.prepare('SELECT id, type_id, name FROM tags WHERE id = ?').get(id) as { id: number; type_id: number; name: string };
+        out.push({ id: tag.id, typeId: tag.type_id, name: tag.name, count: 0 });
+      }
+    }
+  }
+  return out;
 }
 
 function orderBy(q: FileQuery): string {
@@ -96,14 +178,14 @@ function orderBy(q: FileQuery): string {
   }
 }
 
-export function listFiles(lib: OpenLibrary, q: FileQuery, offset = 0, limit = PAGE_SIZE): { items: FileItem[]; total: number } {
+export function listFiles(lib: OpenLibrary, q: FileQuery, offset = 0, limit = PAGE_SIZE): { items: FileItem[]; total: number; unknown: string[] } {
   if (limit < 1 || limit > 500) throw badRequest('INVALID_LIMIT', 'limit must be between 1 and 500.');
   const w = where(lib, q);
   const total = lib.db.prepare(`SELECT COUNT(*) FROM files f WHERE ${w.sql}`).pluck().get(...w.params) as number;
   const rows = lib.db.prepare(
     `SELECT ${COLUMNS} FROM files f WHERE ${w.sql} ORDER BY ${orderBy(q)} LIMIT ? OFFSET ?`,
   ).all(...w.params, limit, Math.max(0, offset)) as FileRow[];
-  return { items: rows.map(toItem), total };
+  return { items: rows.map(toItem), total, unknown: w.unknown };
 }
 
 /** Name, star and folder of each id, in the order given (for actions on a selection that isn't all loaded). */
@@ -157,6 +239,7 @@ export function fileDetail(lib: OpenLibrary, id: number): FileDetail {
     description: row.description,
     folder: { id: folder.id, kind: folder.kind, name: folder.name },
     ancestors: folder.ancestors,
+    tags: tagsOfFile(lib.db, id),
   };
 }
 

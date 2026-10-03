@@ -6,7 +6,7 @@
   import InboxBanner from '../components/InboxBanner.svelte';
   import NameDialog from '../components/NameDialog.svelte';
   import { fmt } from '../media.ts';
-  import { navigate } from '../router.svelte.ts';
+  import { href, navigate } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
   import { drag, importDrop, startImport } from '../stores/imports.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
@@ -77,6 +77,7 @@
       </span>
     </div>
     <div class="actions">
+      <a class="btn" href={href('/favorites')}><span class="star">★</span> Favorites</a>
       <button class="btn" onclick={() => (creating = true)}>+ New {word('category').toLowerCase()}</button>
       <button class="btn primary" onclick={addImages}>+ Add images</button>
     </div>
@@ -122,6 +123,7 @@
   .facts b { color: var(--text); font-weight: 400; }
   .facts b.accent { color: var(--accent); }
   .actions { margin-left: auto; display: flex; gap: 8px; }
+  .star { color: var(--accent2); }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px 16px; }
 

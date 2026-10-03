@@ -2,11 +2,12 @@ import { Readable } from 'node:stream';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { valid } from '../lib/validate.ts';
-import { briefFiles, fileDetail, folderFileNames, listFileIds, listFiles, locateFile, PAGE_SIZE, randomFile, setFavorite } from '../services/files.ts';
+import { briefFiles, fileDetail, folderFileNames, listFileIds, listFiles, locateFile, PAGE_SIZE, randomFile, setFavorite, tagCounts } from '../services/files.ts';
 import { bulkRename, copyFiles, moveFiles, renameFile, setFileDescription, undoMove } from '../services/file-ops.ts';
 import { importPath, importStream, logImport } from '../services/import.ts';
 import { requireLibrary } from '../services/library.ts';
 import { recycleFiles } from '../services/recycle.ts';
+import { changeFileTags, tagCoverage } from '../services/tags.ts';
 
 const flag = z.enum(['1', '0', 'true', 'false']).transform((v) => v === '1' || v === 'true').optional();
 
@@ -16,6 +17,8 @@ const fileQuery = z.object({
   recursive: flag,
   favorites: flag,
   name: z.string().max(200).optional(),
+  q: z.string().max(2000).optional(),
+  tag: z.coerce.number().int().positive().optional(),
   sort: z.enum(['name', 'modified', 'added', 'size', 'random']).default('name'),
   order: z.enum(['asc', 'desc']).default('asc'),
   seed: z.coerce.number().int().optional(),
@@ -40,6 +43,15 @@ export const fileRoutes = new Hono()
     },
   )
   .post('/brief', valid('json', z.object({ ids })), (c) => c.json({ files: briefFiles(requireLibrary(), c.req.valid('json').ids) }))
+  /** Tag counts over the matching images (the tag sidebar). */
+  .get('/tag-counts', valid('query', fileQuery), (c) => c.json({ tags: tagCounts(requireLibrary(), c.req.valid('query')) }))
+  /** Add and remove tags on images (ids from the tag input; implied tags follow). */
+  .post('/tags', valid('json', z.object({ ids, add: z.array(z.number().int().positive()).max(1000).default([]), remove: z.array(z.number().int().positive()).max(1000).default([]) })), (c) => {
+    const { ids: list, add, remove } = c.req.valid('json');
+    return c.json(changeFileTags(requireLibrary(), list, add, remove));
+  })
+  /** For the bulk tag dialog: the tags on the images, and on how many. */
+  .post('/tag-coverage', valid('json', z.object({ ids })), (c) => c.json({ tags: tagCoverage(requireLibrary(), c.req.valid('json').ids) }))
   .get('/names', valid('query', z.object({ folder: z.coerce.number().int().positive() })), (c) =>
     c.json({ names: folderFileNames(requireLibrary(), c.req.valid('query').folder) }))
   .get('/ids', valid('query', fileQuery), (c) => c.json({ ids: listFileIds(requireLibrary(), c.req.valid('query')) }))
@@ -64,9 +76,9 @@ export const fileRoutes = new Hono()
     valid('json', z.object({ items: z.array(z.object({ id: z.number().int().positive(), folderId: z.number().int().positive(), filename: z.string().min(1) })).min(1).max(10000) })),
     (c) => c.json(undoMove(requireLibrary(), c.req.valid('json').items)),
   )
-  .post('/copy', valid('json', z.object({ ids, folderId: targetId, policy })), async (c) => {
-    const { ids: list, folderId, policy: p } = c.req.valid('json');
-    return c.json(await copyFiles(requireLibrary(), list, folderId, p));
+  .post('/copy', valid('json', z.object({ ids, folderId: targetId, policy, copyTags: z.boolean().default(true) })), async (c) => {
+    const { ids: list, folderId, policy: p, copyTags } = c.req.valid('json');
+    return c.json(await copyFiles(requireLibrary(), list, folderId, p, copyTags));
   })
   .post(
     '/rename-bulk',

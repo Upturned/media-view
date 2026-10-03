@@ -541,7 +541,7 @@ Where drops go: on an album page or album card → that album; on the Library pa
 - Move and rename update `rel_path`, `folder_id`, `category_id`; tags, collections and favorites stay attached through `files.id`. Images only go into albums or the Inbox.
 - **Name clashes** on move / copy follow a policy (design M3 · 01): **Keep both** (default — `name (1).ext`), **Replace** (the existing image goes to the Recycle Bin; a starred one is never replaced — it keeps both instead) or **Skip**.
 - **Undo a move**: the move returns where each image came from (`undo`); `POST /api/files/undo-move` puts them back (clashes keep both). The toast offers it for 10 s. Copies have no undo (recycle the copies instead).
-- **Copy creates a new file** with a new id, keeping hash, dimensions and description; not stars or collections (the copy is a different file). By default tags are copied (milestone 4). Same hash → it shows up as a duplicate, which is correct.
+- **Copy creates a new file** with a new id, keeping hash, dimensions and description; not stars or collections (the copy is a different file). Its tags are copied too — the Copy dialog has a **Copy tags** checkbox, on by default. Same hash → it shows up as a duplicate, which is correct.
 - **Rename** changes the base name only (the extension is locked); a name already taken in the folder is an error. Case-only renames work.
 - **Bulk rename** (design M3 · 03): `{ ids, pattern, start, digits }`. `#` is the number (from `start`, zero-padded to `digits`), `*` the original name; numbered in the order the ids are given (the grid's current order). Every new name must be unique in its folder — conflicts refuse the whole rename. Renames go through temporary names (on disk and in the DB) so swaps work.
 - **Folders**: rename, move (`POST /api/folders/:id/move { parentId }`) — the kind follows the new place (a category moved into a category becomes a sub-category; albums can't go to the top level; never into itself) and the files' `category_id` is refreshed. A name already taken there is an error.
@@ -711,6 +711,14 @@ LIMIT :limit OFFSET :offset;
 - **Random order** must be stable across pages: `ORDER BY (f.id * :seed) % 2147483647`, with a new seed per visit.
 - **Counts per tag** for the tag sidebar come from the same filtered set (`GROUP BY tag_id` over the matching file ids), capped to the top 100.
 
+### 11.2a Where searches run (milestone 4 decisions)
+
+- **The top-bar search box** filters the **current grid** when the page has one (album, Inbox, View all, tag gallery) — the scope chip says so — and can switch to *Everywhere*, which opens the Search page. On any other page it opens the Search page. Its suggestions show tags (type color, count, aliases as "alias ⇒ name") and how the query is read (must / never / any of).
+- **The Search page** (`#/search?q=&in=`) searches the whole library (or a folder, `in=`). Its first tab, **All**, shows the first few results of each kind — Images, Albums, Racks & drawers, Tags (and Collections from milestone 6) — each with **See all**, which opens that kind's own tab. Folders and tags are matched by the plain-text words of the query; images by the full syntax, with the tag index on the side.
+- **Implications apply to existing images**: adding or removing one re-computes the implied tags of every image carrying the tag. When that touches more than **30 images**, the app asks first, with the count.
+- **Ctrl + click on a tag** opens the Edit tag dialog until the wiki page exists (milestone 5).
+- **Deleting a tag** removes it from every image, after a plain confirmation showing how many images use it.
+
 ### 11.3 Group by collection
 
 With `group=collection`, the same filtered set is joined with collection membership, so an image in two collections yields two rows and images in none yield one row with a null collection:
@@ -785,27 +793,34 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 
 | Method | Path                                  | Purpose                                             |
 |--------|---------------------------------------|-----------------------------------------------------|
-| GET    | `/api/tags`                           | List: `q, type, sort, page` (with counts)           |
-| GET    | `/api/tags/autocomplete?q=`           | Top matches by count, names and aliases, typed      |
-| GET    | `/api/tags/resolve?names=`            | Batch resolve (wiki links)                          |
-| GET    | `/api/tags/:id`                       | Wiki payload: tag, fields, aliases, implications, related, collections, preview |
-| POST   | `/api/tags`                           | Create                                              |
-| PATCH  | `/api/tags/:id`                       | Name, type, description, cover, field values        |
-| DELETE | `/api/tags/:id`                       | Delete                                              |
-| POST   | `/api/tags/:id/merge`                 | `{ intoId, keepAlias }`                             |
-| POST   | `/api/tags/:id/aliases`               | Add alias                                           |
-| DELETE | `/api/tags/:id/aliases/:alias`        | Remove alias                                        |
-| POST   | `/api/tags/:id/implications`          | `{ impliedId }`                                     |
-| DELETE | `/api/tags/:id/implications/:implied` | Remove implication                                  |
+| GET    | `/api/tags`                           | List: `q` (name or alias contains), `type`, `sort` (name / count), `limit` — with counts and aliases |
+| GET    | `/api/tags/suggest?q=&limit=`         | Autocomplete: names and aliases, prefix first then by count; `type:` narrows; reports the matched alias |
+| GET    | `/api/tags/resolve?names=`            | Batch resolve (wiki links) — milestone 5            |
+| GET    | `/api/tags/:id`                       | Tag, aliases, implies / implied by, cover, count (wiki payload grows in milestone 5) |
+| POST   | `/api/tags`                           | Create `{ name, typeId? }` (`type:name` works)       |
+| PATCH  | `/api/tags/:id`                       | `{ name?, typeId?, coverFileId? }` (description and field values in milestone 5) |
+| POST   | `/api/tags/delete`                    | Delete `{ ids }` — they come off every image        |
+| POST   | `/api/tags/merge`                     | `{ sourceIds, targetId, keepAliases }`              |
+| POST   | `/api/tags/:id/aliases`               | Add alias `{ alias }`                               |
+| POST   | `/api/tags/:id/aliases/remove`        | Remove alias `{ alias }`                            |
+| POST   | `/api/tags/:id/aliases/main`          | Make an alias the main name `{ alias }`             |
+| GET    | `/api/tags/:id/implications/impact`   | `?implied=&action=add|remove` → images it would touch (the app asks above 30) |
+| POST   | `/api/tags/:id/implications`          | `{ impliedId }` (loops refused; applied to existing images) |
+| POST   | `/api/tags/:id/implications/remove`   | `{ impliedId }`                                     |
+| GET    | `/api/files/tag-counts`               | Same filters as the file list → top 100 tags in the results, plus the tags the query names |
+| POST   | `/api/files/tags`                     | `{ ids, add, remove }` tag ids; implied tags follow  |
+| POST   | `/api/files/tag-coverage`             | `{ ids }` → each tag on any of them, on how many (bulk tag dialog) |
+| GET    | `/api/folders/search?q=`              | Folders by name, with their path (Search page)     |
 
 ### 12.5 Tag types
 
 | Method | Path                                   | Purpose                                     |
 |--------|----------------------------------------|---------------------------------------------|
-| GET    | `/api/tag-types`                       | Types with their fields                     |
-| POST   | `/api/tag-types`                       | Create                                      |
-| PATCH  | `/api/tag-types/:id`                   | Name, key, color, icon, position, default   |
-| DELETE | `/api/tag-types/:id`                   | Delete (only if no tags, or `moveTo` given) |
+| GET    | `/api/tag-types`                       | Types (fields join in milestone 5)          |
+| POST   | `/api/tag-types`                       | Create `{ name, color }`                    |
+| PATCH  | `/api/tag-types/:id`                   | `{ name?, color?, isDefault? }` — the key follows the name (`body_parts`) |
+| POST   | `/api/tag-types/:id/move`              | `{ delta: -1 | 1 }` reorder                   |
+| DELETE | `/api/tag-types/:id`                   | Delete (only if it has no tags and isn't the default) |
 | POST   | `/api/tag-types/:id/fields`            | Add field                                   |
 | PATCH  | `/api/tag-types/:id/fields/:fieldId`   | Edit / reorder field                        |
 | DELETE | `/api/tag-types/:id/fields/:fieldId`   | Delete field (and its values)               |
@@ -862,11 +877,11 @@ Hash-based routing (`#/…`), so the same build works from `http://localhost` an
 | `#/images/a/:id`         | Album page                                |
 | `#/images/f/:id/all`     | View all images under a folder            |
 | `#/images/v/:fileId`     | Image viewer; the list it steps through is in the query (`?folder&recursive&sort&order&seed&…`), so it survives a reload |
-| `#/search?q=`            | Search                                    |
+| `#/search?q=&tab=`       | Search (tabs: all, images, albums, folders, tags) |
 | `#/tags`                 | Tags directory                            |
-| `#/tags/:id`             | Tag wiki page                             |
+| `#/tags/:id`             | Tag wiki page (milestone 5; until then, the tag gallery) |
 | `#/tags/:id/images`      | Tag gallery (all images with the tag)     |
-| `#/tag-types`            | Tag types & fields                        |
+| `#/tag-types`            | Tag types (fields in milestone 5)         |
 | `#/collections`          | Collections                               |
 | `#/collections/:id`      | Collection page                           |
 | `#/favorites`            | Favorites                                 |
@@ -954,8 +969,8 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 1. **Skeleton** — workspaces, Hono + Svelte wired, config, create/open library, migrations, logging, Darkroom theme and Check styles dialog, keymap registry and Help dialog shell.
 2. **Folders & files** — reconciliation, markers, Inbox, hashing, thumbnails, Library / Folder / Album pages, viewer. *(Done; design `docs/Design/darkroom-milestone-2-pages/`.)*
 3. **File operations** — import (picker and drag and drop), move, copy, rename, covers, recycle bin, watcher. *(Done: see §7.5, §8.3–8.6; design `docs/Design/darkroom-milestone-3-pages/`.)*
-4. **Tags** — types, tags, tag input, tag chips and sidebar, search syntax (include / exclude / any of), aliases and main name, implications, merge.
-5. **Wiki** — tag pages, descriptions, custom fields, related tags.
+4. **Tags** *(done)* — types, tags, tag input, tag chips and sidebar, search syntax (include / exclude / any of), aliases and main name, implications, merge; the Search page, tag galleries, the Tags directory, the Tag types page (without custom fields) and an **Edit tag** dialog for name, type, aliases, implications, merge and delete. Design: `docs/Design/darkroom-milestone-4-pages/`.
+5. **Wiki** — tag pages, descriptions, custom fields, related tags. Editing moves onto the wiki page; the Edit tag dialog stays as a shortcut.
 6. **Collections** — collection pages, viewer navigation, bulk add, group by collection.
 7. **Library Health** — all issue kinds and fixes, severity indicator, external-move keep/undo, logs section.
 8. **Polish** — favorites, random, settings, per-page help content, performance pass at 50k images.

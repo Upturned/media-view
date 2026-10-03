@@ -1,6 +1,8 @@
 <script lang="ts">
   import { ops } from '../stores/ops.svelte.ts';
   import BulkRenameDialog from './BulkRenameDialog.svelte';
+  import BulkTagDialog from './BulkTagDialog.svelte';
+  import EditTagDialog from './EditTagDialog.svelte';
   import MoveDialog from './MoveDialog.svelte';
   import RenameDialog from './RenameDialog.svelte';
 
@@ -16,6 +18,10 @@
       <RenameDialog dialog={d} />
     {:else if d.kind === 'bulk-rename'}
       <BulkRenameDialog dialog={d} />
+    {:else if d.kind === 'edit-tag'}
+      <EditTagDialog tagId={d.tagId} />
+    {:else if d.kind === 'bulk-tag'}
+      <BulkTagDialog dialog={d} />
     {/if}
   {/key}
 {/if}

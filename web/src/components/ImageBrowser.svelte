@@ -7,11 +7,13 @@
   import { fmt, isGif, toParams, viewerHref, type ListQuery } from '../media.ts';
   import { navigate } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
+  import { search } from '../stores/search.svelte.ts';
   import { setDragPayload, startImport } from '../stores/imports.svelte.ts';
   import { openMenu, type MenuItem } from '../stores/menu.svelte.ts';
   import { openOps, openWith, recycleImages, setCover, setStar } from '../stores/ops.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
   import { word } from '../themes/index.ts';
+  import TagIndex from './TagIndex.svelte';
   import Thumb from './Thumb.svelte';
 
   /**
@@ -23,11 +25,14 @@
     where,
     coverTargets = [],
     addTo,
+    searchable = true,
     emptyText = 'Nothing here yet.',
     ontotal,
   }: {
-    /** The folder (and whether to include everything under it). */
-    scope: { folder: number; recursive?: boolean };
+    /** The folder (and whether to include everything under it), or a tag; nothing = the whole library. */
+    scope: { folder?: number; recursive?: boolean; tag?: number; favorites?: boolean };
+    /** Whether the top-bar search filters this grid (and the tag index shows). */
+    searchable?: boolean;
     /** The place, for dialogs: "Portraits", "all images in Fantasy". */
     where: string;
     /** Folders an image of this grid can be the cover of (its album and the folders above it). */
@@ -68,6 +73,8 @@
   let sort = $state<SortKey>(stored('grid.sort', 'name'));
   let order = $state<'asc' | 'desc'>(stored('grid.order', 'asc'));
   let favorites = $state(false);
+  let showIndex = $state(stored('grid.index', true));
+  $effect(() => store('grid.index', showIndex));
   let nameInput = $state('');
   let name = $state('');
   let seed = $state(Math.floor(Math.random() * 2_000_000_000) + 1);
@@ -86,7 +93,9 @@
   const query: ListQuery = $derived({
     folder: scope.folder,
     recursive: scope.recursive,
-    favorites,
+    tag: scope.tag,
+    favorites: scope.favorites || favorites,
+    q: searchable ? search.q : undefined,
     name,
     sort,
     order,
@@ -103,6 +112,8 @@
 
   const PAGE = 200;
   let total = $state<number | null>(null);
+  /** Tags in the search that don't exist (shown as a hint). */
+  let unknown = $state<string[]>([]);
   let pages = $state<Record<number, FileItem[]>>({});
   let generation = 0;
   const loading = new Set<number>();
@@ -116,6 +127,7 @@
       if (gen !== generation) return;
       pages[p] = r.items;
       total = r.total;
+      if (p === 0) unknown = r.unknown;
     } catch (err) {
       if (gen === generation) toast((err as Error).message, 'error');
     } finally {
@@ -233,14 +245,15 @@
     return (await unwrap(client.api.files.brief.$post({ json: { ids: chosen } }))).files;
   }
 
-  async function bulk(action: 'star' | 'unstar' | 'move' | 'copy' | 'rename' | 'recycle') {
+  async function bulk(action: 'star' | 'unstar' | 'move' | 'copy' | 'rename' | 'recycle' | 'tags') {
     try {
       const files = await selection();
       if (files.length === 0) return;
       const ids = files.map((f) => f.id);
       if (action === 'star' || action === 'unstar') await setStar(ids, action === 'star');
+      else if (action === 'tags') openOps({ kind: 'bulk-tag', files, where });
       else if (action === 'move' || action === 'copy') {
-        openOps({ kind: 'transfer', mode: action, files, from: where, currentFolderId: scope.recursive ? null : scope.folder });
+        openOps({ kind: 'transfer', mode: action, files, from: where, currentFolderId: scope.recursive ? null : (scope.folder ?? null) });
       } else if (action === 'rename') {
         openOps({ kind: 'bulk-rename', files, where, order: `current sort order (${sortLabel.toLowerCase()} ${order === 'asc' ? '↑' : '↓'})` });
       } else if (await recycleImages(files)) selected.clear();
@@ -253,7 +266,8 @@
     const items: MenuItem[] = [
       { label: 'Open', action: () => navigate(viewerHref(item.id, query)) },
       { label: 'Open with…', action: () => openWith(item.id) },
-      { label: 'Rename…', separated: true, action: () => openOps({ kind: 'rename-file', file: item, where }) },
+      { label: 'Tags…', separated: true, action: () => openOps({ kind: 'bulk-tag', files: [item], where }) },
+      { label: 'Rename…', action: () => openOps({ kind: 'rename-file', file: item, where }) },
       { label: 'Move…', action: () => openOps({ kind: 'transfer', mode: 'move', files: [item], from: where, currentFolderId: item.folderId }) },
       { label: 'Copy…', action: () => openOps({ kind: 'transfer', mode: 'copy', files: [item], from: where, currentFolderId: item.folderId }) },
       { label: item.favorited ? '☆ Unstar' : '★ Star', action: () => setStar([item.id], !item.favorited) },
@@ -294,6 +308,7 @@
 </script>
 
 <div class="browser">
+ <div class="main">
   <div class="toolbar">
     <button class="tool" onclick={cycleSort} title="Change the sort order"><span class="dim">Sort:</span> {sortLabel}</button>
     <button class="tool arrow" onclick={() => (order = order === 'asc' ? 'desc' : 'asc')} disabled={sort === 'random'}
@@ -304,18 +319,24 @@
         <button class:on={cols === i + 2} onclick={() => (cols = i + 2)}>{i + 2}</button>
       {/each}
     </div>
-    <button class="tool fav" class:on={favorites} onclick={() => (favorites = !favorites)}>{favorites ? '★' : '☆'} Starred only</button>
+    {#if !scope.favorites}
+      <button class="tool fav" class:on={favorites} onclick={() => (favorites = !favorites)}>{favorites ? '★' : '☆'} Starred only</button>
+    {/if}
     <input class="filter" bind:value={nameInput} placeholder="name contains…" spellcheck="false" />
+    {#if searchable}<button class="tool idx" class:on={showIndex} onclick={() => (showIndex = !showIndex)} title="Show or hide the tag index">Index</button>{/if}
     {#if addTo}<button class="add" onclick={pickAndAdd}>+ Add images</button>{/if}
   </div>
+  {#if unknown.length}
+    <div class="unknown">No tag named {unknown.map((u) => `“${u}”`).join(', ')} — check the spelling, or pick one from the suggestions.</div>
+  {/if}
 
   <div class="scroller" bind:this={scroller} bind:clientWidth={width} bind:clientHeight={height}
     onscroll={() => (scrollTop = scroller!.scrollTop)}>
     <div class="sprockets"></div>
     {#if total === 0}
       <div class="empty">
-        <span class="display">{favorites || name ? 'No matches.' : emptyText}</span>
-        {#if favorites || name}<span>Nothing matches the filters — loosen them.</span>{/if}
+        <span class="display">{favorites || name || query.q ? 'No matches.' : emptyText}</span>
+        {#if favorites || name || query.q}<span>Nothing matches the filters — loosen them.</span>{/if}
       </div>
     {:else}
       <div class="canvas" style:height="{PAD_TOP + rowCount * stride + 100}px">
@@ -367,6 +388,7 @@
   {#if selected.size > 0}
     <div class="bulk">
       <div class="count"><span class="display">{fmt(selected.size)}</span><span>{selected.size === 1 ? word('image') : word('images')}<br />selected</span></div>
+      <button onclick={() => bulk('tags')}># Tags…</button>
       <button onclick={() => bulk('star')}>★ Star</button>
       <button onclick={() => bulk('unstar')}>☆ Unstar</button>
       <button onclick={() => bulk('move')}>Move…</button>
@@ -377,10 +399,16 @@
       <button class="close" onclick={() => selected.clear()} title="Clear the selection (Esc)">✕</button>
     </div>
   {/if}
+ </div>
+ {#if searchable && showIndex}<TagIndex {query} />{/if}
 </div>
 
 <style>
-  .browser { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .browser { flex: 1; min-height: 0; display: flex; }
+  .main { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .idx { color: var(--text2); font-weight: 700; }
+  .idx.on { color: var(--text); }
+  .unknown { padding: 8px 16px; border-bottom: 1px solid var(--line); background: color-mix(in oklab, var(--amber) 12%, var(--bg)); font: 11.5px var(--font-mono); color: var(--amber); }
 
   .toolbar {
     display: flex;

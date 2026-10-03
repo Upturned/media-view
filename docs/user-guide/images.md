@@ -149,7 +149,7 @@ Tags appear as colored chips (the color comes from the tag's type). They behave 
 |------------------|-------------------------------------------------------------------------|
 | Hover            | Shows the tag's description                                             |
 | Click            | Shows all images with that tag                                          |
-| Ctrl + click     | Opens the tag's wiki page                                               |
+| Ctrl + click     | Opens the tag's wiki page (until wiki pages arrive: edits the tag)       |
 | Middle-click     | Opens the tag's wiki page in a new tab                                  |
 | Right-click      | Menu: *Open wiki page*, *Show all images*, *Edit tag*, *Copy name* (and *Remove from this image* where it applies) |
 
@@ -244,7 +244,7 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 - favorite / unfavorite them
 - send them to the Recycle Bin
 
-**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album right there. When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move, the message at the bottom offers **Undo** for a few seconds.
+**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album right there. When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move, the message at the bottom offers **Undo** for a few seconds. When copying, **Copy tags** (on by default) gives the copies the same tags.
 
 **Renaming in bulk** — write a pattern: `#` is a number and `*` the original name, so `ref_#` gives *ref_01, ref_02…* and `*_#` keeps the names and numbers them. Choose where numbering starts and how many digits it has. Images are numbered in the grid's current order, extensions are kept, and a live preview shows every new name — names that would clash are flagged before anything changes.
 
@@ -288,14 +288,17 @@ Keys that work everywhere are listed in §3.4.
 
 ### 4.6 Search
 
-Search from the box in the top bar on any page. Results cover your whole library, split into tabs:
+The search box is in the top bar. On a page with images (an album, the Inbox, *View all images*, a tag) it **filters that page as you type**; switch it to **Everywhere**, or press Enter on any other page, to open the Search page for your whole library. Press `/` to jump to it. While you type it suggests tags and shows how it reads your search (must / never / any of).
+
+The Search page's first tab, **All**, shows the first few results of each kind, each with **See all**:
 
 - **Images** — matching images, with the same sorting, filtering, tag sidebar and bulk actions as an album.
-- **Folders** — categories, sub-categories and albums whose names match.
-- **Tags** — tags whose names or aliases match, linking to their wiki pages.
-- **Collections** — collections whose names match.
+- **Albums** — albums whose names match.
+- **Categories & sub-categories** — those whose names match.
+- **Tags** — tags whose names or aliases match.
+- **Collections** — collections whose names match (with collections).
 
-Plain text and tag filters can be mixed in the same search; see §5.6.
+Images are found by the full search (words and tags); folders and tags by the words. Plain text and tag filters can be mixed in the same search; see §5.6, or the *Search* tab of the Help window.
 
 ### 4.7 Tags
 
@@ -306,6 +309,8 @@ A directory of every tag in your library.
 - Search the list, sort by name or count, and filter by type.
 - **New tag** creates a tag in advance, before using it on any image.
 - Select several tags to **merge** them (see §5.3) or delete them.
+- **Edit tag** (Ctrl + click, or right-click any tag) changes its name and type, its aliases and main name, what it implies, merges it into another tag or deletes it. Adding or removing an implication that touches more than 30 images asks first.
+- To tag many images at once, select them and choose **Tags…** in the selection bar: it shows how many of them already have each tag, and nothing changes until you press *Apply*.
 
 ### 4.8 Tag wiki page
 

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { valid } from '../lib/validate.ts';
 import {
-  createFolder, folderChildren, folderDetail, folderTree, libraryFront, moveFolder, renameFolder,
+  createFolder, folderChildren, folderDetail, folderTree, libraryFront, moveFolder, renameFolder, searchFolders,
   setFolderCover, setFolderDescription,
 } from '../services/folders.ts';
 import { requireLibrary } from '../services/library.ts';
@@ -20,6 +20,8 @@ export const folderRoutes = new Hono()
   })
   /** Every folder, flat, for the folder picker. */
   .get('/tree', (c) => c.json({ folders: folderTree(requireLibrary()) }))
+  /** Folders by name (the Search page). */
+  .get('/search', valid('query', z.object({ q: z.string().max(300) })), (c) => c.json({ folders: searchFolders(requireLibrary(), c.req.valid('query').q) }))
   .get('/:id', valid('param', id), (c) => c.json(folderDetail(requireLibrary(), c.req.valid('param').id)))
   .post(
     '/',

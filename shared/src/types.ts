@@ -94,8 +94,60 @@ export interface FileItem {
 
 export interface FileDetail extends FileItem {
   relPath: string;
+  tags: FileTag[];
   folder: Crumb;
   /** Ancestors of the file's folder, top-level first. */
   ancestors: Crumb[];
   description: string | null;
+}
+
+// ─── Tags (milestone 4) ─────────────────────────────────────────────────────
+
+export interface TagTypeInfo {
+  id: number;
+  /** Used in searches as `key:name`. */
+  key: string;
+  name: string;
+  color: string;
+  position: number;
+  isDefault: boolean;
+  tagCount: number;
+}
+
+export interface TagRef {
+  id: number;
+  typeId: number;
+  name: string;
+}
+
+export interface TagSummary extends TagRef {
+  /** Images carrying the tag (manually or implied). */
+  count: number;
+  aliases: string[];
+}
+
+export interface TagDetail extends TagSummary {
+  description: string | null;
+  cover: ThumbRef | null;
+  createdAt: number;
+  implies: TagRef[];
+  impliedBy: TagRef[];
+}
+
+export interface TagSuggestion extends TagRef {
+  count: number;
+  /** The alias that matched, when it was an alias. */
+  alias: string | null;
+}
+
+/** A tag on an image. Implied tags come from another tag and can't be removed on their own. */
+export interface FileTag extends TagRef {
+  source: 'manual' | 'implied';
+}
+
+/** For the bulk tag dialog: how many of the selected images carry each tag. */
+export interface TagCoverage extends TagRef {
+  count: number;
+  /** On every image that has it, it's only implied. */
+  impliedOnly: boolean;
 }

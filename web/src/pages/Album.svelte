@@ -10,6 +10,7 @@
   import { live } from '../stores/events.svelte.ts';
   import { drag, importDrop } from '../stores/imports.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
+  import { useSearchContext } from '../stores/search.svelte.ts';
   import { toast } from '../stores/toasts.svelte.ts';
   import { word } from '../themes/index.ts';
 
@@ -71,6 +72,12 @@
     e.preventDefault();
     void importDrop(e.dataTransfer, addTo);
   }
+
+  // The top-bar search filters this grid.
+  const searchLabel = $derived(folder ? (all ? `all in ${folder.name}` : folder.name) : null);
+  $effect(() => {
+    if (searchLabel) return useSearchContext(searchLabel);
+  });
 
   const crumbs = $derived(folder ? [...folder.ancestors, { id: folder.id, kind: folder.kind, name: folder.name }] : []);
 </script>

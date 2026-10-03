@@ -18,6 +18,7 @@
   // svelte-ignore state_referenced_locally
   let mode = $state<'move' | 'copy'>(dialog.kind === 'transfer' ? dialog.mode : 'move');
   let policy = $state<ClashPolicy>('keep-both');
+  let copyTags = $state(true);
   let busy = $state(false);
   let newName = $state<string | null>(null);
 
@@ -136,7 +137,7 @@
     try {
       if (dialog.kind === 'transfer') {
         remember(node.id);
-        await transfer(mode, dialog.files.map((f) => f.id), node.id, node.name, policy);
+        await transfer(mode, dialog.files.map((f) => f.id), node.id, node.name, policy, copyTags);
       } else if (dialog.kind === 'folder-move') {
         await unwrap(client.api.folders[':id'].move.$post({ param: { id: String(dialog.folder.id) }, json: { parentId: node.id === 0 ? null : node.id } }));
         toast(`Moved “${dialog.folder.name}” to ${node.name}.`);
@@ -208,8 +209,11 @@
         </div>
       {/if}
       <div class="actions">
+        {#if dialog.kind === 'transfer' && mode === 'copy'}
+          <label class="check"><input type="checkbox" bind:checked={copyTags} /> Copy tags</label>
+        {/if}
         <span class="hint">
-          {#if dialog.kind === 'transfer'}{mode === 'move' ? 'Stars and descriptions travel with the images' : 'Copies are new images in the album'}{:else if dialog.kind === 'folder-move'}Everything inside moves with it{:else}Restored items keep their stars and descriptions{/if}
+          {#if dialog.kind === 'transfer'}{mode === 'move' ? 'Tags, stars and descriptions travel with the images' : 'Copies are new images in the album'}{:else if dialog.kind === 'folder-move'}Everything inside moves with it{:else}Restored items keep their stars and descriptions{/if}
         </span>
         <button class="dbtn push" onclick={closeOps}>Cancel</button>
         <button class="dbtn primary" disabled={!valid || busy} onclick={go}>{valid && node ? `${verb} to ${node.name}` : `${verb} here`}</button>
@@ -242,4 +246,6 @@
   .invalid input { text-transform: none; cursor: text; background: var(--bg2); outline: none; width: 180px; }
   .invalid button:disabled { opacity: 0.5; cursor: default; }
   .actions { display: flex; align-items: center; gap: 8px; }
+  .check { display: flex; align-items: center; gap: 6px; padding-right: 10px; font: 11px var(--font-mono); text-transform: uppercase; cursor: pointer; }
+  .check input { accent-color: var(--accent); }
 </style>
