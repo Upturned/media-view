@@ -56,6 +56,28 @@ export function requireLibrary(): OpenLibrary {
 const dataDir = (root: string) => path.join(root, DATA_DIR);
 const metaFile = (root: string) => path.join(dataDir(root), 'library.json');
 
+/**
+ * Recycled items keep their rows under the ':bin/<recycle id>/…' path namespace (':' can't occur in
+ * real names) while their files sit in `.mediaview/recycle-bin/<recycle id>/…` (technical doc §8.6).
+ */
+export const BIN_PREFIX = ':bin';
+
+export function binDir(lib: OpenLibrary): string {
+  return path.join(dataDir(lib.root), 'recycle-bin');
+}
+
+/** Absolute path of a stored path — a module path, or a recycled item's place in the bin. */
+export function absPath(lib: OpenLibrary, relPath: string): string {
+  if (relPath.startsWith(BIN_PREFIX + '/')) return toAbsolute(binDir(lib), relPath.slice(BIN_PREFIX.length + 1));
+  return toAbsolute(lib.moduleRoot('images'), relPath);
+}
+
+export function tempDir(lib: OpenLibrary): string {
+  const dir = path.join(dataDir(lib.root), 'tmp');
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
 export function isLibrary(root: string): boolean {
   return fs.existsSync(metaFile(root));
 }

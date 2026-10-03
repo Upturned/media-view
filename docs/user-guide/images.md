@@ -138,7 +138,8 @@ Because your library is made of ordinary folders, you can still change things in
 - The **top bar** is on every page: the media-view logo (back to the Hub), the search box, shortcuts to Tags, Collections, Favorites, Random and the Recycle Bin, the **Library Health** indicator, the theme picker, Settings and **Help** (`?`).
 - A **breadcrumb trail** (e.g. *Images › Fantasy › Elves › Portraits*) shows where you are; click any part of it to jump back up.
 - **Right-click** almost anything — a card, an image, a tag — for the actions available on it.
-- **Drag and drop** images from Windows Explorer onto the app to add them: onto an album page or album card to add them there, anywhere else to send them to the Inbox.
+- **Drag and drop** images from Windows Explorer onto the app to add them: onto an album page or album card to add them there, anywhere else to send them to the Inbox. On a category or sub-category page, a dropped **folder** becomes a new album there, with its images.
+- **Drag images out of a grid** to move them: a bar appears at the bottom with the Inbox and your recent albums; drop on one, or on *Other album…* to pick one.
 
 ### 3.1 Tags, wherever you see them
 
@@ -243,7 +244,11 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 - favorite / unfavorite them
 - send them to the Recycle Bin
 
-**Adding images** — **Add images** opens the Windows file picker, or drag files from Explorer onto the page. Either way, they're copied into this album.
+**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album right there. When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move, the message at the bottom offers **Undo** for a few seconds.
+
+**Renaming in bulk** — write a pattern: `#` is a number and `*` the original name, so `ref_#` gives *ref_01, ref_02…* and `*_#` keeps the names and numbers them. Choose where numbering starts and how many digits it has. Images are numbered in the grid's current order, extensions are kept, and a live preview shows every new name — names that would clash are flagged before anything changes.
+
+**Adding images** — **Add images** opens the Windows file picker, or drag files from Explorer onto the page. Either way, they're copied into this album and the originals are left untouched. A panel at the bottom right shows the progress (you can keep working) and, at the end, what wasn't imported and why: other file types, files that can't be read, or images already in this album (identical ones are skipped).
 
 **Right-click an image** for: *Open*, *Open With…*, *Rename*, *Move*, *Copy*, *Add to collection*, *Favorite*, *Recycle*, and **Set as cover of ▸** — the album, any sub-category or the category above it, the current collection, or any of the image's tags (for example, as a character's portrait).
 
@@ -358,7 +363,8 @@ Images and folders you delete go here first.
 
 - **Restore** puts an item back where it came from (or somewhere you choose, if that place no longer exists), with its tags and collections intact.
 - **Delete permanently** removes it from disk.
-- Favorited images are protected — you'll be asked to unfavorite them before they can be recycled.
+- Favorited images are protected — you'll be asked to unfavorite them before they can be recycled. Recycling a selection that includes starred images recycles the others and keeps the starred ones; a folder with starred images inside can't be recycled until they're unstarred.
+- **Empty the bin** deletes everything in it. Nothing is ever deleted from the bin automatically.
 
 ### 4.15 Library Health
 

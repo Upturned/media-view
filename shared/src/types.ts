@@ -80,6 +80,7 @@ export type SortKey = 'name' | 'modified' | 'added' | 'size' | 'random';
 
 export interface FileItem {
   id: number;
+  folderId: number;
   filename: string;
   ext: string;
   size: number;

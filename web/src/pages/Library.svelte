@@ -2,13 +2,15 @@
   import type { FolderCard, InboxSummary } from '@media-view/shared';
   import { client, unwrap } from '../api.ts';
   import FolderCardView from '../components/FolderCardView.svelte';
+  import DropOverlay from '../components/DropOverlay.svelte';
   import InboxBanner from '../components/InboxBanner.svelte';
   import NameDialog from '../components/NameDialog.svelte';
   import { fmt } from '../media.ts';
   import { navigate } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
+  import { drag, importDrop, startImport } from '../stores/imports.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
-  import { toast } from '../stores/toasts.svelte.ts';
+  import { toast, toastError } from '../stores/toasts.svelte.ts';
   import { isStyled, word } from '../themes/index.ts';
 
   /** The front page of the Images module: the Inbox first, then the categories a→z (user guide §4.2). */
@@ -36,18 +38,34 @@
     navigate(`/images/f/${card.id}`);
   }
 
-  async function rescan() {
+  // No album here: images added or dropped on this page go to the Inbox (user guide §4.2).
+  const inboxTarget = $derived(inbox ? { id: inbox.id, label: 'Inbox' } : null);
+
+  async function addImages() {
+    if (!inboxTarget) return;
     try {
-      await unwrap(client.api.library.rescan.$post());
+      const { paths } = await unwrap(client.api.system['pick-files'].$post({ json: { title: 'Add images to the Inbox' } }));
+      startImport(inboxTarget, paths);
     } catch (err) {
-      toast((err as Error).message, 'error');
+      toastError(err);
     }
+  }
+
+  function onDragOver(e: DragEvent) {
+    if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+  }
+
+  function onDrop(e: DragEvent) {
+    if (!inboxTarget || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    void importDrop(e.dataTransfer, inboxTarget);
   }
 
   const imagesRoot =$derived(library.info ? `${library.info.path.replace(/[\\/]+$/, '')}\\Images\\` : '');
 </script>
 
-<div class="page">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="page" ondragover={onDragOver} ondrop={onDrop}>
   <header class="head">
     <h1 class="display title">Library</h1>
     <div class="facts">
@@ -58,12 +76,9 @@
         <b class="accent">{fmt(inbox?.imageCount ?? 0)}</b> in the Inbox
       </span>
     </div>
-    <div class="actions btn-group">
-      <!-- Until the folder watcher (milestone 3), changes made in Explorer show up after a rescan. -->
-      <button class="btn" onclick={rescan} disabled={live.scanning} title="Check the library folder again for changes made outside the app">
-        {live.scanning ? 'Scanning…' : '↻ Rescan'}
-      </button>
+    <div class="actions">
       <button class="btn" onclick={() => (creating = true)}>+ New {word('category').toLowerCase()}</button>
+      <button class="btn primary" onclick={addImages}>+ Add images</button>
     </div>
   </header>
 
@@ -79,7 +94,7 @@
   {#if categories.length > 0}
     <div class="grid">
       {#each categories as c, i (c.id)}
-        <FolderCardView folder={c} index={i} />
+        <FolderCardView folder={c} parentId={null} index={i} />
       {/each}
     </div>
   {:else if loaded}
@@ -88,6 +103,10 @@
       <span>Create one, or add folders to <span class="path">{imagesRoot}</span> in Explorer — the app picks them up.</span>
     </div>
   {/if}
+
+  {#if drag.files}
+    <DropOverlay target={`${imagesRoot}Inbox\\`} headline={'Straight to\nthe Inbox.'} body="No album here, so the Inbox gets them. Sort them later." />
+  {/if}
 </div>
 
 {#if creating}
@@ -95,14 +114,14 @@
 {/if}
 
 <style>
-  .page { display: flex; flex-direction: column; gap: 24px; }
+  .page { position: relative; display: flex; flex-direction: column; gap: 24px; }
 
   .head { display: flex; align-items: flex-end; gap: 32px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 18px; }
   .title { font-size: clamp(72px, 10vw, 140px); line-height: 0.78; }
   .facts { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; font: 12px var(--font-mono); color: var(--text2); text-transform: uppercase; }
   .facts b { color: var(--text); font-weight: 400; }
   .facts b.accent { color: var(--accent); }
-  .actions { margin-left: auto; display: flex; }
+  .actions { margin-left: auto; display: flex; gap: 8px; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px 16px; }
 

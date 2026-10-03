@@ -6,3 +6,6 @@ A category or sub-category, with what's inside it. In the Darkroom style, catego
 - **+ New sub-category** and **+ New album** create folders right here.
 - **View all images** shows every image under this folder — from all its albums, however deep — in one grid.
 - Click a card to open it; right-click for more.
+- Click the description (or **✎ Edit description**) to change it; Ctrl+Enter saves.
+- Drag images from Explorer onto an **album card** to add them to that album. Dropped on the page, loose images go to the Inbox and a dropped folder becomes a new album here.
+- **Rename · Move · Recycle** under the buttons act on this folder. A folder can't be recycled while it holds starred images.

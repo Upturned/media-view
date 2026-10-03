@@ -1,8 +1,12 @@
+import { Readable } from 'node:stream';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { valid } from '../lib/validate.ts';
-import { fileDetail, listFileIds, listFiles, locateFile, PAGE_SIZE, randomFile, setFavorite } from '../services/files.ts';
+import { briefFiles, fileDetail, folderFileNames, listFileIds, listFiles, locateFile, PAGE_SIZE, randomFile, setFavorite } from '../services/files.ts';
+import { bulkRename, copyFiles, moveFiles, renameFile, setFileDescription, undoMove } from '../services/file-ops.ts';
+import { importPath, importStream, logImport } from '../services/import.ts';
 import { requireLibrary } from '../services/library.ts';
+import { recycleFiles } from '../services/recycle.ts';
 
 const flag = z.enum(['1', '0', 'true', 'false']).transform((v) => v === '1' || v === 'true').optional();
 
@@ -18,6 +22,10 @@ const fileQuery = z.object({
 });
 
 const id = z.object({ id: z.coerce.number().int().positive() });
+const ids = z.array(z.number().int().positive()).min(1).max(10000);
+/** An album or the Inbox; null = the Inbox. */
+const targetId = z.number().int().positive().nullable();
+const policy = z.enum(['keep-both', 'replace', 'skip']).default('keep-both');
 
 export const fileRoutes = new Hono()
   .get(
@@ -31,6 +39,9 @@ export const fileRoutes = new Hono()
       return c.json(listFiles(requireLibrary(), q, offset, limit));
     },
   )
+  .post('/brief', valid('json', z.object({ ids })), (c) => c.json({ files: briefFiles(requireLibrary(), c.req.valid('json').ids) }))
+  .get('/names', valid('query', z.object({ folder: z.coerce.number().int().positive() })), (c) =>
+    c.json({ names: folderFileNames(requireLibrary(), c.req.valid('query').folder) }))
   .get('/ids', valid('query', fileQuery), (c) => c.json({ ids: listFileIds(requireLibrary(), c.req.valid('query')) }))
   .get('/locate', valid('query', fileQuery.extend({ id: z.coerce.number().int().positive() })), (c) => {
     const { id: fileId, ...q } = c.req.valid('query');
@@ -40,13 +51,67 @@ export const fileRoutes = new Hono()
     const { exclude, ...q } = c.req.valid('query');
     return c.json({ id: randomFile(requireLibrary(), q, exclude) });
   })
-  .post('/favorite', valid('json', z.object({ ids: z.array(z.number().int().positive()).min(1).max(10000), favorited: z.boolean() })), (c) => {
-    const { ids, favorited } = c.req.valid('json');
-    return c.json({ changed: setFavorite(requireLibrary(), ids, favorited) });
+  .post('/favorite', valid('json', z.object({ ids, favorited: z.boolean() })), (c) => {
+    const { ids: list, favorited } = c.req.valid('json');
+    return c.json({ changed: setFavorite(requireLibrary(), list, favorited) });
   })
+  .post('/move', valid('json', z.object({ ids, folderId: targetId, policy })), (c) => {
+    const { ids: list, folderId, policy: p } = c.req.valid('json');
+    return c.json(moveFiles(requireLibrary(), list, folderId, p));
+  })
+  .post(
+    '/undo-move',
+    valid('json', z.object({ items: z.array(z.object({ id: z.number().int().positive(), folderId: z.number().int().positive(), filename: z.string().min(1) })).min(1).max(10000) })),
+    (c) => c.json(undoMove(requireLibrary(), c.req.valid('json').items)),
+  )
+  .post('/copy', valid('json', z.object({ ids, folderId: targetId, policy })), async (c) => {
+    const { ids: list, folderId, policy: p } = c.req.valid('json');
+    return c.json(await copyFiles(requireLibrary(), list, folderId, p));
+  })
+  .post(
+    '/rename-bulk',
+    valid('json', z.object({ ids, pattern: z.string().min(1).max(200), start: z.number().int().min(0).max(999999), digits: z.number().int().min(1).max(6) })),
+    (c) => {
+      const { ids: list, pattern, start, digits } = c.req.valid('json');
+      return c.json(bulkRename(requireLibrary(), list, pattern, start, digits));
+    },
+  )
+  .post('/recycle', valid('json', z.object({ ids })), (c) => c.json(recycleFiles(requireLibrary(), c.req.valid('json').ids)))
+  /** One file from the picker (the client loops, so it can show progress and cancel). */
+  .post('/import', valid('json', z.object({ folderId: targetId.optional(), path: z.string().min(1).max(2000) })), async (c) => {
+    const { folderId, path } = c.req.valid('json');
+    return c.json(await importPath(requireLibrary(), folderId ?? null, path));
+  })
+  /** One dropped file, as the raw request body. */
+  .post(
+    '/upload',
+    valid('query', z.object({ folderId: z.coerce.number().int().positive().optional(), name: z.string().min(1).max(500) })),
+    async (c) => {
+      const { folderId, name } = c.req.valid('query');
+      const body = c.req.raw.body ? Readable.fromWeb(c.req.raw.body as import('node:stream/web').ReadableStream) : Readable.from([]);
+      return c.json(await importStream(requireLibrary(), folderId ?? null, name, body));
+    },
+  )
+  .post(
+    '/import-done',
+    valid('json', z.object({ target: z.string().max(500), copied: z.number(), renamed: z.number(), skipped: z.number(), rejected: z.number(), cancelled: z.boolean() })),
+    (c) => {
+      logImport(c.req.valid('json'));
+      return c.json({ ok: true });
+    },
+  )
   .get('/:id', valid('param', id), (c) => c.json(fileDetail(requireLibrary(), c.req.valid('param').id)))
-  .patch('/:id', valid('param', id), valid('json', z.object({ favorited: z.boolean() })), (c) => {
-    const lib = requireLibrary();
-    setFavorite(lib, [c.req.valid('param').id], c.req.valid('json').favorited);
-    return c.json(fileDetail(lib, c.req.valid('param').id));
-  });
+  .patch(
+    '/:id',
+    valid('param', id),
+    valid('json', z.object({ favorited: z.boolean(), name: z.string().max(300), description: z.string().max(5000) }).partial()),
+    (c) => {
+      const lib = requireLibrary();
+      const fileId = c.req.valid('param').id;
+      const change = c.req.valid('json');
+      if (change.favorited !== undefined) setFavorite(lib, [fileId], change.favorited);
+      if (change.description !== undefined) setFileDescription(lib, fileId, change.description);
+      if (change.name !== undefined) renameFile(lib, fileId, change.name);
+      return c.json(fileDetail(lib, fileId));
+    },
+  );

@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#070707;}
+a{color:#ff4b2b;text-decoration:none;cursor:pointer}
+a:hover{color:#f3f2ec;text-decoration:underline}
+input::placeholder{color:#77766f}
+</style>
+</helmet>
+<section id="m2" ref="{{ root }}" style="--bg:#121212;--bg2:#0b0b0b;--surface:#1b1b1a;--surface2:#262625;--line:#363631;--text:#f3f2ec;--text2:#9a9990;--accent:#ff4b2b;--accent-ink:#0b0b0b;--accent2:#f2e34b;--red:#ff3d5a;--amber:#ffb020;--blue:#58a6ff;--thumb:#0e0e0e;--scrim:rgba(11,11,11,.8);padding:72px 80px 96px;display:flex;flex-direction:column;gap:56px;font-family:Bahnschrift,'DIN Alternate','Segoe UI',system-ui,sans-serif;color:var(--text);background:#070707;">
+
+  <header style="display:flex;align-items:flex-end;gap:48px;max-width:1440px;">
+    <div style="display:flex;flex-direction:column;gap:12px;flex:none;white-space:nowrap;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font:700 12px/1 'Cascadia Mono',Consolas,Menlo,monospace;background:var(--accent);color:var(--accent-ink);padding:5px 8px;">M2</span>
+        <span style="font:12px/1 'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);">media-view · Images module · Darkroom</span>
+      </div>
+      <h1 style="margin:0;font:700 112px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:-0.01em;text-transform:uppercase;">Milestone 2</h1>
+    </div>
+    <p style="margin:0 0 6px;max-width:620px;font-size:15px;line-height:1.55;color:var(--text2);text-wrap:pretty;">Library → Folder → Album → Viewer. Every board is live: right-click cards and frames, drag files onto the page or onto album cards, click a frame in 03 to load it into 04. Viewer keys: ← → + − 0 S R F Esc.</p>
+  </header>
+
+  <div style="display:grid;grid-template-columns:repeat(2,1440px);gap:72px;align-items:start;">
+
+    <!-- ============ 01 LIBRARY ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M2 · 01</span><span style="color:var(--text);">Library</span><span>inbox first · racks a→z · right-click a rack</span>
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <button onClick="{{ toggleLibDrop }}" style="background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Preview page drop</button>
+          <button onClick="{{ toggleInboxDrop }}" style="background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Preview tray drop</button>
+        </div>
+      </div>
+      <div data-art="lib" onClick="{{ closeCtx }}" onDragOver="{{ libOver }}" onDragLeave="{{ libLeave }}" onDrop="{{ libDropFn }}" style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:56px;flex:none;display:flex;align-items:stretch;background:var(--bg2);border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 22px;border-right:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.02em;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 18px;font:13px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);"><span style="color:var(--accent);font-weight:700;">&gt;</span>search 40,265 frames, or #tag_</div>
+          <nav style="display:flex;align-items:stretch;font:600 13px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase;">
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Tags</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Collections</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Favorites</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Random</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Bin</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Settings</a>
+          </nav>
+          <button onMouseEnter="{{ healthEnter }}" onMouseLeave="{{ tipOff }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:var(--red);color:#fff;font:700 13px/1 'Cascadia Mono',Consolas,monospace;cursor:pointer;"><span style="font-size:10px;letter-spacing:.1em;">HEALTH</span>37</button>
+          <button style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:none;color:var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;"><span style="width:12px;height:12px;border:1.5px solid var(--text);background:linear-gradient(90deg,var(--text) 50%,transparent 50%);"></span>Darkroom</button>
+          <button style="width:52px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;cursor:pointer;">?</button>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 40px 64px;display:flex;flex-direction:column;gap:24px;">
+          <div style="display:flex;align-items:flex-end;gap:32px;border-bottom:1px solid var(--line);padding-bottom:18px;">
+            <h2 style="margin:0;font:700 140px/0.78 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:-0.01em;">Library</h2>
+            <div style="display:flex;flex-direction:column;gap:4px;font:12px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;padding-bottom:4px;">
+              <span>D:\MyLibrary\Images\</span>
+              <span><span style="color:var(--text);">40,265</span> frames · <span style="color:var(--text);">10</span> racks · <span style="color:var(--accent);">214</span> undeveloped</span>
+            </div>
+            <div style="margin-left:auto;display:flex;">
+              <button onClick="{{ newCategory }}" style="height:42px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;" style-hover="border-color:var(--text);">+ New category</button>
+              <button onClick="{{ addToInbox }}" style="height:42px;padding:0 18px;border:none;background:var(--accent);color:var(--accent-ink);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">+ Add images</button>
+            </div>
+          </div>
+
+          <div onDragOver="{{ inboxOver }}" onDragLeave="{{ inboxLeave }}" onDrop="{{ inboxDropFn }}" style="position:relative;flex:none;display:grid;grid-template-columns:auto 1fr auto;align-items:stretch;background:color-mix(in oklab,var(--accent) 16%,var(--bg2));border:1px solid var(--accent);cursor:pointer;">
+            <div style="display:flex;flex-direction:column;justify-content:space-between;gap:12px;padding:20px 28px;border-right:1px solid var(--accent);">
+              <span style="display:flex;align-items:center;gap:8px;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--accent);"><svg width="15" height="15" viewBox="0 0 16 16"><path d="M1.5 9 L4 3.5 H12 L14.5 9 V13 H1.5 Z" fill="none" stroke="currentColor" stroke-width="1.5"></path><rect x="5.5" y="8.3" width="5" height="1.5" fill="currentColor"></rect></svg>Inbox · developing tray</span>
+              <span style="font:700 150px/0.78 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;color:var(--accent);letter-spacing:-0.02em;">{{ inboxCount }}</span>
+              <span style="font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">frames waiting to be filed</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;padding:20px 28px;min-width:0;">
+              <span style="font:700 34px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;text-wrap:pretty;">They’re not going to develop themselves.</span>
+              <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;">
+                <sc-for list="{{ inboxThumbs }}" as="t" hint-placeholder-count="6"><div style="aspect-ratio:3/2;background:{{ t.fill }};outline:1px solid color-mix(in oklab,var(--accent) 40%,transparent);"></div></sc-for>
+              </div>
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">38 new this week · oldest: 41 days · can’t be renamed, moved or recycled</span>
+            </div>
+            <button onClick="{{ openInbox }}" style="width:150px;border:none;border-left:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;cursor:pointer;">Sort<br>the tray<br>→</button>
+            <sc-if value="{{ inboxDrop }}">
+              <div style="position:absolute;inset:0;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                <span style="font:700 72px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Into the tray ↓</span>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;align-items:baseline;gap:12px;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">Racks</span><span>10 categories · a→z</span></div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px 16px;">
+            <sc-for list="{{ cats }}" as="c" hint-placeholder-count="10">
+              <sc-if value="{{ c.full }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ c.onClick }}" onContextMenu="{{ c.onCtx }}" style="display:flex;flex-direction:column;gap:10px;cursor:pointer;">
+                  <div style="position:relative;aspect-ratio:16/10;background:{{ c.fill }};outline:1px solid var(--line);" style-hover="outline:2px solid var(--accent);">
+                    <span style="position:absolute;top:0;left:0;padding:5px 8px;background:var(--bg2);font:700 20px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text2);">{{ c.num }}</span>
+                    <span style="position:absolute;right:8px;bottom:8px;font:10px 'Cascadia Mono',Consolas,monospace;color:#fff;background:rgba(0,0,0,.45);padding:3px 6px;">COVER</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;min-width:0;">
+                    <span style="display:flex;align-items:center;gap:6px;font:10.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--accent);"><svg width="11" height="11" viewBox="0 0 16 16"><rect x="2" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="12.4" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="2" y="4" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="9.5" width="12" height="1.6" fill="currentColor"></rect></svg>Rack</span>
+                    <span style="font:700 28px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;text-wrap:pretty;">{{ c.name }}</span>
+                    <span style="font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);"><span style="color:var(--text);">{{ c.count }}</span> images · {{ c.meta }}</span>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ c.empty }}">
+                <div onContextMenu="{{ c.onCtx }}" style="display:flex;flex-direction:column;gap:10px;">
+                  <div style="aspect-ratio:16/10;border:1px dashed var(--text2);display:grid;place-items:center;padding:16px;text-align:center;font:11px/1.5 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">This rack is empty —<br>add an album or a sub-category.</div>
+                  <div style="display:flex;flex-direction:column;gap:5px;">
+                    <span style="font:10.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);">Rack · {{ c.num }}</span>
+                    <span style="font:700 28px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ c.name }}</span>
+                    <span style="font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">0 images</span>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ libDrop }}">
+          <div style="position:absolute;inset:0;z-index:40;background:color-mix(in oklab,var(--accent) 30%,var(--scrim));display:flex;flex-direction:column;justify-content:center;padding:0 80px;gap:10px;pointer-events:none;">
+            <div style="position:absolute;inset:16px;border:2px solid var(--accent);"></div>
+            <span style="font:12px 'Cascadia Mono',Consolas,monospace;letter-spacing:.1em;">DROP TARGET → D:\MyLibrary\Images\Inbox\</span>
+            <span style="font:700 150px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;">Straight<br>to the tray.</span>
+            <span style="font-size:16px;">No album here, so the Inbox gets them. Sort later. (Sure.)</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ ctxLib }}">
+          <div style="position:absolute;left:{{ ctxLib.left }};top:{{ ctxLib.top }};z-index:70;width:230px;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+            <span style="padding:7px 12px;background:var(--text);color:var(--bg);font:700 14px/1.1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;">{{ ctxLib.title }}</span>
+            <sc-for list="{{ ctxLib.items }}" as="m" hint-placeholder-count="5">
+              <button onClick="{{ m.onClick }}" style="display:flex;align-items:center;height:30px;padding:0 12px;border:none;border-top:{{ m.border }};background:none;color:{{ m.color }};font:inherit;text-align:left;cursor:pointer;" style-hover="background:var(--surface2);">{{ m.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tipLib }}">
+          <div style="position:absolute;left:{{ tipLib.left }};top:{{ tipLib.top }};width:280px;z-index:60;pointer-events:none;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;">
+            <span style="padding:5px 12px;background:{{ tipLib.color }};color:{{ tipLib.ink }};font:700 13px/1.2 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">{{ tipLib.typeLabel }}</span>
+            <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ tipLib.title }}</span>
+              <span style="font-size:13px;line-height:1.45;text-wrap:pretty;">{{ tipLib.desc }}</span>
+              <span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ tipLib.meta }}</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toastLib }}">
+          <div style="position:absolute;left:40px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastLib }}</div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 02 FOLDER ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M2 · 02</span><span style="color:var(--text);">Folder page</span><span>category “Fantasy” · drag files onto an album card</span>
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <button onClick="{{ toggleCardDrop }}" style="background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Preview card drop</button>
+        </div>
+      </div>
+      <div data-art="folder" onClick="{{ closeCtx }}" onDragOver="{{ fPageOver }}" onDragLeave="{{ fPageLeave }}" onDrop="{{ fPageDrop }}" style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:56px;flex:none;display:flex;align-items:stretch;background:var(--bg2);border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 22px;border-right:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.02em;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 18px;font:13px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);"><span style="color:var(--accent);font-weight:700;">&gt;</span>search 40,265 frames, or #tag_</div>
+          <nav style="display:flex;align-items:stretch;font:600 13px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase;">
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Tags</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Collections</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Favorites</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Random</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Bin</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Settings</a>
+          </nav>
+          <button onMouseEnter="{{ healthEnter }}" onMouseLeave="{{ tipOff }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:var(--red);color:#fff;font:700 13px/1 'Cascadia Mono',Consolas,monospace;cursor:pointer;"><span style="font-size:10px;letter-spacing:.1em;">HEALTH</span>37</button>
+          <button style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:none;color:var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;"><span style="width:12px;height:12px;border:1.5px solid var(--text);background:linear-gradient(90deg,var(--text) 50%,transparent 50%);"></span>Darkroom</button>
+          <button style="width:52px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;cursor:pointer;">?</button>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:22px 40px 64px;display:flex;flex-direction:column;gap:22px;">
+          <div style="display:flex;align-items:center;gap:8px;font:11.5px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+            <a style="color:var(--text2);">Images</a><span>/</span>
+            <span style="display:flex;align-items:center;gap:5px;color:var(--accent);"><svg width="12" height="12" viewBox="0 0 16 16"><rect x="2" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="12.4" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="2" y="4" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="9.5" width="12" height="1.6" fill="currentColor"></rect></svg>Fantasy</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:440px 1fr;gap:36px;padding-bottom:24px;border-bottom:1px solid var(--line);">
+            <div style="position:relative;aspect-ratio:3/2;background:repeating-linear-gradient(135deg, oklch(0.46 0.07 67) 0 7px, oklch(0.42 0.07 67) 7px 14px);outline:1px solid var(--line);outline-offset:8px;">
+              <span style="position:absolute;left:10px;bottom:10px;font:10.5px 'Cascadia Mono',Consolas,monospace;color:#fff;background:rgba(0,0,0,.45);padding:3px 6px;">COVER · throne_room_establishing_shot_4k.jpg</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
+              <span style="display:flex;align-items:center;gap:8px;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--accent);"><svg width="13" height="13" viewBox="0 0 16 16"><rect x="2" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="12.4" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="2" y="4" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="9.5" width="12" height="1.6" fill="currentColor"></rect></svg>Category · rack 01</span>
+              <h2 style="margin:0;font:700 120px/0.8 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:-0.01em;">Fantasy</h2>
+              <p style="margin:0;max-width:640px;font-size:15px;line-height:1.55;color:var(--text);text-wrap:pretty;">Elves, dragons and everything with pointy ears or a hoard. Reference for the Ilvenmar Cycle lives under <a>Elves</a>; loose battle scenes wait in their own album until someone has a free weekend. <a style="font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);">✎ edit</a></p>
+              <div style="display:flex;gap:28px;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">
+                <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">8,412</span>images under here</div>
+                <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">4</span>drawers</div>
+                <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">6</span>albums</div>
+              </div>
+              <div style="margin-top:auto;display:flex;">
+                <button onClick="{{ newSub }}" style="height:42px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;" style-hover="border-color:var(--text);">+ New sub-category</button>
+                <button onClick="{{ newAlbum }}" style="height:42px;padding:0 18px;border:1px solid var(--line);border-left:none;background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;" style-hover="border-color:var(--text);">+ New album</button>
+                <button onClick="{{ viewAll }}" style="margin-left:auto;height:42px;padding:0 20px;border:none;background:var(--accent);color:var(--accent-ink);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">View all 8,412 images →</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:baseline;gap:12px;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">Drawers</span><span>4 sub-categories</span></div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;">
+            <sc-for list="{{ drawers }}" as="d" hint-placeholder-count="4">
+              <div onClick="{{ d.onClick }}" onContextMenu="{{ d.onCtx }}" style="display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);cursor:pointer;" style-hover="border-color:var(--accent);">
+                <div style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-bottom:1px solid var(--line);font:10.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);"><svg width="11" height="11" viewBox="0 0 16 16"><rect x="1.8" y="3.8" width="12.4" height="9.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="6" y="7.6" width="4" height="1.8" fill="currentColor"></rect></svg>Sub-category<span style="margin-left:auto;">{{ d.inner }}</span></div>
+                <sc-if value="{{ d.full }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;gap:3px;height:140px;padding:10px 10px 0;">
+                    <div style="grid-row:span 2;background:{{ d.f1 }};"></div><div style="background:{{ d.f2 }};"></div><div style="background:{{ d.f3 }};"></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ d.empty }}">
+                  <div style="height:140px;margin:10px 10px 0;border:1px dashed var(--text2);display:grid;place-items:center;padding:12px;text-align:center;font:10.5px/1.5 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">This drawer is empty —<br>add an album or a sub-category.</div>
+                </sc-if>
+                <div style="width:56px;height:6px;margin:10px auto 0;background:var(--line);"></div>
+                <div style="display:flex;flex-direction:column;gap:5px;padding:10px 12px 14px;">
+                  <span style="font:700 26px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;text-wrap:pretty;">{{ d.name }}</span>
+                  <span style="font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);"><span style="color:var(--text);">{{ d.count }}</span> images</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:baseline;gap:12px;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">Albums</span><span>6 albums · drop files on a card to file them there</span></div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px 22px;padding-top:12px;">
+            <sc-for list="{{ albums }}" as="a" hint-placeholder-count="6">
+              <div onClick="{{ a.onClick }}" onContextMenu="{{ a.onCtx }}" onDragOver="{{ a.onOver }}" onDragLeave="{{ a.onLeave }}" onDrop="{{ a.onDrop }}" style="display:flex;flex-direction:column;gap:10px;cursor:pointer;">
+                <div style="position:relative;aspect-ratio:3/2;margin-right:12px;">
+                  <div style="position:absolute;inset:0;transform:translate(12px,-12px);background:var(--surface);outline:1px solid var(--line);"></div>
+                  <div style="position:absolute;inset:0;transform:translate(6px,-6px);background:var(--surface2);outline:1px solid var(--line);"></div>
+                  <sc-if value="{{ a.full }}" hint-placeholder-val="{{ true }}">
+                    <div style="position:absolute;inset:0;background:{{ a.fill }};outline:1px solid var(--line);" style-hover="outline:2px solid var(--accent);"></div>
+                  </sc-if>
+                  <sc-if value="{{ a.empty }}">
+                    <div style="position:absolute;inset:0;background:var(--bg);border:1px dashed var(--text2);display:grid;place-items:center;padding:14px;text-align:center;font:10.5px/1.5 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">This album is empty —<br>drop images here.</div>
+                  </sc-if>
+                  <sc-if value="{{ a.isDrop }}">
+                    <div style="position:absolute;inset:0;z-index:2;background:var(--accent);color:var(--accent-ink);display:flex;flex-direction:column;justify-content:center;padding:0 16px;gap:4px;pointer-events:none;">
+                      <span style="font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">Drop to copy into</span>
+                      <span style="font:700 34px/0.9 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ a.name }} ↓</span>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                  <span style="display:flex;align-items:center;gap:6px;font:10.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);"><svg width="11" height="11" viewBox="0 0 16 16"><rect x="4.5" y="1.5" width="10" height="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect><rect x="1.5" y="4" width="10" height="11" fill="currentColor"></rect></svg>Album</span>
+                  <span style="font:700 26px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;text-wrap:pretty;">{{ a.name }}</span>
+                  <span style="font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);"><span style="color:var(--text);">{{ a.count }}</span> images</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ fDropPage }}">
+          <div style="position:absolute;inset:0;z-index:40;background:color-mix(in oklab,var(--accent) 30%,var(--scrim));display:flex;flex-direction:column;justify-content:center;padding:0 80px;gap:10px;pointer-events:none;">
+            <div style="position:absolute;inset:16px;border:2px solid var(--accent);"></div>
+            <span style="font:12px 'Cascadia Mono',Consolas,monospace;letter-spacing:.1em;">DROP TARGET → D:\MyLibrary\Images\Inbox\</span>
+            <span style="font:700 150px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;">Racks don’t<br>hold loose prints.</span>
+            <span style="font-size:16px;">Dropped here, they go to the Inbox. Aim for an album card to file them directly.</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ ctxFolder }}">
+          <div style="position:absolute;left:{{ ctxFolder.left }};top:{{ ctxFolder.top }};z-index:70;width:230px;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+            <span style="padding:7px 12px;background:var(--text);color:var(--bg);font:700 14px/1.1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;">{{ ctxFolder.title }}</span>
+            <sc-for list="{{ ctxFolder.items }}" as="m" hint-placeholder-count="5">
+              <button onClick="{{ m.onClick }}" style="display:flex;align-items:center;height:30px;padding:0 12px;border:none;border-top:{{ m.border }};background:none;color:{{ m.color }};font:inherit;text-align:left;cursor:pointer;" style-hover="background:var(--surface2);">{{ m.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tipFolder }}">
+          <div style="position:absolute;left:{{ tipFolder.left }};top:{{ tipFolder.top }};width:280px;z-index:60;pointer-events:none;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;">
+            <span style="padding:5px 12px;background:{{ tipFolder.color }};color:{{ tipFolder.ink }};font:700 13px/1.2 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">{{ tipFolder.typeLabel }}</span>
+            <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ tipFolder.title }}</span>
+              <span style="font-size:13px;line-height:1.45;text-wrap:pretty;">{{ tipFolder.desc }}</span>
+              <span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ tipFolder.meta }}</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toastFolder }}">
+          <div style="position:absolute;left:40px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastFolder }}</div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 03 ALBUM ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M2 · 03</span><span style="color:var(--text);">Album grid</span><span>click opens in 04 · ○ / ctrl / shift select · tags cycle</span>
+        <div style="margin-left:auto;display:flex;border:1px solid var(--line);">
+          <sc-for list="{{ modeTabs }}" as="m" hint-placeholder-count="2">
+            <button onClick="{{ m.onClick }}" style="padding:6px 12px;border:none;background:{{ m.bg }};color:{{ m.color }};font:inherit;cursor:pointer;">{{ m.label }}</button>
+          </sc-for>
+        </div>
+        <button onClick="{{ toggleAlbumDrop }}" style="background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Preview drop</button>
+      </div>
+      <div data-art="album" onClick="{{ closeCtx }}" onDragOver="{{ albumOver }}" onDragLeave="{{ albumLeave }}" onDrop="{{ albumDropFn }}" style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:56px;flex:none;display:flex;align-items:stretch;background:var(--bg2);border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 22px;border-right:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.02em;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 18px;font:13px 'Cascadia Mono',Consolas,Menlo,monospace;min-width:0;">
+            <span style="color:var(--accent);font-weight:700;">&gt;</span>
+            <div style="flex:1;display:flex;gap:10px;white-space:nowrap;overflow:hidden;">
+              <sc-for list="{{ searchTokens }}" as="t" hint-placeholder-count="4">
+                <span style="display:inline-flex;align-items:center;border-bottom:2px solid {{ t.color }};padding-bottom:1px;"><span style="color:{{ t.preColor }};font-weight:700;">{{ t.pre }}</span><span style="color:var(--text2);">{{ t.typ }}</span><span style="color:var(--text);">{{ t.name }}</span></span>
+              </sc-for>
+              <span style="width:8px;height:16px;background:var(--accent);"></span>
+            </div>
+            <span style="flex:none;font-size:11px;color:var(--accent-ink);background:var(--text);padding:3px 7px;">{{ matchCount }} / {{ albumTotal }}</span>
+          </div>
+          <nav style="display:flex;align-items:stretch;font:600 13px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase;">
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Tags</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Collections</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Favorites</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Random</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Bin</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);text-decoration:none;">Settings</a>
+          </nav>
+          <button onMouseEnter="{{ healthEnter }}" onMouseLeave="{{ tipOff }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:var(--red);color:#fff;font:700 13px/1 'Cascadia Mono',Consolas,monospace;cursor:pointer;"><span style="font-size:10px;letter-spacing:.1em;">HEALTH</span>37</button>
+          <button style="width:52px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;cursor:pointer;">?</button>
+        </div>
+
+        <div style="flex:1;display:flex;min-height:0;">
+          <main style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative;">
+            <div style="padding:20px 32px 16px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line);">
+              <sc-if value="{{ isAlbum }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:8px;font:11.5px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+                  <a style="color:var(--text2);">Images</a><span>/</span>
+                  <a style="display:flex;align-items:center;gap:5px;color:var(--text2);"><svg width="12" height="12" viewBox="0 0 16 16"><rect x="2" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="12.4" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="2" y="4" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="9.5" width="12" height="1.6" fill="currentColor"></rect></svg>Fantasy</a><span>/</span>
+                  <a style="display:flex;align-items:center;gap:5px;color:var(--text2);"><svg width="12" height="12" viewBox="0 0 16 16"><rect x="1.8" y="3.8" width="12.4" height="9.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="6" y="7.6" width="4" height="1.8" fill="currentColor"></rect></svg>Elves</a><span>/</span>
+                  <a style="display:flex;align-items:center;gap:5px;color:var(--text2);"><svg width="12" height="12" viewBox="0 0 16 16"><rect x="1.8" y="3.8" width="12.4" height="9.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="6" y="7.6" width="4" height="1.8" fill="currentColor"></rect></svg>High Court of Ilvenmar</a><span>/</span>
+                  <span style="display:flex;align-items:center;gap:5px;color:var(--accent);"><svg width="12" height="12" viewBox="0 0 16 16"><rect x="4.5" y="1.5" width="10" height="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect><rect x="1.5" y="4" width="10" height="11" fill="currentColor"></rect></svg>Portraits &amp; Expression Sheets</span>
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:28px;">
+                  <h2 style="margin:0;flex:1;min-width:0;font:700 64px/0.9 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:-0.005em;">Portraits &amp; Expression Sheets</h2>
+                  <div style="display:flex;gap:24px;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">1,248</span>frames</div>
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--accent2);">112</span>starred</div>
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">2D</span>since last roll</div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isInbox }}">
+                <div style="display:flex;align-items:center;gap:8px;font:11.5px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+                  <a style="color:var(--text2);">Images</a><span>/</span>
+                  <span style="display:flex;align-items:center;gap:5px;color:var(--accent);"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M1.5 9 L4 3.5 H12 L14.5 9 V13 H1.5 Z" fill="none" stroke="currentColor" stroke-width="1.5"></path><rect x="5.5" y="8.3" width="5" height="1.5" fill="currentColor"></rect></svg>Inbox</span>
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:28px;">
+                  <h2 style="margin:0;flex:1;min-width:0;display:flex;align-items:baseline;gap:20px;font:700 64px/0.9 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:-0.005em;">Inbox<span style="font:12px 'Cascadia Mono',Consolas,monospace;letter-spacing:0;color:var(--text2);">select · tag · move to an album</span></h2>
+                  <div style="display:flex;gap:24px;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--accent);">214</span>waiting</div>
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">38</span>new this week</div>
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">41D</span>oldest</div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="display:flex;align-items:stretch;height:44px;border-bottom:1px solid var(--line);font:12px 'Cascadia Mono',Consolas,Menlo,monospace;text-transform:uppercase;">
+              <button onClick="{{ cycleSort }}" style="padding:0 16px;border:none;border-right:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;"><span style="color:var(--text2);">Sort:</span> {{ sortLabel }}</button>
+              <button onClick="{{ flipSort }}" style="width:40px;border:none;border-right:1px solid var(--line);background:none;color:var(--accent);font:inherit;font-size:15px;cursor:pointer;">{{ sortArrow }}</button>
+              <div style="display:flex;align-items:center;gap:2px;padding:0 12px;border-right:1px solid var(--line);">
+                <span style="color:var(--text2);margin-right:6px;">Cols</span>
+                <sc-for list="{{ colTicks }}" as="k" hint-placeholder-count="9">
+                  <button onClick="{{ k.onClick }}" style="width:24px;height:24px;border:none;background:{{ k.bg }};color:{{ k.color }};font:700 11px 'Cascadia Mono',Consolas,monospace;cursor:pointer;">{{ k.n }}</button>
+                </sc-for>
+              </div>
+              <button onClick="{{ toggleFav }}" style="padding:0 16px;border:none;border-right:1px solid var(--line);background:{{ favBg }};color:{{ favColor }};font:inherit;font-weight:700;cursor:pointer;">{{ favLabel }}</button>
+              <button onClick="{{ toggleGroup }}" style="padding:0 16px;border:none;border-right:1px solid var(--line);background:{{ groupBg }};color:{{ groupColor }};font:inherit;font-weight:700;cursor:pointer;">▤ By collection</button>
+              <input value="{{ nameQ }}" onChange="{{ onNameQ }}" placeholder="name contains…" style="flex:1;min-width:0;padding:0 16px;border:none;background:none;color:var(--text);font:inherit;text-transform:none;outline:none;">
+              <button onClick="{{ addImages }}" style="padding:0 20px;border:none;background:var(--accent);color:var(--accent-ink);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;cursor:pointer;">+ ADD IMAGES</button>
+            </div>
+
+            <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 120px;background:var(--bg2);">
+              <sc-for list="{{ groups }}" as="g" hint-placeholder-count="1">
+                <div style="display:flex;flex-direction:column;">
+                  <sc-if value="{{ g.show }}">
+                    <div style="display:flex;align-items:baseline;gap:14px;padding:18px 32px 8px;background:var(--bg);">
+                      <span style="font:700 26px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ g.title }}</span>
+                      <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ g.meta }}</span>
+                      <sc-if value="{{ g.canReverse }}"><button onClick="{{ g.onReverse }}" style="margin-left:auto;background:none;border:1px solid var(--line);color:var(--text2);padding:4px 8px;font:11px 'Cascadia Mono',Consolas,monospace;cursor:pointer;">⇅ REVERSE</button></sc-if>
+                    </div>
+                  </sc-if>
+                  <div style="height:16px;background-color:var(--bg2);background-image:repeating-linear-gradient(90deg, var(--surface2) 0 10px, transparent 10px 22px);background-size:100% 7px;background-position:0 50%;background-repeat:no-repeat;"></div>
+                  <div style="display:grid;grid-template-columns:{{ gridCols }};gap:18px 14px;padding:6px 32px 10px;">
+                    <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="18">
+                      <div onClick="{{ it.onClick }}" onContextMenu="{{ it.onCtx }}" title="{{ it.name }}" style="position:relative;display:flex;flex-direction:column;gap:6px;cursor:pointer;">
+                        <div style="position:relative;aspect-ratio:3/2;background:var(--thumb);outline:1px solid var(--line);" style-hover="outline:1px solid var(--accent);">
+                          <div style="position:absolute;inset:8px;container-type:size;display:grid;place-items:center;">
+                            <sc-if value="{{ it.big }}" hint-placeholder-val="{{ true }}"><div style="width:min(100cqw, calc(100cqh * {{ it.ar }}));height:min(100cqh, calc(100cqw * {{ it.iar }}));background:{{ it.fill }};"></div></sc-if>
+                            <sc-if value="{{ it.tiny }}"><div style="width:22px;height:22px;background:{{ it.fill }};outline:1px dashed var(--text2);outline-offset:3px;"></div></sc-if>
+                          </div>
+                          <sc-if value="{{ it.gif }}"><span style="position:absolute;top:0;left:0;font:700 10px/1 'Cascadia Mono',Consolas,monospace;padding:4px 6px;background:var(--accent);color:var(--accent-ink);">GIF</span></sc-if>
+                          <sc-if value="{{ it.fav }}"><span style="position:absolute;top:2px;right:6px;color:var(--accent2);font-size:15px;">★</span></sc-if>
+                          <sc-if value="{{ it.sel }}">
+                            <div style="position:absolute;inset:-9px -7px;border:3px solid var(--accent2);border-radius:48% 52% 45% 55% / 55% 42% 58% 45%;transform:rotate(-1.5deg);pointer-events:none;"></div>
+                          </sc-if>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;font:10.5px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);">
+                          <sc-if value="{{ it.sel }}"><span onClick="{{ it.onToggle }}" style="width:14px;height:14px;flex:none;background:var(--accent2);color:#111;font:700 10px/14px sans-serif;text-align:center;">✓</span></sc-if>
+                          <sc-if value="{{ it.unsel }}"><span onClick="{{ it.onToggle }}" style="width:12px;height:12px;flex:none;border:1px solid var(--text2);border-radius:50%;"></span></sc-if>
+                          <span style="color:var(--accent);font-weight:700;">{{ it.frame }}</span>
+                          <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.name }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ showLoading }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;gap:10px;padding:8px 32px;">
+                  <div style="display:grid;grid-template-columns:{{ gridCols }};gap:18px 14px;">
+                    <sc-for list="{{ skeletons }}" as="s" hint-placeholder-count="6"><div style="aspect-ratio:3/2;border:1px dashed var(--line);"></div></sc-for>
+                  </div>
+                  <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">▒ developing frames {{ loadingRange }} — they load as you scroll</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noResults }}">
+                <div style="padding:60px 32px;display:flex;flex-direction:column;gap:8px;">
+                  <span style="font:700 48px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Blank roll.</span>
+                  <span style="font:12px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Nothing matches the name filter + keepers. Loosen something.</span>
+                </div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;left:0;right:0;bottom:0;height:60px;display:flex;align-items:stretch;background:var(--accent2);color:#111;z-index:10;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                <div style="display:flex;align-items:center;gap:10px;padding:0 24px;border-right:2px solid #111;">
+                  <span style="font:700 34px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;">{{ selCount }}</span><span style="line-height:1.2;">frames circled.<br>do something.</span>
+                </div>
+                <sc-for list="{{ bulkActions }}" as="b" hint-placeholder-count="7">
+                  <button onClick="{{ b.onClick }}" style="padding:0 15px;border:none;border-right:1px solid rgba(0,0,0,.25);background:{{ b.bg }};color:{{ b.color }};font:inherit;font-weight:700;cursor:pointer;" style-hover="filter:brightness(.92);">{{ b.label }}</button>
+                </sc-for>
+                <button onClick="{{ selectAll }}" style="margin-left:auto;padding:0 16px;border:none;border-left:1px solid rgba(0,0,0,.25);background:none;color:#111;font:inherit;cursor:pointer;">Select all</button>
+                <button onClick="{{ clearSel }}" style="width:60px;border:none;border-left:2px solid #111;background:none;color:#111;font:700 16px sans-serif;cursor:pointer;">✕</button>
+              </div>
+            </sc-if>
+          </main>
+
+          <aside style="width:300px;flex:none;display:flex;flex-direction:column;border-left:1px solid var(--line);background:var(--surface);">
+            <div style="padding:16px 18px 12px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line);">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;">
+                <span style="font:700 26px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Index</span>
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ tagTotal }} TAGS · 4 TYPES</span>
+              </div>
+              <input value="{{ sideFilter }}" onChange="{{ onSideFilter }}" placeholder="filter…" style="height:30px;padding:0 10px;border:1px solid var(--line);background:var(--bg2);color:var(--text);font:12px 'Cascadia Mono',Consolas,monospace;outline:none;">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:var(--text);color:var(--bg);font:700 10px/12px sans-serif;text-align:center;">+</span>must</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:var(--red);color:#fff;font:700 10px/12px sans-serif;text-align:center;">×</span>never</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border:1px dashed var(--blue);color:var(--blue);font:700 10px/10px sans-serif;text-align:center;">~</span>any of</span>
+              </div>
+              <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ clearFilters }}" style="align-self:flex-start;background:none;border:none;padding:0;color:var(--accent);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">✕ clear {{ filterCount }} — open the floodgates</button>
+              </sc-if>
+            </div>
+            <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 24px;position:relative;">
+              <sc-for list="{{ sideGroups }}" as="g" hint-placeholder-count="4">
+                <sc-if value="{{ g.has }}" hint-placeholder-val="{{ true }}">
+                  <div style="position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:5px 18px;background:{{ g.color }};color:{{ g.ink }};font:700 14px/1.2 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">{{ g.label }}<span style="margin-left:auto;font:11px 'Cascadia Mono',Consolas,monospace;">{{ g.n }}</span></div>
+                </sc-if>
+                <sc-for list="{{ g.tags }}" as="t" hint-placeholder-count="6">
+                  <div onClick="{{ t.onClick }}" onContextMenu="{{ t.onCtx }}" onMouseEnter="{{ t.onEnter }}" onMouseLeave="{{ tipOff }}" style="display:flex;align-items:center;gap:9px;padding:4px 18px 4px 14px;border-bottom:1px solid color-mix(in oklab,var(--line) 50%,transparent);background:{{ t.bg }};cursor:pointer;user-select:none;" style-hover="background:var(--surface2);">
+                    <sc-if value="{{ t.isOff }}"><span style="width:12px;height:12px;flex:none;border:1px solid var(--line);"></span></sc-if>
+                    <sc-if value="{{ t.isInc }}"><span style="width:12px;height:12px;flex:none;background:var(--text);color:var(--bg);font:700 10px/12px sans-serif;text-align:center;">+</span></sc-if>
+                    <sc-if value="{{ t.isExc }}"><span style="width:12px;height:12px;flex:none;background:var(--red);color:#fff;font:700 10px/12px sans-serif;text-align:center;">×</span></sc-if>
+                    <sc-if value="{{ t.isAny }}"><span style="width:12px;height:12px;flex:none;border:1px dashed var(--blue);color:var(--blue);font:700 10px/10px sans-serif;text-align:center;">~</span></sc-if>
+                    <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ t.deco }};opacity:{{ t.op }};">{{ t.label }}</span>
+                    <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ t.cnt }}</span>
+                  </div>
+                </sc-for>
+              </sc-for>
+            </div>
+          </aside>
+        </div>
+
+        <sc-if value="{{ albumDrop }}">
+          <div style="position:absolute;inset:0;z-index:40;background:color-mix(in oklab,var(--accent) 30%,var(--scrim));display:flex;flex-direction:column;justify-content:center;padding:0 80px;gap:10px;pointer-events:none;">
+            <div style="position:absolute;inset:16px;border:2px solid var(--accent);"></div>
+            <span style="font:12px 'Cascadia Mono',Consolas,monospace;letter-spacing:.1em;">DROP TARGET → {{ dropPath }}</span>
+            <span style="font:700 150px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;">Release<br>the roll.</span>
+            <span style="font-size:16px;">Copied in, originals untouched. No chemicals involved.</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ ctxAlbum }}">
+          <div style="position:absolute;left:{{ ctxAlbum.left }};top:{{ ctxAlbum.top }};z-index:70;width:240px;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+            <span style="padding:7px 12px;background:var(--text);color:var(--bg);font:700 14px/1.1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ctxAlbum.title }}</span>
+            <sc-for list="{{ ctxAlbum.items }}" as="m" hint-placeholder-count="5">
+              <button onClick="{{ m.onClick }}" style="display:flex;align-items:center;height:28px;padding:0 12px;border:none;border-top:{{ m.border }};background:none;color:{{ m.color }};font:inherit;text-align:left;cursor:pointer;" style-hover="background:var(--surface2);">{{ m.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tipAlbum }}">
+          <div style="position:absolute;left:{{ tipAlbum.left }};top:{{ tipAlbum.top }};width:280px;z-index:60;pointer-events:none;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;">
+            <span style="padding:5px 12px;background:{{ tipAlbum.color }};color:{{ tipAlbum.ink }};font:700 13px/1.2 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">{{ tipAlbum.typeLabel }}</span>
+            <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;overflow-wrap:anywhere;">{{ tipAlbum.title }}</span>
+              <span style="font-size:13px;line-height:1.45;text-wrap:pretty;">{{ tipAlbum.desc }}</span>
+              <span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ tipAlbum.meta }}</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toastAlbum }}">
+          <div style="position:absolute;left:32px;bottom:80px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastAlbum }}</div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 04 VIEWER ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M2 · 04</span><span style="color:var(--text);">Image viewer</span><span>wheel zooms · drag pans · type tags, enter adds</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+          <span>Opened from</span>
+          <div style="display:flex;border:1px solid var(--line);">
+            <sc-for list="{{ vCtxTabs }}" as="m" hint-placeholder-count="2">
+              <button onClick="{{ m.onClick }}" style="padding:6px 12px;border:none;background:{{ m.bg }};color:{{ m.color }};font:inherit;cursor:pointer;">{{ m.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div data-art="viewer" onClick="{{ closeCtx }}" style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg2);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <sc-if value="{{ notFull }}" hint-placeholder-val="{{ true }}">
+          <div style="height:48px;flex:none;display:flex;align-items:stretch;border-bottom:1px solid var(--line);">
+            <div style="display:flex;align-items:center;gap:8px;padding:0 18px;border-right:1px solid var(--line);font:700 19px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:10px;height:10px;background:var(--accent);"></span>MEDIA/VIEW</div>
+            <a onClick="{{ goBack }}" style="display:flex;align-items:center;gap:8px;padding:0 16px;border-right:1px solid var(--line);color:var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">← {{ vBackLabel }}</a>
+            <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 16px;font:12.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);"><span style="color:var(--accent);font-weight:700;">&gt;</span>search_</div>
+            <button onMouseEnter="{{ healthEnter }}" onMouseLeave="{{ tipOff }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:var(--red);color:#fff;font:700 13px/1 'Cascadia Mono',Consolas,monospace;cursor:pointer;"><span style="font-size:10px;letter-spacing:.1em;">HEALTH</span>37</button>
+            <button style="width:48px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;cursor:pointer;">?</button>
+          </div>
+        </sc-if>
+        <div style="flex:1;display:flex;min-height:0;">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+            <div ref="{{ stageRef }}" onMouseDown="{{ panStart }}" style="flex:1;position:relative;min-height:0;overflow:hidden;background:{{ stageBg }};cursor:{{ stageCursor }};user-select:none;">
+              <div style="position:absolute;top:18px;left:24px;z-index:3;display:flex;align-items:baseline;gap:12px;pointer-events:none;">
+                <span style="font:700 72px/0.8 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;color:var(--accent);">{{ vPosLabel }}</span>
+                <span style="font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);line-height:1.4;">{{ vCtxKind }}<br><span style="color:var(--text);">{{ vCtxName }}</span></span>
+              </div>
+              <div style="position:absolute;top:100px;left:40px;right:40px;bottom:28px;container-type:size;display:grid;place-items:center;">
+                <div style="width:{{ vW }};height:{{ vH }};background:{{ vFill }};transform:{{ vTransform }};transition:{{ vTrans }};outline:1px solid var(--line);outline-offset:10px;display:grid;place-items:end start;">
+                  <span style="margin:10px;font:10.5px 'Cascadia Mono',Consolas,monospace;color:#fff;background:rgba(0,0,0,.45);padding:3px 6px;white-space:nowrap;">{{ vCaption }}</span>
+                </div>
+              </div>
+              <div onMouseDown="{{ stop }}" style="position:absolute;top:24px;right:24px;z-index:3;display:flex;align-items:stretch;height:34px;border:1px solid var(--line);background:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                <button onClick="{{ zoomOut }}" title="Zoom out (−)" style="width:34px;border:none;background:none;color:var(--text);font:inherit;cursor:pointer;">−</button>
+                <button onClick="{{ zoomReset }}" title="Reset (0)" style="min-width:64px;border:none;border-left:1px solid var(--line);border-right:1px solid var(--line);background:none;color:var(--accent);font:inherit;cursor:pointer;">{{ zoomLabel }}</button>
+                <button onClick="{{ zoomIn }}" title="Zoom in (+)" style="width:34px;border:none;background:none;color:var(--text);font:inherit;cursor:pointer;">+</button>
+                <button onClick="{{ toggleShow }}" title="Slideshow (S)" style="padding:0 12px;border:none;border-left:1px solid var(--line);background:{{ showBg }};color:{{ showColor }};font:inherit;font-weight:700;cursor:pointer;">{{ showLabel }}</button>
+                <sc-if value="{{ showOn }}">
+                  <div style="display:flex;align-items:stretch;border-left:1px solid var(--line);">
+                    <button onClick="{{ intDown }}" style="width:26px;border:none;background:none;color:var(--text);font:inherit;cursor:pointer;">‹</button>
+                    <span style="display:flex;align-items:center;min-width:34px;justify-content:center;">{{ intLabel }}</span>
+                    <button onClick="{{ intUp }}" style="width:26px;border:none;background:none;color:var(--text);font:inherit;cursor:pointer;">›</button>
+                  </div>
+                </sc-if>
+                <button onClick="{{ vRandom }}" title="Random (R)" style="padding:0 12px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">⚄ Random</button>
+                <button onClick="{{ toggleFull }}" title="Fullscreen (F)" style="padding:0 12px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">{{ fullLabel }}</button>
+                <sc-if value="{{ notFull }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ togglePanels }}" style="padding:0 12px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">{{ panelsLabel }}</button>
+                </sc-if>
+              </div>
+              <sc-if value="{{ isFull }}">
+                <span style="position:absolute;left:24px;bottom:16px;z-index:3;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;pointer-events:none;">Fullscreen · Esc to exit · ← → to step</span>
+              </sc-if>
+              <sc-if value="{{ showOn }}"><div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--line);z-index:3;"><div style="width:{{ progPct }};height:100%;background:var(--accent);"></div></div></sc-if>
+            </div>
+            <sc-if value="{{ notFull }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:none;height:108px;background:#050505;display:flex;flex-direction:column;border-top:1px solid var(--line);">
+                <div style="height:12px;background-image:repeating-linear-gradient(90deg, #2a2a28 0 9px, transparent 9px 20px);background-size:100% 6px;background-position:0 50%;background-repeat:no-repeat;"></div>
+                <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;">
+                  <button onClick="{{ vPrev }}" title="Previous (←)" style="width:36px;height:56px;border:1px solid #333;background:none;color:#eee;font-size:13px;cursor:pointer;">◀</button>
+                  <sc-for list="{{ vStrip }}" as="s" hint-placeholder-count="12">
+                    <div onClick="{{ s.onClick }}" style="flex:1;height:{{ s.h }};background:{{ s.fill }};opacity:{{ s.op }};outline:{{ s.outline }};position:relative;cursor:pointer;" style-hover="opacity:1;"><span style="position:absolute;bottom:0;left:0;padding:1px 4px;background:{{ s.tagBg }};color:{{ s.tagInk }};font:700 10px 'Cascadia Mono',Consolas,monospace;">{{ s.n }}</span></div>
+                  </sc-for>
+                  <button onClick="{{ vNext }}" title="Next (→)" style="width:36px;height:56px;border:1px solid #333;background:none;color:#eee;font-size:13px;cursor:pointer;">▶</button>
+                </div>
+                <div style="height:12px;background-image:repeating-linear-gradient(90deg, #2a2a28 0 9px, transparent 9px 20px);background-size:100% 6px;background-position:0 50%;background-repeat:no-repeat;"></div>
+              </div>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ panels }}" hint-placeholder-val="{{ true }}">
+            <aside style="width:420px;flex:none;overflow-y:auto;overflow-x:hidden;background:var(--surface);border-left:1px solid var(--line);position:relative;">
+              <div onClick="{{ togInfo }}" style="display:flex;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line);cursor:pointer;font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">01 · Info<span style="margin-left:auto;font-family:'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ pInfoArrow }}</span></div>
+              <sc-if value="{{ pInfo }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:14px 20px 18px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line);">
+                  <span style="font:700 22px/1.05 'Bahnschrift Condensed','DIN Condensed',sans-serif;overflow-wrap:anywhere;">{{ vName }}</span>
+                  <div style="display:flex;flex-wrap:wrap;font:11px 'Cascadia Mono',Consolas,monospace;">
+                    <sc-for list="{{ pathParts }}" as="p" hint-placeholder-count="7"><a style="color:var(--text2);" style-hover="color:var(--accent);">{{ p.p }}</a><sc-if value="{{ p.notLast }}"><span style="color:var(--accent);padding:0 3px;">\</span></sc-if></sc-for>
+                  </div>
+                  <div style="display:grid;grid-template-columns:110px 1fr;font:12px 'Cascadia Mono',Consolas,monospace;border-top:1px solid var(--line);">
+                    <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">SIZE</span><span style="padding:5px 0;border-bottom:1px solid var(--line);">{{ vSize }}</span>
+                    <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">DIMENSIONS</span><span style="padding:5px 0;border-bottom:1px solid var(--line);">{{ vDims }}</span>
+                    <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">MODIFIED</span><span style="padding:5px 0;border-bottom:1px solid var(--line);">2025-06-14 18:33</span>
+                    <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">ADDED</span><span style="padding:5px 0;border-bottom:1px solid var(--line);">2025-06-15 09:02</span>
+                  </div>
+                  <div style="position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                    <button onClick="{{ toggleVFav }}" style="height:30px;border:{{ vFavBorder }};background:{{ vFavBg }};color:{{ vFavColor }};font:inherit;font-weight:700;cursor:pointer;">{{ vFavLabel }}</button>
+                    <button onClick="{{ vOpenWith }}" style="height:30px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Open with…</button>
+                    <button onClick="{{ vRename }}" style="height:30px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Rename</button>
+                    <button onClick="{{ vMove }}" style="height:30px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Move</button>
+                    <button onClick="{{ toggleCover }}" style="height:30px;border:1px solid var(--line);background:{{ coverBg }};color:var(--text);font:inherit;cursor:pointer;">Cover of ▸</button>
+                    <button onClick="{{ vRecycle }}" style="height:30px;border:1px solid var(--red);background:none;color:var(--red);font:inherit;cursor:pointer;">Recycle</button>
+                    <sc-if value="{{ coverMenu }}">
+                      <div style="position:absolute;left:0;right:0;top:72px;z-index:20;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;">
+                        <span style="padding:6px 12px;background:var(--text);color:var(--bg);font:700 13px/1.1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;">Set as cover of…</span>
+                        <sc-for list="{{ coverItems }}" as="c" hint-placeholder-count="6">
+                          <button onClick="{{ c.onClick }}" style="display:flex;align-items:center;gap:10px;height:28px;padding:0 12px;border:none;border-bottom:1px solid var(--line);background:none;color:var(--text);font:inherit;text-transform:none;text-align:left;cursor:pointer;" style-hover="background:var(--surface2);"><span style="min-width:84px;padding:1px 5px;background:{{ c.kindBg }};color:{{ c.kindInk }};font-size:10px;text-transform:uppercase;text-align:center;">{{ c.kind }}</span>{{ c.name }}</button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-if>
+              <div onClick="{{ togTags }}" style="display:flex;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line);cursor:pointer;font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">02 · Tags <span style="margin-left:8px;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ vTagCount }}</span><span style="margin-left:auto;font-family:'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ pTagsArrow }}</span></div>
+              <sc-if value="{{ pTags }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:14px 20px 18px;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--line);">
+                  <div style="display:flex;flex-direction:column;border:1px solid var(--text);background:var(--bg2);">
+                    <div style="display:flex;align-items:center;gap:8px;padding:0 10px;"><span style="color:var(--accent);font:700 13px 'Cascadia Mono',Consolas,monospace;">+</span><input value="{{ tagQuery }}" onChange="{{ onQuery }}" onKeyDown="{{ onQueryKey }}" placeholder="tag it — type:name works" style="flex:1;height:36px;border:none;background:none;color:var(--text);font:13px 'Cascadia Mono',Consolas,monospace;outline:none;"></div>
+                    <sc-if value="{{ showSugg }}" hint-placeholder-val="{{ true }}">
+                      <div style="border-top:1px solid var(--line);display:flex;flex-direction:column;">
+                        <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="4">
+                          <div onClick="{{ s.onPick }}" style="display:flex;align-items:center;gap:8px;padding:0 10px 0 0;height:30px;cursor:pointer;font-size:12.5px;border-bottom:1px solid color-mix(in oklab,var(--line) 60%,transparent);" style-hover="background:var(--surface2);">
+                            <span style="width:4px;align-self:stretch;background:{{ s.color }};"></span>
+                            <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><sc-if value="{{ s.hasAlias }}"><span style="color:var(--text2);font-family:'Cascadia Mono',Consolas,monospace;">{{ s.alias }} ⇒ </span></sc-if>{{ s.label }}</span>
+                            <sc-if value="{{ s.onImage }}"><span style="font:10px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">ON IT</span></sc-if>
+                            <span style="font:10px 'Cascadia Mono',Consolas,monospace;padding:2px 5px;background:{{ s.color }};color:{{ s.ink }};text-transform:uppercase;">{{ s.typeLabel }}</span>
+                            <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);min-width:42px;text-align:right;">{{ s.count }}</span>
+                          </div>
+                        </sc-for>
+                        <sc-if value="{{ showCreate }}" hint-placeholder-val="{{ true }}">
+                          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;font:12px 'Cascadia Mono',Consolas,monospace;">
+                            <span style="color:var(--accent);">NEW:</span>
+                            <button onClick="{{ doCreate }}" style="background:none;border:none;padding:0;color:var(--text);font:inherit;cursor:pointer;text-decoration:underline;">create “{{ createName }}” as</button>
+                            <button onClick="{{ cycleCreateType }}" style="height:22px;padding:0 8px;border:none;background:{{ createColor }};color:{{ createInk }};font:inherit;font-weight:700;text-transform:uppercase;cursor:pointer;">{{ createType }} ▾</button>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <sc-for list="{{ vGroups }}" as="g" hint-placeholder-count="4">
+                    <sc-if value="{{ g.has }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:grid;grid-template-columns:78px 1fr;gap:10px;">
+                        <span style="font:700 13px/22px 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;border-top:3px solid {{ g.color }};">{{ g.label }}</span>
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                          <sc-for list="{{ g.tags }}" as="t" hint-placeholder-count="5">
+                            <sc-if value="{{ t.own }}" hint-placeholder-val="{{ true }}"><span onClick="{{ t.onClick }}" onContextMenu="{{ t.onCtx }}" onMouseEnter="{{ t.onEnter }}" onMouseLeave="{{ tipOff }}" style="padding:3px 8px;background:{{ t.color }};color:{{ t.ink }};font-size:12.5px;cursor:pointer;overflow-wrap:anywhere;" style-hover="outline:2px solid var(--text);">{{ t.label }}</span></sc-if>
+                            <sc-if value="{{ t.implied }}"><span onMouseEnter="{{ t.onEnter }}" onMouseLeave="{{ tipOff }}" style="display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid {{ t.color }};background:repeating-linear-gradient(135deg, color-mix(in oklab,{{ t.color }} 22%,transparent) 0 4px, transparent 4px 8px);color:var(--text);font-size:12.5px;cursor:default;"><svg width="9" height="10" viewBox="0 0 10 11"><rect x="1" y="5" width="8" height="6" fill="currentColor"></rect><rect x="2.6" y="1" width="4.8" height="6" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.4"></rect></svg>{{ t.label }}</span></sc-if>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div onClick="{{ togColl }}" style="display:flex;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line);cursor:pointer;font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">03 · Collections<span style="margin-left:auto;font-family:'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ pCollArrow }}</span></div>
+              <sc-if value="{{ pColl }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:12px 20px 28px;display:flex;flex-direction:column;">
+                  <sc-for list="{{ vColls }}" as="k" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);background:{{ k.bg }};color:{{ k.color }};font-size:13px;cursor:pointer;"><span style="flex:1;">{{ k.name }}</span><span style="font:11px 'Cascadia Mono',Consolas,monospace;">{{ k.pos }}</span></div>
+                  </sc-for>
+                  <button onClick="{{ addColl }}" style="margin-top:10px;height:34px;border:1px dashed var(--text2);background:none;color:var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">+ Add to another collection</button>
+                </div>
+              </sc-if>
+            </aside>
+          </sc-if>
+        </div>
+        <sc-if value="{{ ctxViewer }}">
+          <div style="position:absolute;left:{{ ctxViewer.left }};top:{{ ctxViewer.top }};z-index:70;width:240px;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+            <span style="padding:7px 12px;background:var(--text);color:var(--bg);font:700 14px/1.1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.04em;">{{ ctxViewer.title }}</span>
+            <sc-for list="{{ ctxViewer.items }}" as="m" hint-placeholder-count="5">
+              <button onClick="{{ m.onClick }}" style="display:flex;align-items:center;height:28px;padding:0 12px;border:none;border-top:{{ m.border }};background:none;color:{{ m.color }};font:inherit;text-align:left;cursor:pointer;" style-hover="background:var(--surface2);">{{ m.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tipViewer }}">
+          <div style="position:absolute;left:{{ tipViewer.left }};top:{{ tipViewer.top }};width:280px;z-index:60;pointer-events:none;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;">
+            <span style="padding:5px 12px;background:{{ tipViewer.color }};color:{{ tipViewer.ink }};font:700 13px/1.2 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">{{ tipViewer.typeLabel }}</span>
+            <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;overflow-wrap:anywhere;">{{ tipViewer.title }}</span>
+              <span style="font-size:13px;line-height:1.45;text-wrap:pretty;">{{ tipViewer.desc }}</span>
+              <span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ tipViewer.meta }}</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toastViewer }}">
+          <div style="position:absolute;left:24px;bottom:124px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastViewer }}</div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;defaultCols&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:2,&quot;max&quot;:10,&quot;step&quot;:1,&quot;default&quot;:6,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Album&quot;},&quot;viewerContext&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Collection&quot;,&quot;Album&quot;],&quot;default&quot;:&quot;Collection&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Viewer&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#ff4b2b&quot;,&quot;#f2e34b&quot;,&quot;#58a6ff&quot;,&quot;#2E9E5B&quot;],&quot;default&quot;:&quot;#ff4b2b&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Look&quot;}}">
+class Component extends DCLogic {
+  static D = (() => {
+    const T = { character: { label: 'Character', color: '#2E9E5B' }, source: { label: 'Source', color: '#B0487A' }, artist: { label: 'Artist', color: '#D08A1E' }, general: { label: 'General', color: '#6B7A99' } };
+    const ORDER = ['character', 'source', 'artist', 'general'];
+    const ink = hex => { const n = parseInt(hex.slice(1), 16); const L = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }; return (0.2126 * L((n >> 16) & 255) + 0.7152 * L((n >> 8) & 255) + 0.0722 * L(n & 255)) > 0.179 ? '#000000' : '#FFFFFF'; };
+    const RAW = {
+      character: 'aerin_valecrest lathir maelis_of_the_thornwood_court ysolde corin_ashgrove the_pale_archivist fennick saoirse_dunmore odrin vael nimue_(winter_form) tamsin_reed kaelen silas_wren brannoch idrel sera_moonwhistle quill',
+      source: 'the_ilvenmar_cycle chapter_3_the_long_road_south original_character the_lord_of_the_rings ashes_of_varn_(webcomic) thornwood_tales commissions_2025 dnd_campaign_saltmarsh oneshots',
+      artist: 'felipe mirelle_k ohno_tatsu gr4yhound lumen_studio petra_vasquez jun_ah silverpoint_sam ink_and_ivy w.o.l.f unknown_artist',
+      general: 'silver_hair long_hair pointy_ears full_body turnaround expression_sheet standing three-quarter_view portrait armor cape circlet silk_embroidered_robe sketch lineart flat_colors painterly monochrome blue_eyes green_eyes smiling serious side_view back_view hands_reference holding_staff holding_bow night forest_background white_background simple_background jewelry braid freckles scar_across_left_eye_from_the_siege_of_varn animated wip color_palette height_chart multiple_views dramatic_lighting',
+    };
+    const DESC = {
+      aerin_valecrest: 'Heir to the silver court of Ilvenmar. Never smiles in canon; constantly smiles in fanart.',
+      lathir: "Aerin's sworn blade. Left-handed — check the hands before you tag.",
+      the_ilvenmar_cycle: 'The main story. Every court character implies this one.',
+      chapter_3_the_long_road_south: 'Chapter 3 of the Ilvenmar Cycle. The one with the rain.',
+      original_character: 'Mine, all mine. Characters I made up rather than borrowed.',
+      the_lord_of_the_rings: 'Also known as lotr. You know the one.',
+      sketch: 'Rough, unfinished, gloriously messy. Exclude it when you want to look competent.',
+      wip: 'Work in progress. Some of these have been "in progress" since 2022.',
+      armor: 'Plate, leather, scale — anything that would hurt to be hit by.',
+      cape: 'Capes, cloaks, mantles. If it billows, it counts.',
+      felipe: "That's you. Hi.", mirelle_k: 'Commissioned artist. Paid in full, credited always.',
+      silver_hair: 'Silver, white, platinum. Aliases: white_hair, platinum_hair.',
+      scar_across_left_eye_from_the_siege_of_varn: 'Yes, the full name. No, we are not shortening it.',
+    };
+    const ALIASES = { lotr: 'the_lord_of_the_rings', aerin: 'aerin_valecrest', white_hair: 'silver_hair', greyhound: 'gr4yhound', silvermane: 'odrin', platinum_hair: 'silver_hair' };
+    const IMPLIED = { the_ilvenmar_cycle: 'aerin_valecrest', original_character: 'aerin_valecrest' };
+    const TAGS = [];
+    ORDER.forEach(type => RAW[type].split(' ').forEach((name, i) => {
+      const base = { character: 460, source: 900, artist: 380, general: 820 }[type];
+      const count = Math.max(1, Math.round(base * Math.pow(0.8, i) + ((i * 37) % 23)));
+      TAGS.push({ name, type, color: T[type].color, ink: ink(T[type].color), count, total: count * 9 + ((i * 131) % 400), desc: DESC[name] || `${T[type].label} tag — no wiki text yet. Ctrl+click to write its page.` });
+    }));
+    const TAG = Object.fromEntries(TAGS.map(t => [t.name, t]));
+    const FILES = [
+      ['aerin_valecrest__court_regalia_turnaround_FINAL_v3 (1).png', 2/3, 'png'], ['aerin_expressions_sheet_A_happy-sad-furious-smug.png', 16/9, 'png'], ['lathir_bust_wip.jpg', 4/5, 'jpg'],
+      ['IMG_20250614_183302_ref_lighting.jpg', 3/2, 'jpg'], ['maelis_thornwood_court_dress__back_detail.png', 2/3, 'png'], ['circlet_design_variants_x12.png', 21/9, 'png'],
+      ['blink_loop_aerin.gif', 1, 'gif'], ['icon_crest_ilvenmar_64px.png', 1, 'png', 'tiny'], ['ysolde_full_body_lineart_clean.png', 1/2.4, 'png'],
+      ['pose_ref_kneeling_with_staff (from sketchbook p.43).jpg', 3/4, 'jpg'], ['hands_reference_sheet__holding_bow_and_quill.png', 4/3, 'png'], ['corin_ashgrove_height_chart_vs_the_whole_party.png', 32/9, 'png'],
+      ['palette_court_night_scene.png', 5, 'png'], ['the_pale_archivist__concept_03.jpg', 2/3, 'jpg'], ['scan_0042.jpg', 8.5/11, 'jpg'],
+      ['aerin_cape_flow_animation_test.gif', 4/3, 'gif'], ['commission_mirelle_k_aerin_and_lathir_final_signed.png', 3/4, 'png'], ['Screenshot 2025-11-02 031407.png', 16/10, 'png'],
+      ['silas_wren_mugshot_frontal.png', 1, 'png'], ['ear_shapes_by_bloodline.png', 3/2, 'png'], ['nimue_winter_form_v2_(do_not_use_v1).png', 2/3, 'png'],
+      ['map_detail_court_district.jpg', 1, 'jpg'], ['fennick_sticker.webp', 1, 'webp', 'tiny'], ['throne_room_establishing_shot_4k.jpg', 16/9, 'jpg'],
+      ['tamsin_reed_face_closeup_freckles.avif', 4/5, 'avif'], ['embroidery_pattern_tile.svg', 1, 'svg', 'tiny'], ['kaelen__armor_breakdown_layers_01-07.png', 9/16, 'png'],
+      ['ref_dramatic_rimlight_moodboard.jpg', 3/2, 'jpg'], ['brannoch_profile_left.png', 3/4, 'png'], ['idrel_and_sera_moonwhistle_duo_pose.png', 4/3, 'png'],
+      ['vael_idle_breathing.gif', 2/3, 'gif'], ['quill_tiny_doodle_margin.png', 1, 'png', 'tiny'], ['saoirse_dunmore_travel_outfit_ch3.jfif', 3/4, 'jfif'],
+      ['odrin_old_master_portrait_oil_ref.jpg', 4/5, 'jpg'], ['court_banner_long_strip.png', 1/4, 'png'], ['untitled-1-final-final.png', 1, 'png'],
+    ];
+    const fill = (h, l = 0.44) => `repeating-linear-gradient(135deg, oklch(${l} 0.07 ${h}) 0 7px, oklch(${l - 0.04} 0.07 ${h}) 7px 14px)`;
+    const hueOf = i => (i * 47 + 20) % 360;
+    const ratioLabel = ar => { const m = [[2/3,'2:3'],[16/9,'16:9'],[4/5,'4:5'],[3/2,'3:2'],[21/9,'21:9'],[1,'1:1'],[3/4,'3:4'],[4/3,'4:3'],[32/9,'32:9'],[5,'5:1'],[16/10,'16:10'],[9/16,'9:16'],[1/4,'1:4'],[1/2.4,'5:12'],[8.5/11,'letter']].find(([v]) => Math.abs(v - ar) < 0.01); return m ? m[1] : ar.toFixed(2); };
+    const VIEW_TAGS = ['aerin_valecrest', 'lathir', 'the_ilvenmar_cycle', 'chapter_3_the_long_road_south', 'original_character', 'felipe', 'mirelle_k', 'silver_hair', 'long_hair', 'pointy_ears', 'full_body', 'turnaround', 'multiple_views', 'standing', 'armor', 'cape', 'circlet', 'silk_embroidered_robe', 'jewelry', 'braid', 'blue_eyes', 'serious', 'white_background', 'flat_colors', 'scar_across_left_eye_from_the_siege_of_varn'];
+    const CATS = [['Fantasy', 8412, '4 drawers · 6 albums'], ['Photography', 12903, '6 drawers · 48 albums'], ['Character Design Sheets', 3211, '2 drawers · 19 albums'], ['Anatomy & Pose Reference', 5126, '9 albums'], ['Concept Art — Environments', 4310, '3 drawers · 14 albums'], ['Sci-Fi & Mecha Reference', 2780, '1 drawer · 7 albums'], ['Wallpapers (the good ones)', 1904, '4 albums'], ['Comics — Ashes of Varn pages', 642, '12 albums'], ['Reaction Images', 977, '1 album'], ['Untitled rack', 0, '']];
+    const DRAWERS = [['Elves', 3140, '2 drawers · 3 albums'], ['Dragons & Wyrms', 1288, '4 albums'], ['Dwarven Holds', 904, '1 drawer · 2 albums'], ['Fae Courts', 0, 'empty']];
+    const ALBUMS = [['Maps', 412], ['Heraldry & Crests', 96], ['Moodboards', 230], ['Battle Scenes', 1160], ['Creature Studies', 318], ['Taverns (someday)', 0]];
+    return { T, ORDER, ink, ALIASES, IMPLIED, TAGS, TAG, FILES, fill, hueOf, ratioLabel, VIEW_TAGS, CATS, DRAWERS, ALBUMS,
+      FAV: [0, 4, 6, 13, 16, 20, 23, 29, 33], CH3: [0, 4, 2, 9, 10, 13, 16, 20, 24, 26, 28, 29], COURT: [0, 5, 1, 4, 15, 26],
+      INBOX: Array.from({ length: 36 }, (_, i) => (i * 11 + 5) % 36) };
+  })();
+
+  root = React.createRef();
+  stageRef = React.createRef();
+  state = {
+    tip: null, ctx: null, toast: null,
+    libDrop: false, inboxDrop: false, fDropPage: false, fDropCard: null, albumDrop: false,
+    mode: 'album', side: { aerin_valecrest: 'inc', sketch: 'exc', wip: 'exc', armor: 'any', cape: 'any' }, sideFilter: '',
+    sel: { 2: 1, 3: 1, 9: 1, 10: 1 }, last: null, cols: null, sort: 2, asc: false, fav: false, group: false, rev: {}, nameQ: '',
+    favs: null, vCtx: null, vpos: 3, z: 1, px: 0, py: 0, dragging: false, show: false, interval: 5, prog: 0, full: false, panels: true,
+    pInfo: true, pTags: true, pColl: true, q: 'sil', vAdded: [], ctype: 0, coverMenu: false,
+  };
+
+  componentDidMount() {
+    this.onKey = e => this.handleKey(e);
+    window.addEventListener('keydown', this.onKey);
+    this.bindWheel(); this.applyAccent();
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); }
+  componentDidUpdate(pp) {
+    this.bindWheel();
+    if (pp.accent !== this.props.accent) this.applyAccent();
+    if (this.state.show && !this.timer) this.timer = setInterval(() => this.tick(), 100);
+    if (!this.state.show && this.timer) { clearInterval(this.timer); this.timer = null; }
+  }
+  applyAccent() { const el = this.root.current; if (el && this.props.accent) el.style.setProperty('--accent', this.props.accent); }
+  bindWheel() {
+    const el = this.stageRef.current; if (!el || el === this._wheelEl) return;
+    this._wheelEl = el;
+    el.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); const f = e.deltaY < 0 ? 1.15 : 1 / 1.15; this.setZoom(this.state.z * f); }, { passive: false });
+  }
+  setZoom(z) { z = Math.min(10, Math.max(0.1, Math.round(z * 100) / 100)); this.setState(z <= 1 ? { z, px: 0, py: 0 } : { z }); }
+  tick() { const s = this.state; const p = s.prog + 0.1 / s.interval; if (p >= 1) this.step(1, { prog: 0 }); else this.setState({ prog: p }); }
+  vList() { const D = Component.D; return this.vCtx() === 'collection' ? D.CH3 : D.FILES.map((_, i) => i); }
+  vCtx() { return this.state.vCtx || (this.props.viewerContext === 'Album' ? 'album' : 'collection'); }
+  step(d, extra) { const n = this.vList().length; let p = this.state.vpos + d; if (p < 1) p = n; if (p > n) p = 1; this.setState({ vpos: p, z: 1, px: 0, py: 0, coverMenu: false, ...(extra || {}) }); }
+  random() { const n = this.vList().length; let p; do { p = 1 + Math.floor(Math.random() * n); } while (p === this.state.vpos && n > 1); this.setState({ vpos: p, z: 1, px: 0, py: 0 }); this.toast('viewer', `Random frame → ${p}. Never the same one twice in a row.`); }
+  handleKey(e) {
+    const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA')) return;
+    const k = e.key, s = this.state;
+    const map = {
+      ArrowLeft: () => this.step(-1), ArrowRight: () => this.step(1), '+': () => this.setZoom(s.z * 1.25), '=': () => this.setZoom(s.z * 1.25), '-': () => this.setZoom(s.z / 1.25),
+      '0': () => this.setState({ z: 1, px: 0, py: 0 }), f: () => this.setState({ full: !s.full }), F: () => this.setState({ full: !s.full }),
+      r: () => this.random(), R: () => this.random(), s: () => this.setState({ show: !s.show, prog: 0 }), S: () => this.setState({ show: !s.show, prog: 0 }),
+      Escape: () => this.setState({ full: false, show: false, ctx: null, coverMenu: false }), Backspace: () => this.toast('viewer', '← Back to the page you came from.'), F1: () => this.toast('viewer', 'Help · This page / Shortcuts / Formats / About'),
+    };
+    if (map[k]) { e.preventDefault(); map[k](); }
+  }
+  toast(board, text) { this.setState({ toast: { board, text } }); clearTimeout(this._tt); this._tt = setTimeout(() => this.setState({ toast: null }), 3000); }
+  pos(e) {
+    const art = e.currentTarget.closest('[data-art]'); const r = art.getBoundingClientRect(); const sc = r.width / art.offsetWidth;
+    const er = e.currentTarget.getBoundingClientRect();
+    return { board: art.dataset.art, x: (er.left - r.left) / sc, y: (er.top - r.top) / sc, w: er.width / sc, h: er.height / sc, cx: (e.clientX - r.left) / sc, cy: (e.clientY - r.top) / sc };
+  }
+  openCtx(e, title, labels) {
+    e.preventDefault(); e.stopPropagation();
+    const p = this.pos(e);
+    this.setState({ tip: null, ctx: { board: p.board, x: Math.min(p.cx, 1440 - 250), y: Math.min(p.cy, 900 - 40 - labels.length * 30), title, labels } });
+  }
+
+  renderVals() {
+    const D = Component.D, st = this.state, set = p => this.setState(p);
+    const fmt = n => n.toLocaleString('en-US'), disp = s => s.replace(/_/g, ' ');
+    const toast = (b, t) => this.toast(b, t);
+    const tipOff = () => st.tip && set({ tip: null });
+    const tipOn = (place, data) => e => { const p = this.pos(e); set({ tip: { place, ...p, ...data } }); };
+    const tipFor = b => { const t = st.tip; if (!t || t.board !== b) return null;
+      const left = t.place === 'below' ? Math.max(8, Math.min(t.x + t.w - 280, 1440 - 290)) : Math.max(8, t.x - 292);
+      const top = t.place === 'below' ? t.y + t.h + 10 : Math.min(t.y - 6, 900 - 180);
+      return { ...t, left: left + 'px', top: top + 'px' }; };
+    const ctxFor = b => { const c = st.ctx; if (!c || c.board !== b) return null;
+      return { left: c.x + 'px', top: c.y + 'px', title: c.title, items: c.labels.map((l, i) => {
+        const sep = l.startsWith('—'); const lab = sep ? l.slice(1) : l; const danger = /recycle/i.test(lab);
+        return { key: i, label: lab, border: sep ? '1px solid var(--line)' : 'none', color: danger ? 'var(--red)' : 'var(--text)',
+          onClick: ev => { ev.stopPropagation(); set({ ctx: null }); toast(b, `${lab.replace(' ▸', '')} · ${c.title}`); } }; }) }; };
+    const tst = b => st.toast && st.toast.board === b ? st.toast.text : '';
+    const healthEnter = tipOn('below', { title: '37 things want you', typeLabel: 'Library Health', color: 'var(--red)', ink: '#fff', desc: "3 are missing (we're worried), 21 need a decision, 13 are just gossip.", meta: 'Red = something is missing' });
+    const dnd = (k, board, msg, val) => ({
+      over: e => { e.preventDefault(); e.stopPropagation(); if (st[k] !== (val ?? true)) set({ [k]: val ?? true }); },
+      leave: e => { if (!e.currentTarget.contains(e.relatedTarget)) set({ [k]: val !== undefined ? null : false }); },
+      drop: e => { e.preventDefault(); e.stopPropagation(); const n = (e.dataTransfer && e.dataTransfer.files.length) || 1; set({ [k]: val !== undefined ? null : false }); toast(board, msg(n)); },
+    });
+    const pl = n => `${n} file${n > 1 ? 's' : ''}`;
+
+    // ---- library
+    const cats = D.CATS.map(([name, count, meta], i) => ({ key: name, name, count: fmt(count), meta, empty: count === 0, full: count > 0, num: String(i + 1).padStart(2, '0'), fill: D.fill(D.hueOf(i * 3 + 1), 0.46),
+      onClick: () => toast('lib', i === 0 ? 'Opening rack “Fantasy” → see board 02' : `Opening rack “${name}”`),
+      onCtx: e => this.openCtx(e, name, ['Open', 'Rename', 'Set cover…', 'Edit description', '—Recycle']) }));
+    const dL = dnd('libDrop', 'lib', n => `${pl(n)} tossed in the Inbox. It's getting crowded in there.`);
+    const dI = dnd('inboxDrop', 'lib', n => `${pl(n)} landed in the tray. Sort them. Eventually.`);
+
+    // ---- folder
+    const drawers = D.DRAWERS.map(([name, count, inner], i) => ({ key: name, name, count: fmt(count), inner, empty: count === 0, full: count > 0,
+      f1: D.fill(D.hueOf(i * 5 + 2), 0.46), f2: D.fill(D.hueOf(i * 5 + 3), 0.4), f3: D.fill(D.hueOf(i * 5 + 7), 0.36),
+      onClick: () => toast('folder', `Opening drawer “${name}”`), onCtx: e => this.openCtx(e, name, ['Open', 'Rename', 'Move…', 'Set cover…', 'Edit description', '—Recycle']) }));
+    const albums = D.ALBUMS.map(([name, count], i) => { const d = dnd('fDropCard', 'folder', n => `${pl(n)} copied into album “${name}”.`, name);
+      return { key: name, name, count: fmt(count), empty: count === 0, full: count > 0, fill: D.fill(D.hueOf(i * 7 + 4), 0.45), isDrop: st.fDropCard === name,
+        onOver: d.over, onLeave: d.leave, onDrop: d.drop, onClick: () => toast('folder', `Opening album “${name}” → see board 03`),
+        onCtx: e => this.openCtx(e, name, ['Open', 'Add images…', 'Rename', 'Move…', 'Set cover…', 'Edit description', '—Recycle']) }; });
+    const dF = dnd('fDropPage', 'folder', n => `${pl(n)} sent to the Inbox — racks don't hold loose prints.`);
+
+    // ---- album
+    const inbox = st.mode === 'inbox';
+    const favs = st.favs || Object.fromEntries(D.FAV.map(i => [i, 1]));
+    const sf = st.sideFilter.toLowerCase();
+    const sideGroups = D.ORDER.map(type => {
+      const tags = D.TAGS.filter(t => t.type === type && (!sf || t.name.includes(sf))).map(t => {
+        const s = st.side[t.name] || 'off';
+        return { key: t.name, label: disp(t.name), cnt: fmt(t.count), isInc: s === 'inc', isExc: s === 'exc', isAny: s === 'any', isOff: s === 'off',
+          bg: { inc: `color-mix(in oklab, ${t.color} 30%, transparent)`, any: 'color-mix(in oklab, var(--blue) 12%, transparent)' }[s] || 'transparent',
+          deco: s === 'exc' ? 'line-through' : 'none', op: s === 'exc' ? '0.6' : '1',
+          onEnter: tipOn('left', { title: disp(t.name), typeLabel: D.T[type].label, color: t.color, ink: t.ink, desc: t.desc, meta: `${fmt(t.count)} here · ${fmt(t.total)} in library` }),
+          onClick: e => { const cur = st.side[t.name] || 'off'; const nx = (e.ctrlKey || e.metaKey) ? (cur === 'any' ? 'off' : 'any') : ({ off: 'inc', inc: 'exc', exc: 'off', any: 'off' })[cur];
+            const side = { ...st.side }; if (nx === 'off') delete side[t.name]; else side[t.name] = nx; set({ side }); },
+          onCtx: e => this.openCtx(e, disp(t.name), ['Open wiki page', 'Show all images', 'Edit tag', 'Copy name']) };
+      });
+      return { key: type, label: D.T[type].label, color: D.T[type].color, ink: D.ink(D.T[type].color), n: tags.length, tags, has: tags.length > 0 };
+    });
+    const sideList = Object.entries(st.side);
+    const tok = s => sideList.filter(([, v]) => v === s).map(([n]) => { const t = D.TAG[n]; return { key: s + n, pre: { inc: '#', exc: '-#', any: '~#' }[s], typ: t.type === 'general' ? '' : t.type + ':', name: n, color: t.color, preColor: { inc: 'var(--text2)', exc: 'var(--red)', any: 'var(--blue)' }[s] }; });
+    const nInc = sideList.filter(([, v]) => v === 'inc').length, nExc = sideList.filter(([, v]) => v === 'exc').length, nAny = sideList.filter(([, v]) => v === 'any').length;
+    const total = inbox ? 214 : 1248;
+    const match = sideList.length ? Math.max(3, Math.round(total * Math.pow(0.42, nInc) * Math.pow(0.86, nExc) * (nAny ? 0.64 : 1))) : total;
+    const cols = st.cols || Math.min(10, Math.max(2, this.props.defaultCols || 6));
+    const base = inbox ? D.INBOX : D.FILES.map((_, i) => i);
+    const sorters = [
+      (a, b) => D.FILES[a][0].localeCompare(D.FILES[b][0]), (a, b) => ((a * 13) % 36) - ((b * 13) % 36), (a, b) => base.indexOf(a) - base.indexOf(b),
+      (a, b) => D.FILES[b][1] - D.FILES[a][1], (a, b) => ((a * 7919) % 37) - ((b * 7919) % 37)];
+    let ids = base.slice().sort(sorters[st.sort]); if (st.asc) ids.reverse();
+    const nq = st.nameQ.trim().toLowerCase();
+    const keep = i => (!st.fav || favs[i]) && (!nq || D.FILES[i][0].toLowerCase().includes(nq));
+    ids = ids.filter(keep);
+    const flat = [];
+    const mk = (i, key) => {
+      const [name, ar, ext, tiny] = D.FILES[i]; const sel = !!st.sel[i]; flat.push(i);
+      const toggle = e => { e.stopPropagation(); const s = { ...st.sel }; if (s[i]) delete s[i]; else s[i] = 1; set({ sel: s, last: i }); };
+      return { key, name, ar: ar.toFixed(4), iar: (1 / ar).toFixed(4), tiny: !!tiny, big: !tiny, gif: ext === 'gif', fill: D.fill(D.hueOf(i)), fav: !!favs[i], sel, unsel: !sel, frame: (i + 1) + 'A',
+        onToggle: toggle,
+        onClick: e => {
+          if (e.shiftKey && st.last != null) { const a = flat.indexOf(st.last), b = flat.indexOf(i); if (a > -1 && b > -1) { const s = { ...st.sel }; flat.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(x => s[x] = 1); set({ sel: s, last: i }); return; } }
+          if (e.ctrlKey || e.metaKey || Object.keys(st.sel).length) { toggle(e); return; }
+          set({ vCtx: 'album', vpos: i + 1, z: 1, px: 0, py: 0 }); toast('album', `Opened ${i + 1}A in the viewer → board 04`);
+        },
+        onCtx: e => this.openCtx(e, name, ['Open', 'Open with…', 'Rename', 'Move…', 'Copy…', 'Add to collection ▸', favs[i] ? 'Unfavorite' : '★ Favorite', 'Set as cover of ▸', '—Recycle']) };
+    };
+    const groups = st.group
+      ? [{ title: 'Chapter 3 refs', meta: '12 images · collection order', list: D.CH3, id: 'ch3' }, { title: 'Court outfits — final pass', meta: '6 images · collection order', list: D.COURT, id: 'court' },
+         { title: 'Not in a collection', meta: 'the loners', list: ids.filter(i => !D.CH3.includes(i) && !D.COURT.includes(i)), id: 'none' }]
+        .map(g => { let l = g.list.filter(keep); if (st.rev[g.id]) l = l.slice().reverse();
+          return { key: g.id, title: g.title, meta: g.meta, show: true, canReverse: g.id !== 'none', onReverse: () => set({ rev: { ...st.rev, [g.id]: !st.rev[g.id] } }), items: l.map(i => mk(i, g.id + i)) }; })
+        .filter(g => g.items.length)
+      : [{ key: 'all', show: false, items: ids.map(i => mk(i, 'a' + i)) }];
+    const selCount = Object.keys(st.sel).length;
+    const SORTS = ['Name', 'Date modified', 'Date added', 'File size', 'Random'];
+    const bulk = (inbox ? ['Move to album →', 'Tag', '+ Collection', 'Copy', 'Rename', '★ Star', 'Recycle'] : ['Tag', '+ Collection', 'Move', 'Copy', 'Rename', '★ Star', 'Recycle'])
+      .map((l, i) => ({ key: l, label: l, bg: l === 'Recycle' ? '#111' : (inbox && i === 0 ? 'var(--accent)' : 'transparent'), color: l === 'Recycle' ? 'var(--accent2)' : '#111',
+        onClick: () => toast('album', l === 'Recycle' && Object.keys(st.sel).some(k => favs[k]) ? 'Starred frames are protected — unstar them first.' : `${l.replace(' →', '')} · ${selCount} frames`) }));
+    const dA = dnd('albumDrop', 'album', n => `Caught ${pl(n)}. Copied into “${inbox ? 'Inbox' : 'Portraits & Expression Sheets'}”.`);
+    const rows = Math.ceil(ids.length / cols);
+
+    // ---- viewer
+    const vctx = this.vCtx(), list = this.vList(), vpos = Math.min(st.vpos, list.length), cur = list[vpos - 1];
+    const [vName, vAr, vExt, vTiny] = D.FILES[cur];
+    const added = st.vAdded, vNames = [...D.VIEW_TAGS, ...added.map(a => a.name)];
+    const vTagsAll = vNames.map(n => D.TAG[n] || added.find(a => a.name === n));
+    const vGroups = D.ORDER.map(type => {
+      const tags = vTagsAll.filter(t => t.type === type).map(t => ({ key: t.name, label: disp(t.name), color: t.color, ink: t.ink, implied: !!D.IMPLIED[t.name], own: !D.IMPLIED[t.name],
+        onEnter: tipOn('left', { title: disp(t.name), typeLabel: D.T[type].label, color: t.color, ink: t.ink, desc: t.desc, meta: D.IMPLIED[t.name] ? `Implied by character:${D.IMPLIED[t.name]} — can't be removed on its own.` : `${fmt(t.total || 1)} images · Ctrl+click for wiki` }),
+        onClick: e => toast('viewer', (e.ctrlKey || e.metaKey) ? `Opening wiki page · ${disp(t.name)}` : `Showing all images tagged ${disp(t.name)}`),
+        onCtx: e => this.openCtx(e, disp(t.name), ['Open wiki page', 'Show all images', 'Edit tag', 'Copy name', '—Remove from this image']) }));
+      return { key: type, label: D.T[type].label, color: D.T[type].color, tags, has: tags.length > 0 };
+    });
+    const q = st.q.trim().toLowerCase(); let qType = null, qName = q;
+    const pm = q.match(/^(character|source|artist|general):(.*)$/); if (pm) { qType = pm[1]; qName = pm[2]; }
+    const sugg = [];
+    if (qName) {
+      Object.entries(D.ALIASES).forEach(([a, n]) => { if (a.includes(qName)) sugg.push({ t: D.TAG[n], alias: a }); });
+      D.TAGS.forEach(t => { if (t.name.includes(qName) && (!qType || t.type === qType) && !sugg.find(s => s.t === t)) sugg.push({ t, alias: '' }); });
+    }
+    const pick = (name, type) => { if (vNames.includes(name)) { set({ q: '' }); return; }
+      const t = D.TAG[name] || { name, type, color: D.T[type].color, ink: D.ink(D.T[type].color), count: 0, total: 1, desc: 'Brand new. No wiki page yet.' };
+      set({ vAdded: [...added, t], q: '' }); };
+    const suggestions = sugg.slice(0, 6).map(({ t, alias }) => ({ key: t.name + alias, label: disp(t.name), typeLabel: D.T[t.type].label, color: t.color, ink: t.ink, count: fmt(t.total), alias, hasAlias: !!alias, onImage: vNames.includes(t.name), notOn: !vNames.includes(t.name), onPick: () => pick(t.name, t.type) }));
+    const ctype = qType || D.ORDER[[3, 0, 1, 2][st.ctype % 4]];
+    const exact = (qName && D.TAGS.some(t => t.name === qName.replace(/ /g, '_'))) || D.ALIASES[qName];
+    const createName = qName.replace(/ /g, '_');
+    const vFav = !!favs[cur];
+    const pxW = 3840, pxH = Math.round(3840 / vAr);
+    const fit = st.z === 1 && !st.px && !st.py;
+    const win = 13, start = Math.max(0, Math.min(vpos - 1 - 6, list.length - win));
+    const vStrip = list.slice(start, start + win).map((i, k) => { const n = start + k + 1, on = n === vpos;
+      return { key: 'v' + i, n: on ? n + 'A' : n, fill: D.fill(D.hueOf(i)), h: on ? '60px' : '56px', op: on ? '1' : '.5', outline: on ? '3px solid var(--accent)' : 'none', tagBg: on ? 'var(--accent)' : 'transparent', tagInk: on ? 'var(--accent-ink)' : '#ddd', onClick: () => set({ vpos: n, z: 1, px: 0, py: 0 }) }; });
+    const path = vctx === 'album' || true ? ['D:', 'MyLibrary', 'Images', 'Fantasy', 'Elves', 'High Court of Ilvenmar', 'Portraits & Expression Sheets'] : [];
+    const coverTargets = [['Album', 'Portraits & Expression Sheets'], ['Sub-category', 'High Court of Ilvenmar'], ['Sub-category', 'Elves'], ['Category', 'Fantasy'], ...(vctx === 'collection' ? [['Collection', 'Chapter 3 refs']] : []), ['Tag', 'aerin valecrest', D.T.character.color], ['Tag', 'lathir', D.T.character.color]];
+
+    return {
+      root: this.root, stageRef: this.stageRef, tipOff, healthEnter, stop: e => e.stopPropagation(),
+      closeCtx: () => (st.ctx || st.coverMenu) && set({ ctx: null, coverMenu: false }),
+      // library
+      cats, inboxCount: 214, inboxThumbs: [3, 8, 11, 17, 21, 27].map(i => ({ key: 't' + i, fill: D.fill(D.hueOf(i), 0.46) })),
+      libDrop: st.libDrop, inboxDrop: st.inboxDrop, toggleLibDrop: () => set({ libDrop: !st.libDrop, inboxDrop: false }), toggleInboxDrop: () => set({ inboxDrop: !st.inboxDrop, libDrop: false }),
+      libOver: dL.over, libLeave: dL.leave, libDropFn: dL.drop, inboxOver: dI.over, inboxLeave: dI.leave, inboxDropFn: dI.drop,
+      newCategory: () => toast('lib', 'New category → D:\\MyLibrary\\Images\\New rack\\ (type a name)'), addToInbox: () => toast('lib', 'Windows file picker → files will land in the Inbox.'),
+      openInbox: () => { set({ mode: 'inbox', sel: {} }); toast('lib', 'Inbox opened on the album page → board 03'); },
+      ctxLib: ctxFor('lib'), tipLib: tipFor('lib'), toastLib: tst('lib'),
+      // folder
+      drawers, albums, fDropPage: st.fDropPage, fPageOver: dF.over, fPageLeave: dF.leave, fPageDrop: dF.drop,
+      toggleCardDrop: () => set({ fDropCard: st.fDropCard ? null : 'Maps' }),
+      newSub: () => toast('folder', 'New sub-category inside Fantasy (a drawer)'), newAlbum: () => toast('folder', 'New album inside Fantasy'),
+      viewAll: () => toast('folder', 'All 8,412 images under Fantasy, one grid, with the tag index'),
+      ctxFolder: ctxFor('folder'), tipFolder: tipFor('folder'), toastFolder: tst('folder'),
+      // album
+      isAlbum: !inbox, isInbox: inbox,
+      modeTabs: [['album', 'Album'], ['inbox', 'Inbox']].map(([m, l]) => ({ key: m, label: l, bg: st.mode === m ? 'var(--text)' : 'transparent', color: st.mode === m ? 'var(--bg)' : 'var(--text2)', onClick: () => set({ mode: m, sel: {} }) })),
+      searchTokens: [...tok('inc'), ...tok('any'), ...tok('exc')], matchCount: fmt(match), albumTotal: fmt(total),
+      sideGroups, sideFilter: st.sideFilter, onSideFilter: e => set({ sideFilter: e.target.value }), tagTotal: D.TAGS.length,
+      filterCount: sideList.length, hasFilters: sideList.length > 0, clearFilters: () => set({ side: {} }),
+      groups, gridCols: `repeat(${cols}, minmax(0, 1fr))`,
+      colTicks: [2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => ({ key: n, n, bg: n === cols ? 'var(--accent)' : 'transparent', color: n === cols ? 'var(--accent-ink)' : 'var(--text2)', onClick: () => set({ cols: n }) })),
+      sortLabel: SORTS[st.sort], sortArrow: st.asc ? '↑' : '↓', cycleSort: () => set({ sort: (st.sort + 1) % 5 }), flipSort: () => set({ asc: !st.asc }),
+      favBg: st.fav ? 'var(--accent2)' : 'transparent', favColor: st.fav ? '#111' : 'var(--text2)', favLabel: st.fav ? '★ Favorites only' : '☆ Favorites only', toggleFav: () => set({ fav: !st.fav }),
+      groupBg: st.group ? 'var(--text)' : 'transparent', groupColor: st.group ? 'var(--bg)' : 'var(--text2)', toggleGroup: () => set({ group: !st.group }),
+      nameQ: st.nameQ, onNameQ: e => set({ nameQ: e.target.value }),
+      addImages: () => toast('album', `Windows file picker → copies into “${inbox ? 'Inbox' : 'Portraits & Expression Sheets'}”`),
+      showLoading: !st.group && ids.length > 0, skeletons: Array.from({ length: cols }, (_, i) => ({ key: i })), loadingRange: `37–${36 + cols * 4} of ${fmt(total)}`, noResults: ids.length === 0 && !st.group,
+      selCount, hasSel: selCount > 0, bulkActions: bulk, selectAll: () => set({ sel: Object.fromEntries(base.map(i => [i, 1])) }), clearSel: () => set({ sel: {} }),
+      albumDrop: st.albumDrop, toggleAlbumDrop: () => set({ albumDrop: !st.albumDrop }), albumOver: dA.over, albumLeave: dA.leave, albumDropFn: dA.drop,
+      dropPath: inbox ? 'D:\\MyLibrary\\Images\\Inbox\\' : 'D:\\MyLibrary\\Images\\Fantasy\\Elves\\High Court of Ilvenmar\\Portraits & Expression Sheets\\',
+      ctxAlbum: ctxFor('album'), tipAlbum: tipFor('album'), toastAlbum: tst('album'),
+      // viewer
+      vCtxTabs: [['album', 'Album'], ['collection', 'Collection']].map(([m, l]) => ({ key: m, label: l, bg: vctx === m ? 'var(--text)' : 'transparent', color: vctx === m ? 'var(--bg)' : 'var(--text2)', onClick: () => set({ vCtx: m, vpos: 1, z: 1, px: 0, py: 0 }) })),
+      notFull: !st.full, isFull: st.full, panels: st.panels && !st.full, stageBg: st.full ? '#000' : 'var(--bg2)', stageCursor: st.z > 1 ? (st.dragging ? 'grabbing' : 'grab') : 'default',
+      vBackLabel: vctx === 'album' ? 'Portraits & Expression Sheets' : 'Chapter 3 refs', goBack: () => toast('viewer', '← Back to the page you came from (Backspace)'),
+      vPosLabel: `${vpos} / ${list.length}`, vCtxKind: vctx === 'album' ? 'in album' : 'in collection', vCtxName: vctx === 'album' ? 'Portraits & Expression Sheets' : '“Chapter 3 refs”',
+      vW: vTiny ? '64px' : `min(100cqw, calc(100cqh * ${vAr.toFixed(4)}))`, vH: vTiny ? '64px' : `min(100cqh, calc(100cqw * ${(1 / vAr).toFixed(4)}))`,
+      vFill: D.fill(D.hueOf(cur), 0.5), vTransform: `translate(${st.px}px, ${st.py}px) scale(${st.z})`, vTrans: st.dragging ? 'none' : 'transform .18s ease-out',
+      vCaption: `IMAGE · ${D.ratioLabel(vAr)} · ${vExt.toUpperCase()}${vTiny ? ' · natural size' : ''}`,
+      panStart: e => { if (st.z <= 1 || e.button !== 0) return; e.preventDefault(); const sx = e.clientX - st.px, sy = e.clientY - st.py;
+        const mv = ev => this.setState({ px: ev.clientX - sx, py: ev.clientY - sy }); const up = () => { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); this.setState({ dragging: false }); };
+        window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up); set({ dragging: true }); },
+      zoomLabel: fit ? 'Fit' : `${st.z.toFixed(st.z < 1 ? 2 : 1)}×`, zoomIn: () => this.setZoom(st.z * 1.25), zoomOut: () => this.setZoom(st.z / 1.25), zoomReset: () => set({ z: 1, px: 0, py: 0 }),
+      showOn: st.show, showLabel: st.show ? '❚❚ Stop' : '▶ Slideshow', showBg: st.show ? 'var(--accent)' : 'transparent', showColor: st.show ? 'var(--accent-ink)' : 'var(--text)',
+      toggleShow: () => set({ show: !st.show, prog: 0 }), intLabel: st.interval + 's', intDown: () => set({ interval: Math.max(1, st.interval - 1) }), intUp: () => set({ interval: Math.min(30, st.interval + 1) }), progPct: (st.prog * 100).toFixed(1) + '%',
+      vRandom: () => this.random(), fullLabel: st.full ? '⤡ Exit' : '⤢ Full', toggleFull: () => set({ full: !st.full }), panelsLabel: st.panels ? 'Log ⟩' : '⟨ Log', togglePanels: () => set({ panels: !st.panels }),
+      vPrev: () => this.step(-1), vNext: () => this.step(1), vStrip,
+      pInfo: st.pInfo, pTags: st.pTags, pColl: st.pColl, pInfoArrow: st.pInfo ? '−' : '+', pTagsArrow: st.pTags ? '−' : '+', pCollArrow: st.pColl ? '−' : '+',
+      togInfo: () => set({ pInfo: !st.pInfo }), togTags: () => set({ pTags: !st.pTags }), togColl: () => set({ pColl: !st.pColl }),
+      vName, pathParts: path.map((p, i) => ({ key: i, p, notLast: i < path.length - 1 })), vSize: (((cur * 37) % 140) / 10 + 0.4).toFixed(1) + ' MB', vDims: vTiny ? '64 × 64' : `${pxW} × ${pxH}`,
+      vFavLabel: vFav ? '★ Starred' : '☆ Star', vFavBg: vFav ? 'var(--accent2)' : 'transparent', vFavColor: vFav ? '#111' : 'var(--text)', vFavBorder: vFav ? 'none' : '1px solid var(--line)',
+      toggleVFav: () => { const f = { ...favs }; if (f[cur]) delete f[cur]; else f[cur] = 1; set({ favs: f }); },
+      vOpenWith: () => toast('viewer', 'Open with… → choose a program'), vRename: () => toast('viewer', `Rename · ${vName}`), vMove: () => toast('viewer', 'Move to another album…'),
+      vRecycle: () => toast('viewer', vFav ? 'Starred — unstar it before recycling.' : 'Sent to the Recycle Bin. Restore anytime.'),
+      coverMenu: st.coverMenu, coverBg: st.coverMenu ? 'var(--surface2)' : 'transparent', toggleCover: e => { e.stopPropagation(); set({ coverMenu: !st.coverMenu }); },
+      coverItems: coverTargets.map(([kind, name, c]) => ({ key: kind + name, kind, name, kindBg: c || 'var(--surface2)', kindInk: c ? D.ink(c) : 'var(--text2)', onClick: e => { e.stopPropagation(); set({ coverMenu: false }); toast('viewer', `Set as cover of ${kind.toLowerCase()} “${name}”`); } })),
+      vGroups, vTagCount: vNames.length, tagQuery: st.q, onQuery: e => set({ q: e.target.value }), showSugg: !!qName, suggestions,
+      showCreate: !!qName && !exact, createName, createType: D.T[ctype].label, createColor: D.T[ctype].color, createInk: D.ink(D.T[ctype].color),
+      cycleCreateType: () => set({ ctype: st.ctype + 1 }), doCreate: () => pick(createName, ctype),
+      onQueryKey: e => { if (e.key === 'Enter') { if (suggestions[0] && suggestions[0].notOn) suggestions[0].onPick(); else if (qName && !exact) pick(createName, ctype); } },
+      vColls: [{ name: 'Chapter 3 refs', pos: vctx === 'collection' ? `${vpos} / 12 ◀ HERE` : '3 / 12', on: vctx === 'collection' }, { name: 'Court outfits — final pass', pos: '1 / 6' }, { name: 'Wallpaper candidates (maybe)', pos: '17 / 40' }]
+        .map(k => ({ key: k.name, name: k.name, pos: k.pos, bg: k.on ? 'var(--accent)' : 'transparent', color: k.on ? 'var(--accent-ink)' : 'var(--text)' })),
+      addColl: () => toast('viewer', 'Add to collection → pick one or create new'),
+      ctxViewer: ctxFor('viewer'), tipViewer: tipFor('viewer'), toastViewer: tst('viewer'),
+    };
+  }
+}
+</script>
+</body>
+</html>

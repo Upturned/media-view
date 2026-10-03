@@ -4,10 +4,11 @@ import type { DB } from '../db/connection.ts';
 import { hashFile } from '../lib/hash.ts';
 import { log } from '../lib/log.ts';
 import { writeMarker } from '../lib/markers.ts';
-import { baseName, extension, parentPath, toAbsolute, underPrefix } from '../lib/paths.ts';
+import { baseName, extension, parentPath, toAbsolute } from '../lib/paths.ts';
 import { walk, type DiskDir, type DiskFile } from '../lib/walk.ts';
 import { clearIssue, getIssuePayload, IssueSweep, raiseIssue, type IssueKind } from './issues.ts';
 import { ensureInbox, type OpenLibrary } from './library.ts';
+import { rewritePrefix } from './tree.ts';
 
 /**
  * Reconciliation: compare the Images module root with the DB (technical doc §7.2).
@@ -106,11 +107,10 @@ function matchFolders(
   const { db } = lib;
   const libraryId = lib.meta.id;
   const rows = db.prepare(
-    "SELECT id, uuid, parent_id, kind, name, rel_path, missing_since FROM folders WHERE module = 'images'",
+    "SELECT id, uuid, parent_id, kind, name, rel_path, missing_since FROM folders WHERE module = 'images' AND recycled = 0",
   ).all() as FolderRow[];
   const byUuid = new Map(rows.map((r) => [r.uuid, r]));
   const byPath = new Map(rows.map((r) => [key(r.rel_path), r]));
-  const recycled = new Set(db.prepare("SELECT entity_id FROM recycle_items WHERE entity = 'folder'").pluck().all() as number[]);
 
   // What each directory directly contains, for kind inference.
   const childDirs = new Map<string, number>();
@@ -199,7 +199,7 @@ function matchFolders(
   // DB folders not matched by any directory are missing (the Inbox is always recreated instead).
   const seen = new Set([...resolved.values()].map((r) => r.id));
   for (const r of rows) {
-    if (seen.has(r.id) || r.kind === 'inbox' || recycled.has(r.id)) continue;
+    if (seen.has(r.id) || r.kind === 'inbox') continue;
     if (r.missing_since === null) {
       db.prepare('UPDATE folders SET missing_since = ? WHERE id = ?').run(now, r.id);
       result.foldersMissing++;
@@ -233,13 +233,7 @@ function updateKnownFolder(
   if (moved) {
     // Rewrite the paths of everything under the folder, in the DB and in memory.
     const newPrefix = d.relPath;
-    const under = underPrefix('rel_path', oldPath);
-    db.prepare(
-      `UPDATE folders SET rel_path = ? || substr(rel_path, ?) WHERE module = 'images' AND ${under.sql}`,
-    ).run(newPrefix, oldPath.length + 1, ...under.params);
-    db.prepare(
-      `UPDATE files SET rel_path = ? || substr(rel_path, ?) WHERE media_type = 'image' AND ${under.sql}`,
-    ).run(newPrefix, oldPath.length + 1, ...under.params);
+    rewritePrefix(db, oldPath, newPrefix);
     const lowerOld = key(oldPath) + '/';
     for (const other of allRows) {
       if (key(other.rel_path).startsWith(lowerOld)) other.rel_path = newPrefix + other.rel_path.slice(oldPath.length);

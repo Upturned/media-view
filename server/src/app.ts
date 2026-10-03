@@ -7,6 +7,7 @@ import { fileRoutes } from './routes/files.ts';
 import { folderRoutes } from './routes/folders.ts';
 import { libraryRoutes } from './routes/library.ts';
 import { mediaRoutes } from './routes/media.ts';
+import { recycleRoutes } from './routes/recycle.ts';
 import { settingsRoutes } from './routes/settings.ts';
 import { systemRoutes } from './routes/system.ts';
 
@@ -39,6 +40,7 @@ export function createApp(allowedOrigins: Set<string>) {
     .route('/api/library', libraryRoutes)
     .route('/api/folders', folderRoutes)
     .route('/api/files', fileRoutes)
+    .route('/api/recycle', recycleRoutes)
     .route('/api/settings', settingsRoutes)
     .route('/api/system', systemRoutes)
     .route('/api/events', eventRoutes)

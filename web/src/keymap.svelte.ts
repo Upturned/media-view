@@ -47,6 +47,8 @@ function isTyping(target: EventTarget | null): boolean {
 
 window.addEventListener('keydown', (e) => {
   if (e.defaultPrevented) return;
+  // An open dialog handles its own keys (Esc closes it, and nothing else).
+  if (document.querySelector('dialog[open]')) return;
   const pressed = eventKey(e);
   const typing = isTyping(e.target);
   // Latest registration wins, so a page can override a global key.

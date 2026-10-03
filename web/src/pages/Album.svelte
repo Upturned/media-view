@@ -2,10 +2,14 @@
   import type { FolderDetail, InboxSummary } from '@media-view/shared';
   import { ApiError, client, unwrap } from '../api.ts';
   import Breadcrumbs from '../components/Breadcrumbs.svelte';
+  import DropOverlay from '../components/DropOverlay.svelte';
+  import FolderActions from '../components/FolderActions.svelte';
   import ImageBrowser from '../components/ImageBrowser.svelte';
   import { fmt } from '../media.ts';
   import { folderHref, href, navigate, router } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
+  import { drag, importDrop } from '../stores/imports.svelte.ts';
+  import { library } from '../stores/library.svelte.ts';
   import { toast } from '../stores/toasts.svelte.ts';
   import { word } from '../themes/index.ts';
 
@@ -48,10 +52,31 @@
   const isInbox = $derived(folder?.kind === 'inbox');
   const DAY = 24 * 60 * 60 * 1000;
   const oldestDays = $derived(folder?.oldestAddedAt ? Math.max(0, Math.floor((Date.now() - folder.oldestAddedAt) / DAY)) : null);
+  // Images can be added to an album or the Inbox, not to "View all".
+  const addTo = $derived(folder && !all ? { id: folder.id, label: folder.name } : undefined);
+  /** The album and the folders above it: an image here can be the cover of any of them. */
+  const coverTargets = $derived(
+    folder ? [{ id: folder.id, kind: folder.kind, name: folder.name }, ...[...folder.ancestors].reverse()].filter((c) => c.kind !== 'inbox') : [],
+  );
+  const diskPath = $derived(
+    folder && library.info ? `${library.info.path.replace(/[\\/]+$/, '')}\\Images\\${folder.relPath.replaceAll('/', '\\')}\\` : '',
+  );
+
+  function onDragOver(e: DragEvent) {
+    if (addTo && e.dataTransfer?.types.includes('Files')) e.preventDefault();
+  }
+
+  function onDrop(e: DragEvent) {
+    if (!addTo || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    void importDrop(e.dataTransfer, addTo);
+  }
+
   const crumbs = $derived(folder ? [...folder.ancestors, { id: folder.id, kind: folder.kind, name: folder.name }] : []);
 </script>
 
-<div class="album-page">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="album-page" ondragover={onDragOver} ondrop={onDrop}>
   {#if notFound}
     <p class="missing">This folder no longer exists. <a href={href('/images')}>Back to the Library</a></p>
   {:else if folder}
@@ -63,6 +88,9 @@
           {folder.name}
           {#if isInbox}<span class="hint">select · move to an album</span>{/if}
         </h1>
+        {#if !all}
+          <FolderActions folder={{ id: folder.id, name: folder.name, kind: folder.kind, parentId: folder.parentId }} parent={folder.ancestors.at(-1)} />
+        {/if}
         <div class="stats">
           {#if isInbox}
             <div class="stat"><b class="accent">{fmt(folder.imageCount)}</b>waiting</div>
@@ -79,19 +107,25 @@
     {#key `${folder.id}-${all}`}
       <ImageBrowser
         scope={{ folder: folder.id, recursive: all }}
+        where={all ? `all images in ${folder.name}` : folder.name}
+        {coverTargets}
+        {addTo}
         emptyText={isInbox ? 'The Inbox is empty.' : all ? 'No images under here yet.' : 'This album is empty.'}
         ontotal={(n) => (shown = n)}
       />
     {/key}
+    {#if drag.files && addTo}
+      <DropOverlay target={diskPath} headline={'Drop to add\nthem here.'} body="Copied in, originals untouched. Folders are flattened into this album." />
+    {/if}
   {/if}
 </div>
 
 <style>
   /* Fills the window under the top bar; only the grid scrolls. */
-  .album-page { height: calc(100vh - 56px); display: flex; flex-direction: column; }
+  .album-page { position: relative; height: calc(100vh - 56px); display: flex; flex-direction: column; }
 
   .head { padding: 20px 32px 16px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--line); }
-  .row { display: flex; align-items: flex-end; gap: 28px; }
+  .row { display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap; }
   .title { flex: 1; min-width: 0; font-size: clamp(40px, 5vw, 64px); line-height: 0.9; overflow-wrap: anywhere; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 20px; }
   .all { font-size: 0.45em; color: var(--text2); }
   .hint { font: 12px var(--font-mono); letter-spacing: 0; color: var(--text2); }

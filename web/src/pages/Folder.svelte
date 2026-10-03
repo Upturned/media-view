@@ -2,6 +2,9 @@
   import type { FolderCard, FolderDetail, FolderKind } from '@media-view/shared';
   import { ApiError, client, unwrap } from '../api.ts';
   import Breadcrumbs from '../components/Breadcrumbs.svelte';
+  import DescriptionEditor from '../components/DescriptionEditor.svelte';
+  import DropOverlay from '../components/DropOverlay.svelte';
+  import FolderActions from '../components/FolderActions.svelte';
   import FolderCardView from '../components/FolderCardView.svelte';
   import KindIcon from '../components/KindIcon.svelte';
   import NameDialog from '../components/NameDialog.svelte';
@@ -9,7 +12,9 @@
   import { fmt } from '../media.ts';
   import { folderHref, href, navigate, router } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
-  import { toast } from '../stores/toasts.svelte.ts';
+  import { drag, readDrop, startImport } from '../stores/imports.svelte.ts';
+  import { library } from '../stores/library.svelte.ts';
+  import { toast, toastError } from '../stores/toasts.svelte.ts';
   import { isStyled, word } from '../themes/index.ts';
 
   /** A category or sub-category: its sub-categories and albums (user guide §4.3). */
@@ -54,9 +59,55 @@
     const card = await unwrap(client.api.folders.$post({ json: { parentId: folder.id, kind: creating as 'subcategory' | 'album', name } }));
     toast(`Created “${card.name}”.`);
   }
+
+  async function saveDescription(text: string) {
+    if (!folder) return;
+    try {
+      folder = await unwrap(client.api.folders[':id'].$patch({ param: { id: String(folder.id) }, json: { description: text } }));
+    } catch (err) {
+      toastError(err);
+      throw err;
+    }
+  }
+
+  // Racks and drawers don't hold images: loose images dropped here go to the Inbox; a dropped
+  // folder becomes an album here, with its images (decision for milestone 3).
+  function onDragOver(e: DragEvent) {
+    if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+  }
+
+  async function onDrop(e: DragEvent) {
+    if (!folder || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    const here = folder;
+    const { files, folders } = await readDrop(e.dataTransfer);
+    if (files.length) startImport({ id: null, label: 'Inbox' }, files);
+    for (const dropped of folders) {
+      try {
+        const album = await createAlbum(here.id, dropped.name);
+        startImport({ id: album.id, label: album.name }, dropped.files);
+      } catch (err) {
+        toastError(err);
+      }
+    }
+  }
+
+  /** An album named after a dropped folder; "Name (1)" if the name is taken. */
+  async function createAlbum(parentId: number, name: string) {
+    for (let n = 0; ; n++) {
+      try {
+        return await unwrap(client.api.folders.$post({ json: { parentId, kind: 'album', name: n ? `${name} (${n})` : name } }));
+      } catch (err) {
+        if (!(err instanceof ApiError && err.code === 'NAME_TAKEN') || n > 50) throw err;
+      }
+    }
+  }
+
+  const diskPath = $derived(library.info ? `${library.info.path.replace(/[\\/]+$/, '')}\\Images\\Inbox\\` : '');
 </script>
 
-<div class="page">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="page" ondragover={onDragOver} ondrop={onDrop}>
   {#if notFound}
     <p class="missing">This folder no longer exists. <a href={href('/images')}>Back to the Library</a></p>
   {:else if folder}
@@ -69,7 +120,7 @@
       <div class="info">
         <span class="kind"><KindIcon kind={folder.kind} size={13} />{kindWord}{isStyled(folder.kind === 'category' ? 'category' : 'subcategory') ? ` · ${folder.kind === 'category' ? 'category' : 'sub-category'}` : ''}</span>
         <h1 class="display title">{folder.name}</h1>
-        {#if folder.description}<p class="desc">{folder.description}</p>{/if}
+        <DescriptionEditor text={folder.description} prompt="What lives in this {kindWord.toLowerCase()}?" onsave={saveDescription} />
         <div class="stats">
           <div class="stat"><b>{fmt(folder.imageCount)}</b>{word('images')} under here</div>
           <div class="stat"><b>{folder.subcategoryCount}</b>{folder.subcategoryCount === 1 ? word('subcategory') : word('subcategories')}</div>
@@ -84,25 +135,29 @@
             <a class="btn primary" href={href(`/images/f/${folder.id}/all`)}>View all {fmt(folder.imageCount)} {word('images')} →</a>
           {/if}
         </div>
+        <FolderActions folder={{ id: folder.id, name: folder.name, kind: folder.kind, parentId: folder.parentId }} parent={folder.ancestors.at(-1)} />
       </div>
     </header>
 
     {#if drawers.length > 0}
       <div class="section-title"><strong>{word('subcategories')}</strong><span>{drawers.length} {drawers.length === 1 ? 'sub-category' : 'sub-categories'}</span></div>
       <div class="grid">
-        {#each drawers as d (d.id)}<FolderCardView folder={d} />{/each}
+        {#each drawers as d (d.id)}<FolderCardView folder={d} parentId={folder.id} />{/each}
       </div>
     {/if}
 
     {#if albums.length > 0}
       <div class="section-title"><strong>Albums</strong><span>{albums.length} {albums.length === 1 ? 'album' : 'albums'}</span></div>
       <div class="grid albums">
-        {#each albums as a (a.id)}<FolderCardView folder={a} />{/each}
+        {#each albums as a (a.id)}<FolderCardView folder={a} parentId={folder.id} />{/each}
       </div>
     {/if}
 
     {#if children.length === 0}
       <div class="empty">This {kindWord.toLowerCase()} is empty — add an album or a {word('subcategory').toLowerCase()}.</div>
+    {/if}
+    {#if drag.files}
+      <DropOverlay target={diskPath} headline={`${folder.kind === 'category' ? word('categories') : word('subcategories')} don’t hold\nloose prints.`} body="Loose images dropped here go to the Inbox; a dropped folder becomes an album here. Aim for an album card to file images directly." />
     {/if}
   {/if}
 </div>
@@ -117,7 +172,7 @@
 {/if}
 
 <style>
-  .page { display: flex; flex-direction: column; gap: 22px; padding-top: 22px; }
+  .page { position: relative; display: flex; flex-direction: column; gap: 22px; padding-top: 22px; }
 
   .head {
     display: grid;
@@ -130,7 +185,6 @@
   .info { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
   .kind { display: flex; align-items: center; gap: 8px; font: 12px var(--font-mono); text-transform: uppercase; color: var(--accent); }
   .title { font-size: clamp(56px, 8vw, 120px); line-height: 0.8; overflow-wrap: anywhere; }
-  .desc { margin: 0; max-width: 640px; font-size: 15px; line-height: 1.55; white-space: pre-line; }
   .stats { display: flex; gap: 28px; }
   .actions { margin-top: auto; display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
 

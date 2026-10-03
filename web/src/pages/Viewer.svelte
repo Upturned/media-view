@@ -2,13 +2,16 @@
   import type { FileDetail, FileItem } from '@media-view/shared';
   import { onDestroy, untrack } from 'svelte';
   import { ApiError, client, unwrap } from '../api.ts';
+  import DescriptionEditor from '../components/DescriptionEditor.svelte';
   import KindIcon from '../components/KindIcon.svelte';
   import Thumb from '../components/Thumb.svelte';
   import { registerKeys } from '../keymap.svelte.ts';
   import { fileUrl, fmt, formatDate, formatSize, fromParams, toParams, viewerHref, type ListQuery } from '../media.ts';
   import { folderHref, goBack, href, navigate, router } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
-  import { toast } from '../stores/toasts.svelte.ts';
+  import { openMenu } from '../stores/menu.svelte.ts';
+  import { openOps, openWith, recycleImages, setCover } from '../stores/ops.svelte.ts';
+  import { toast, toastError } from '../stores/toasts.svelte.ts';
   import { openDialog } from '../stores/ui.svelte.ts';
 
   /** The image viewer (user guide §4.5): prev / next follow the list it was opened from. */
@@ -95,6 +98,36 @@
   async function toggleFavorite() {
     if (!file) return;
     file = await unwrap(client.api.files[':id'].$patch({ param: { id: String(file.id) }, json: { favorited: !file.favorited } }));
+  }
+
+  async function saveDescription(text: string) {
+    if (!file) return;
+    try {
+      file = await unwrap(client.api.files[':id'].$patch({ param: { id: String(file.id) }, json: { description: text } }));
+    } catch (err) {
+      toastError(err);
+      throw err;
+    }
+  }
+
+  /** "Set as cover of ▸": the album and every folder above it (tags and collections come later). */
+  function coverMenu(e: MouseEvent) {
+    if (!file) return;
+    const f = file;
+    const targets = [f.folder, ...[...f.ancestors].reverse()].filter((c) => c.kind !== 'inbox');
+    openMenu(e, 'Set as cover of…', targets.map((c) => ({ label: `${c.kind === 'album' ? 'Album' : c.kind === 'category' ? 'Category' : 'Sub-category'} · ${c.name}`, action: () => setCover(c.id, c.name, f.id) })));
+  }
+
+  async function recycle() {
+    if (!file) return;
+    const pos = position;
+    if (!(await recycleImages([file]))) return;
+    // Show the next image of the list (or the previous one at the end), else go back.
+    if (pos && pos.total > 1) {
+      const next = await itemAt(pos.index + 1 < pos.total ? pos.index + 1 : pos.index - 1);
+      if (next && next.id !== id) return show(next);
+    }
+    back();
   }
 
   function back() {
@@ -369,7 +402,13 @@
             </dl>
             <div class="actions">
               <button class="fav" class:on={file.favorited} onclick={toggleFavorite}>{file.favorited ? '★ Starred' : '☆ Star'}</button>
+              <button onclick={() => file && openWith(file.id)}>Open with…</button>
+              <button onclick={() => file && openOps({ kind: 'rename-file', file, where: file.folder.name })}>Rename</button>
+              <button onclick={() => file && openOps({ kind: 'transfer', mode: 'move', files: [file], from: file.folder.name, currentFolderId: file.folder.id })}>Move</button>
+              <button onclick={coverMenu} disabled={file.folder.kind === 'inbox' && file.ancestors.length === 0}>Cover of ▸</button>
+              <button class="recycle" onclick={recycle}>Recycle</button>
             </div>
+            <DescriptionEditor text={file.description} compact prompt="Describe this image…" onsave={saveDescription} />
           </div>
         {/if}
       </aside>
@@ -497,6 +536,10 @@
   dt, dd { margin: 0; padding: 5px 0; border-bottom: 1px solid var(--line); }
   dt { color: var(--text2); text-transform: uppercase; }
   .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font: 11px var(--font-mono); text-transform: uppercase; }
-  .fav { height: 30px; border: 1px solid var(--line); background: none; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
-  .fav.on { border-color: var(--accent2); background: var(--accent2); color: #111; }
+  .actions button { height: 30px; border: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-transform: inherit; cursor: pointer; }
+  .actions button:hover:not(:disabled) { border-color: var(--text); }
+  .actions button:disabled { color: var(--line); cursor: default; }
+  .actions .fav { font-weight: 700; }
+  .actions .fav.on { border-color: var(--accent2); background: var(--accent2); color: #111; }
+  .actions .recycle { border-color: var(--red); color: var(--red); }
 </style>
