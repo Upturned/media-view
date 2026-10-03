@@ -1,8 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import CheckStylesDialog from './components/CheckStylesDialog.svelte';
+  import ConfirmDialog from './components/ConfirmDialog.svelte';
   import ContextMenu from './components/ContextMenu.svelte';
   import HelpDialog from './components/HelpDialog.svelte';
+  import ImportPanel from './components/ImportPanel.svelte';
+  import MoveDropBar from './components/MoveDropBar.svelte';
+  import OpsDialogs from './components/OpsDialogs.svelte';
   import Toasts from './components/Toasts.svelte';
   import TopBar from './components/TopBar.svelte';
   import { registerKeys } from './keymap.svelte.ts';
@@ -11,17 +15,21 @@
   import Hub from './pages/Hub.svelte';
   import Library from './pages/Library.svelte';
   import NotFound from './pages/NotFound.svelte';
+  import RecycleBin from './pages/RecycleBin.svelte';
   import Settings from './pages/Settings.svelte';
   import Viewer from './pages/Viewer.svelte';
   import Welcome from './pages/Welcome.svelte';
   import { router } from './router.svelte.ts';
+  import { confirmState } from './stores/confirm.svelte.ts';
   import { connectEvents, live } from './stores/events.svelte.ts';
+  import { installDragTracking } from './stores/imports.svelte.ts';
   import { library, refreshLibrary } from './stores/library.svelte.ts';
   import { toast } from './stores/toasts.svelte.ts';
   import { openDialog, ui } from './stores/ui.svelte.ts';
 
   onMount(() => {
     connectEvents();
+    return installDragTracking();
   });
 
   // The library's info (counts, scan status) follows live changes; debounced, as changes come in bursts.
@@ -66,6 +74,8 @@
     <Album all />
   {:else if page === 'viewer'}
     <Viewer />
+  {:else if page === 'recycle'}
+    <RecycleBin />
   {:else if page === 'settings'}
     <Settings />
   {:else}
@@ -79,7 +89,13 @@
   <CheckStylesDialog />
 {/if}
 
+<OpsDialogs />
+{#if confirmState.request}
+  <ConfirmDialog />
+{/if}
 <ContextMenu />
+<MoveDropBar />
+<ImportPanel />
 <Toasts />
 
 <style>

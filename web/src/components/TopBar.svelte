@@ -6,7 +6,7 @@
   import { fmt } from '../media.ts';
   import { word } from '../themes/index.ts';
 
-  // Search, Tags, Collections, Favorites, Random, Bin and the Health badge join as their milestones land.
+  // Search, Tags, Collections, Favorites, Random and the Health badge join as their milestones land.
   const scanning = $derived(live.scanning || library.info?.scan.status === 'scanning');
   const hashing = $derived(library.info?.scan.hashing ?? 0);
 </script>
@@ -29,6 +29,7 @@
 
   <nav>
     <a href={href('/images')} class:active={router.route.path.startsWith('/images')}>Images</a>
+    <a href={href('/recycle')} class:active={router.route.name === 'recycle'}>Bin</a>
     <a href={href('/settings')} class:active={router.route.name === 'settings'}>Settings</a>
   </nav>
   <button class="theme" title="Check styles" onclick={() => openDialog('styles')}><span class="swatch"></span>Darkroom</button>
@@ -85,7 +86,7 @@
     text-decoration: none;
   }
   nav a:hover { color: var(--text); background: var(--surface); }
-  nav a.active { color: var(--text); }
+  nav a.active { color: var(--text); background: var(--surface); box-shadow: inset 0 -3px 0 var(--accent); }
 
   .theme {
     display: flex;

@@ -8,3 +8,4 @@ Shows one image as large as possible, with its details alongside.
 - **Slideshow** steps through the images on its own; set the interval (1–30 s) next to it.
 - **Random** picks another image from the same list. **Full** shows the image alone, full screen.
 - **Info** shows the file name, its folder (click any part to go there), size, dimensions and dates, and lets you **star** it.
+- **Open with…** opens the image in another program; **Rename**, **Move**, **Cover of ▸** (the album or a folder above it) and **Recycle** act on it. Below them, add a short **description**.

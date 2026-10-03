@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FileItem, SortKey } from '@media-view/shared';
+  import type { Crumb, FileItem, SortKey } from '@media-view/shared';
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { client, unwrap } from '../api.ts';
@@ -7,8 +7,10 @@
   import { fmt, isGif, toParams, viewerHref, type ListQuery } from '../media.ts';
   import { navigate } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
-  import { openMenu } from '../stores/menu.svelte.ts';
-  import { toast } from '../stores/toasts.svelte.ts';
+  import { setDragPayload, startImport } from '../stores/imports.svelte.ts';
+  import { openMenu, type MenuItem } from '../stores/menu.svelte.ts';
+  import { openOps, openWith, recycleImages, setCover, setStar } from '../stores/ops.svelte.ts';
+  import { toast, toastError } from '../stores/toasts.svelte.ts';
   import { word } from '../themes/index.ts';
   import Thumb from './Thumb.svelte';
 
@@ -18,11 +20,20 @@
    */
   let {
     scope,
+    where,
+    coverTargets = [],
+    addTo,
     emptyText = 'Nothing here yet.',
     ontotal,
   }: {
     /** The folder (and whether to include everything under it). */
     scope: { folder: number; recursive?: boolean };
+    /** The place, for dialogs: "Portraits", "all images in Fantasy". */
+    where: string;
+    /** Folders an image of this grid can be the cover of (its album and the folders above it). */
+    coverTargets?: Crumb[];
+    /** Where "+ Add images" puts files (albums and the Inbox only). */
+    addTo?: { id: number; label: string };
     emptyText?: string;
     ontotal?: (total: number) => void;
   } = $props();
@@ -213,21 +224,65 @@
     }
   }
 
-  async function setFavorite(ids: number[], favorited: boolean) {
+  // ─── Actions ───────────────────────────────────────────────────────────────
+
+  /** The selection, in the grid's order, with names and stars (it may not all be loaded). */
+  async function selection(): Promise<{ id: number; filename: string; favorited: boolean; folderId: number }[]> {
+    const order = await ids();
+    const chosen = order.filter((id) => selected.has(id));
+    return (await unwrap(client.api.files.brief.$post({ json: { ids: chosen } }))).files;
+  }
+
+  async function bulk(action: 'star' | 'unstar' | 'move' | 'copy' | 'rename' | 'recycle') {
     try {
-      await unwrap(client.api.files.favorite.$post({ json: { ids, favorited } }));
-      toast(`${favorited ? 'Starred' : 'Unstarred'} ${fmt(ids.length)} ${ids.length === 1 ? word('image') : word('images')}.`);
+      const files = await selection();
+      if (files.length === 0) return;
+      const ids = files.map((f) => f.id);
+      if (action === 'star' || action === 'unstar') await setStar(ids, action === 'star');
+      else if (action === 'move' || action === 'copy') {
+        openOps({ kind: 'transfer', mode: action, files, from: where, currentFolderId: scope.recursive ? null : scope.folder });
+      } else if (action === 'rename') {
+        openOps({ kind: 'bulk-rename', files, where, order: `current sort order (${sortLabel.toLowerCase()} ${order === 'asc' ? '↑' : '↓'})` });
+      } else if (await recycleImages(files)) selected.clear();
     } catch (err) {
-      toast((err as Error).message, 'error');
+      toastError(err);
     }
   }
 
   function onCellContext(e: MouseEvent, item: FileItem) {
-    openMenu(e, item.filename, [
+    const items: MenuItem[] = [
       { label: 'Open', action: () => navigate(viewerHref(item.id, query)) },
-      { label: item.favorited ? '☆ Unstar' : '★ Star', action: () => setFavorite([item.id], !item.favorited) },
+      { label: 'Open with…', action: () => openWith(item.id) },
+      { label: 'Rename…', separated: true, action: () => openOps({ kind: 'rename-file', file: item, where }) },
+      { label: 'Move…', action: () => openOps({ kind: 'transfer', mode: 'move', files: [item], from: where, currentFolderId: item.folderId }) },
+      { label: 'Copy…', action: () => openOps({ kind: 'transfer', mode: 'copy', files: [item], from: where, currentFolderId: item.folderId }) },
+      { label: item.favorited ? '☆ Unstar' : '★ Star', action: () => setStar([item.id], !item.favorited) },
+      ...coverTargets.map((c, i) => ({ label: `Cover of ${c.name}`, separated: i === 0, action: () => setCover(c.id, c.name, item.id) })),
       { label: selected.has(item.id) ? 'Deselect' : 'Select', separated: true, action: () => toggle(item.id, 0) },
-    ]);
+      { label: 'Recycle', danger: true, action: () => void recycleImages([item]) },
+    ];
+    openMenu(e, item.filename, items);
+  }
+
+  // Drag images out of the grid: the selection if the dragged image is in it, else that image.
+  function onDragStart(e: DragEvent, item: FileItem) {
+    if (!e.dataTransfer) return;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/x-media-view-files', String(item.id));
+    if (selected.has(item.id) && selected.size > 1) {
+      setDragPayload([{ id: item.id, filename: item.filename }]);
+      void selection().then((files) => setDragPayload(files));
+    } else setDragPayload([{ id: item.id, filename: item.filename }]);
+  }
+
+  async function pickAndAdd() {
+    if (!addTo) return;
+    try {
+      const { paths } = await unwrap(client.api.system['pick-files'].$post({ json: { title: `Add images to ${addTo.label}` } }));
+      startImport(addTo, paths);
+    } catch (err) {
+      toastError(err);
+    }
   }
 
   $effect(() => {
@@ -251,6 +306,7 @@
     </div>
     <button class="tool fav" class:on={favorites} onclick={() => (favorites = !favorites)}>{favorites ? '★' : '☆'} Starred only</button>
     <input class="filter" bind:value={nameInput} placeholder="name contains…" spellcheck="false" />
+    {#if addTo}<button class="add" onclick={pickAndAdd}>+ Add images</button>{/if}
   </div>
 
   <div class="scroller" bind:this={scroller} bind:clientWidth={width} bind:clientHeight={height}
@@ -278,7 +334,9 @@
               style:width="{cellW}px"
               onclick={(e) => onCellClick(e, item, index)}
               oncontextmenu={(e) => onCellContext(e, item)}
-              draggable="false"
+              draggable="true"
+              ondragstart={(e) => onDragStart(e, item)}
+              ondragend={() => setDragPayload([])}
             >
               <div class="frame">
                 <div class="inner"><Thumb file={item} alt={item.filename} /></div>
@@ -309,8 +367,12 @@
   {#if selected.size > 0}
     <div class="bulk">
       <div class="count"><span class="display">{fmt(selected.size)}</span><span>{selected.size === 1 ? word('image') : word('images')}<br />selected</span></div>
-      <button onclick={() => setFavorite([...selected], true)}>★ Star</button>
-      <button onclick={() => setFavorite([...selected], false)}>☆ Unstar</button>
+      <button onclick={() => bulk('star')}>★ Star</button>
+      <button onclick={() => bulk('unstar')}>☆ Unstar</button>
+      <button onclick={() => bulk('move')}>Move…</button>
+      <button onclick={() => bulk('copy')}>Copy…</button>
+      <button onclick={() => bulk('rename')}>Rename…</button>
+      <button class="recycle" onclick={() => bulk('recycle')}>Recycle</button>
       <button class="push" onclick={selectAll}>Select all</button>
       <button class="close" onclick={() => selected.clear()} title="Clear the selection (Esc)">✕</button>
     </div>
@@ -351,6 +413,8 @@
   .fav { font-weight: 700; color: var(--text2); }
   .fav.on { background: var(--accent2); color: #111; }
   .filter { flex: 1; min-width: 0; padding: 0 16px; border: none; background: none; color: var(--text); font: inherit; outline: none; text-transform: none; }
+  .add { padding: 0 20px; border: none; background: var(--accent); color: var(--accent-ink); font: 700 15px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+  .add:hover { filter: brightness(1.08); }
 
   .scroller { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; background: var(--bg2); }
   .canvas { position: relative; }
@@ -410,6 +474,7 @@
   .bulk .count .display { font-size: 34px; }
   .bulk button { padding: 0 16px; border: none; border-right: 1px solid rgba(0, 0, 0, 0.25); background: none; color: #111; font: inherit; font-weight: 700; cursor: pointer; }
   .bulk button:hover { background: rgba(0, 0, 0, 0.08); }
+  .bulk .recycle { color: #8a0016; }
   .bulk .push { margin-left: auto; border-left: 1px solid rgba(0, 0, 0, 0.25); font-weight: 400; }
   .bulk .close { width: 60px; border-right: none; border-left: 2px solid #111; font-size: 16px; }
 </style>

@@ -5,12 +5,15 @@ import { badRequest, conflict, notFound } from '../lib/errors.ts';
 import { emit } from '../lib/events.ts';
 import { log } from '../lib/log.ts';
 import { writeMarker } from '../lib/markers.ts';
+import { expectChange } from '../lib/expected.ts';
+import { validateName } from '../lib/names.ts';
 import { toAbsolute, underPrefix } from '../lib/paths.ts';
 import type { OpenLibrary } from './library.ts';
+import { rewritePrefix } from './tree.ts';
 
-/** Folders of the Images module: cards, details and creation (technical doc §6.2, §7.3). */
+/** Folders of the Images module: cards, details, creation and changes (technical doc §6.2, §7.3). */
 
-interface FolderRow {
+export interface FolderRow {
   id: number;
   parent_id: number | null;
   kind: FolderKind;
@@ -24,7 +27,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const COVERS = 3;
 
 /** Live (not missing, not recycled) folders of the module, with image counts rolled up the tree. */
-class FolderTree {
+export class FolderTree {
   readonly rows: FolderRow[];
   readonly byId: Map<number, FolderRow>;
   private readonly totals = new Map<number, number>();
@@ -32,8 +35,7 @@ class FolderTree {
   constructor(private readonly lib: OpenLibrary) {
     this.rows = lib.db.prepare(
       `SELECT id, parent_id, kind, name, rel_path, description, cover_file_id FROM folders
-       WHERE module = 'images' AND missing_since IS NULL
-         AND id NOT IN (SELECT entity_id FROM recycle_items WHERE entity = 'folder')`,
+       WHERE module = 'images' AND missing_since IS NULL AND recycled = 0`,
     ).all() as FolderRow[];
     this.byId = new Map(this.rows.map((r) => [r.id, r]));
 
@@ -46,6 +48,11 @@ class FolderTree {
         this.totals.set(f.id, (this.totals.get(f.id) ?? 0) + n);
       }
     }
+  }
+
+  /** Images in a folder and everything under it. */
+  count(id: number): number {
+    return this.totals.get(id) ?? 0;
   }
 
   children(parentId: number | null): FolderRow[] {
@@ -130,46 +137,51 @@ export function folderDetail(lib: OpenLibrary, id: number): FolderDetail | Inbox
   return f.kind === 'inbox' ? { ...detail, ...inboxSummary(lib, card) } : detail;
 }
 
-// ─── Creation ────────────────────────────────────────────────────────────────
+// ─── Changes: validate, then disk, then the DB in one transaction (technical doc §7.3) ─
 
-const INVALID_CHARS = /[<>:"/\\|?*\u0000-\u001f]/;
-const RESERVED = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+interface LiveFolder extends FolderRow {
+  uuid: string;
+}
 
-/** A valid Windows folder name, or an error explaining why not. */
-export function validateFolderName(raw: string): string {
-  const name = raw.normalize('NFC').trim();
-  if (!name) throw badRequest('INVALID_NAME', 'The name is empty.');
-  if (name.length > 200) throw badRequest('INVALID_NAME', 'The name is too long.');
-  if (INVALID_CHARS.test(name)) throw badRequest('INVALID_NAME', 'Names can\'t contain < > : " / \\ | ? *');
-  if (name.startsWith('.')) throw badRequest('INVALID_NAME', 'Names can\'t start with a dot.');
-  if (name.endsWith('.')) throw badRequest('INVALID_NAME', 'Names can\'t end with a dot.');
-  if (RESERVED.test(name)) throw badRequest('INVALID_NAME', `“${name}” is reserved by Windows.`);
-  return name;
+/** A live folder (not missing, not recycled), or 404. */
+export function liveFolder(lib: OpenLibrary, id: number): LiveFolder {
+  const f = lib.db.prepare(
+    `SELECT id, uuid, parent_id, kind, name, rel_path, description, cover_file_id FROM folders
+     WHERE id = ? AND module = 'images' AND missing_since IS NULL AND recycled = 0`,
+  ).get(id) as LiveFolder | undefined;
+  if (!f) throw notFound('FOLDER_NOT_FOUND', 'This folder no longer exists.');
+  return f;
+}
+
+/** The kind a folder takes at a position: top level → category; nested category → sub-category. */
+export function kindAt(kind: FolderKind, parent: { kind: FolderKind } | null): FolderKind {
+  if (!parent) return 'category';
+  return kind === 'category' ? 'subcategory' : kind;
+}
+
+/** Throws unless `parent` (null = top level) can hold a folder of `kind`. */
+export function assertCanHold(parent: { kind: FolderKind } | null, kind: FolderKind): void {
+  if (!parent && kind === 'album') throw badRequest('INVALID_PARENT', "Albums can't sit at the top level. Pick a category or sub-category.");
+  if (parent && (parent.kind === 'album' || parent.kind === 'inbox')) throw badRequest('INVALID_PARENT', 'Albums hold only images.');
 }
 
 /** Create a category (no parent), sub-category or album, on disk and in the DB. */
 export function createFolder(lib: OpenLibrary, input: { parentId: number | null; kind: FolderKind; name: string }): FolderCard {
   const { db } = lib;
-  const name = validateFolderName(input.name);
-  let parent: FolderRow | undefined;
-  if (input.parentId !== null) {
-    parent = new FolderTree(lib).byId.get(input.parentId);
-    if (!parent) throw notFound('FOLDER_NOT_FOUND', 'The parent folder no longer exists.');
-  }
+  const name = validateName(input.name);
+  const parent = input.parentId !== null ? liveFolder(lib, input.parentId) : null;
 
-  // Structural rules (technical doc §6.2).
   if (input.kind === 'inbox') throw badRequest('INVALID_KIND', 'There is only one Inbox.');
   if (!parent && input.kind !== 'category') throw badRequest('INVALID_KIND', 'Only categories can be created at the top level.');
   if (parent && input.kind === 'category') throw badRequest('INVALID_KIND', 'A category inside a folder is a sub-category.');
-  if (parent && (parent.kind === 'album' || parent.kind === 'inbox')) throw badRequest('INVALID_PARENT', 'Albums hold only images.');
+  assertCanHold(parent, input.kind);
 
   const relPath = parent ? `${parent.rel_path}/${name}` : name;
   const abs = toAbsolute(lib.moduleRoot('images'), relPath);
-  const taken = db.prepare("SELECT 1 FROM folders WHERE module = 'images' AND rel_path = ?").get(relPath);
-  if (taken || fs.existsSync(abs)) throw conflict('NAME_TAKEN', `“${name}” already exists here.`);
+  assertFree(lib, relPath, abs, name);
 
-  // Disk first, then the DB; undo the disk change if the DB part fails (technical doc §7.3).
   const uuid = randomUUID();
+  expectChange(abs);
   fs.mkdirSync(abs);
   try {
     writeMarker(abs, input.kind, lib.meta.id, uuid);
@@ -186,4 +198,116 @@ export function createFolder(lib: OpenLibrary, input: { parentId: number | null;
     fs.rmSync(abs, { recursive: true, force: true });
     throw err;
   }
+}
+
+function assertFree(lib: OpenLibrary, relPath: string, abs: string, name: string, self?: number): void {
+  const taken = lib.db.prepare("SELECT id FROM folders WHERE module = 'images' AND rel_path = ? AND recycled = 0").pluck().get(relPath) as number | undefined;
+  // A case-only rename of the folder itself is fine.
+  if ((taken !== undefined && taken !== self) || (taken === undefined && fs.existsSync(abs))) {
+    throw conflict('NAME_TAKEN', `“${name}” already exists there.`);
+  }
+}
+
+/** Rename a folder on disk; everything under it follows. */
+export function renameFolder(lib: OpenLibrary, id: number, rawName: string): FolderCard {
+  const f = liveFolder(lib, id);
+  if (f.kind === 'inbox') throw badRequest('INBOX_FIXED', "The Inbox can't be renamed.");
+  const name = validateName(rawName);
+  if (name === f.name) return cardOf(lib, id);
+  const parentRel = f.rel_path.includes('/') ? f.rel_path.slice(0, f.rel_path.lastIndexOf('/')) : '';
+  const relPath = parentRel ? `${parentRel}/${name}` : name;
+  relocate(lib, f, relPath, f.parent_id, f.kind);
+  log('info', 'folders', 'folder renamed', { id, from: f.rel_path, to: relPath });
+  return cardOf(lib, id);
+}
+
+/** Move a folder under another (null = top level); its kind follows its new place. */
+export function moveFolder(lib: OpenLibrary, id: number, parentId: number | null): FolderCard {
+  const f = liveFolder(lib, id);
+  if (f.kind === 'inbox') throw badRequest('INBOX_FIXED', "The Inbox can't be moved.");
+  const parent = parentId !== null ? liveFolder(lib, parentId) : null;
+  if (parent && (parent.id === f.id || parent.rel_path.toLowerCase().startsWith(f.rel_path.toLowerCase() + '/'))) {
+    throw badRequest('INVALID_PARENT', "A folder can't be moved into itself.");
+  }
+  if (parent?.id === f.parent_id || (!parent && f.parent_id === null)) return cardOf(lib, id);
+  assertCanHold(parent, f.kind);
+  const relPath = parent ? `${parent.rel_path}/${f.name}` : f.name;
+  relocate(lib, f, relPath, parent?.id ?? null, kindAt(f.kind, parent));
+  log('info', 'folders', 'folder moved', { id, from: f.rel_path, to: relPath });
+  return cardOf(lib, id);
+}
+
+/** Disk rename/move of a folder, then its row, everything under it and the files' category. */
+function relocate(lib: OpenLibrary, f: LiveFolder, relPath: string, parentId: number | null, kind: FolderKind): void {
+  const { db } = lib;
+  const root = lib.moduleRoot('images');
+  const from = toAbsolute(root, f.rel_path);
+  const to = toAbsolute(root, relPath);
+  assertFree(lib, relPath, to, baseNameOf(relPath), f.id);
+
+  expectChange(from, to);
+  fs.renameSync(from, to);
+  try {
+    db.transaction(() => {
+      rewritePrefix(db, f.rel_path, relPath);
+      db.prepare('UPDATE folders SET rel_path = ?, name = ?, parent_id = ?, kind = ?, updated_at = ? WHERE id = ?')
+        .run(relPath, baseNameOf(relPath), parentId, kind, Date.now(), f.id);
+      refreshCategories(lib, relPath);
+    })();
+  } catch (err) {
+    fs.renameSync(to, from); // undo the disk change
+    throw err;
+  }
+  if (kind !== f.kind) writeMarker(to, kind, lib.meta.id, f.uuid);
+  emit({ type: 'folders-changed' });
+  emit({ type: 'files-changed' });
+}
+
+/** Re-derive `files.category_id` for everything at or under `relPath` (its top-level folder may have changed). */
+export function refreshCategories(lib: OpenLibrary, relPath: string): void {
+  const top = relPath.split('/')[0]!;
+  const topId = lib.db.prepare("SELECT id FROM folders WHERE module = 'images' AND parent_id IS NULL AND rel_path = ? AND recycled = 0")
+    .pluck().get(top) as number | undefined;
+  if (topId === undefined) return;
+  const under = underPrefix('rel_path', relPath);
+  lib.db.prepare(`UPDATE files SET category_id = ? WHERE media_type = 'image' AND ${under.sql}`).run(topId, ...under.params);
+}
+
+const baseNameOf = (relPath: string) => relPath.slice(relPath.lastIndexOf('/') + 1);
+
+function cardOf(lib: OpenLibrary, id: number): FolderCard {
+  const tree = new FolderTree(lib);
+  return tree.card(tree.byId.get(id)!);
+}
+
+export const MAX_DESCRIPTION = 600;
+
+export function setFolderDescription(lib: OpenLibrary, id: number, text: string): FolderCard {
+  liveFolder(lib, id);
+  const value = text.trim();
+  if (value.length > MAX_DESCRIPTION) throw badRequest('TOO_LONG', `Descriptions can be up to ${MAX_DESCRIPTION} characters.`);
+  lib.db.prepare('UPDATE folders SET description = ?, updated_at = ? WHERE id = ?').run(value || null, Date.now(), id);
+  emit({ type: 'folders-changed' });
+  return cardOf(lib, id);
+}
+
+/** Set (or clear, with null) a folder's cover. The image must be inside the folder. */
+export function setFolderCover(lib: OpenLibrary, id: number, fileId: number | null): FolderCard {
+  const f = liveFolder(lib, id);
+  if (fileId !== null) {
+    const rel = lib.db.prepare('SELECT rel_path FROM files WHERE id = ? AND recycled = 0 AND missing_since IS NULL').pluck().get(fileId) as string | undefined;
+    if (!rel) throw notFound('FILE_NOT_FOUND', 'This image no longer exists.');
+    if (!rel.toLowerCase().startsWith(f.rel_path.toLowerCase() + '/')) throw badRequest('NOT_INSIDE', 'The cover must be an image inside the folder.');
+  }
+  lib.db.prepare('UPDATE folders SET cover_file_id = ?, updated_at = ? WHERE id = ?').run(fileId, Date.now(), id);
+  emit({ type: 'folders-changed' });
+  return cardOf(lib, id);
+}
+
+/** Every live folder, flat, for the folder picker (Move / Copy / Restore to…). */
+export function folderTree(lib: OpenLibrary): { id: number; parentId: number | null; kind: FolderKind; name: string; imageCount: number }[] {
+  const tree = new FolderTree(lib);
+  return tree.rows
+    .map((r) => ({ id: r.id, parentId: r.parent_id, kind: r.kind, name: r.name, imageCount: tree.count(r.id) }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 }

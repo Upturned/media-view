@@ -45,6 +45,7 @@ const COLUMNS = 'f.id, f.filename, f.ext, f.size, f.mtime, f.added_at, f.favorit
 function toItem(r: FileRow): FileItem {
   return {
     id: r.id,
+    folderId: r.folder_id,
     filename: r.filename,
     ext: r.ext,
     size: r.size,
@@ -103,6 +104,20 @@ export function listFiles(lib: OpenLibrary, q: FileQuery, offset = 0, limit = PA
     `SELECT ${COLUMNS} FROM files f WHERE ${w.sql} ORDER BY ${orderBy(q)} LIMIT ? OFFSET ?`,
   ).all(...w.params, limit, Math.max(0, offset)) as FileRow[];
   return { items: rows.map(toItem), total };
+}
+
+/** Name, star and folder of each id, in the order given (for actions on a selection that isn't all loaded). */
+export function briefFiles(lib: OpenLibrary, ids: number[]): { id: number; filename: string; favorited: boolean; folderId: number }[] {
+  const get = lib.db.prepare('SELECT id, filename, favorited, folder_id FROM files WHERE id = ? AND recycled = 0');
+  return ids
+    .map((id) => get.get(id) as { id: number; filename: string; favorited: number; folder_id: number } | undefined)
+    .filter((r) => !!r)
+    .map((r) => ({ id: r.id, filename: r.filename, favorited: r.favorited === 1, folderId: r.folder_id }));
+}
+
+/** Lowercase file names in a folder (to show name clashes before moving or renaming). */
+export function folderFileNames(lib: OpenLibrary, folderId: number): string[] {
+  return lib.db.prepare("SELECT lower(filename) FROM files WHERE folder_id = ? AND recycled = 0 AND media_type = 'image'").pluck().all(folderId) as string[];
 }
 
 /** Every id of a query, in order (for "Select all" without loading every item). */

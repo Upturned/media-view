@@ -502,7 +502,9 @@ Watcher events caused by the app's own operations are suppressed through a short
 
 ### 7.5 Watcher
 
-`chokidar` watches the module root with `awaitWriteFinish` (files are only processed once their size is stable) and `ignored: /(^|[\/\\])\.mediaview/`. Events are debounced (~1 s), grouped by the nearest common folder, and fed to a scoped reconciliation of that subtree.
+`workers/watcher.ts`: `chokidar` watches the module root with `awaitWriteFinish` (files are only processed once their size is stable), ignoring hidden entries (markers included). Events are debounced (~1 s) and trigger a reconciliation (a full one for now; scoping it to the changed subtree is an optimization for the 50k performance pass).
+
+The app's own disk changes are registered in `lib/expected.ts` (path prefixes, ~5 s) and ignored by the watcher, so moving or importing never triggers a redundant scan. Even if one runs, reconciliation is idempotent.
 
 ---
 
@@ -520,15 +522,31 @@ Images: `jpg jpeg jfif png gif webp svg avif` (JFIF is JPEG; served as `image/jp
 
 ### 8.3 Import
 
-Two entry points, same result — files copied into the target album (or the Inbox when no album is given), name clashes resolved as `name (1).ext`, rows inserted directly (no wait for the watcher):
+Two entry points, same result — files copied into the target album (or the Inbox when no album is given), rows inserted directly (no wait for the watcher). **One file per request**: the client loops, so the import panel shows exact progress and *Cancel* stops between files (design M3 · 06).
 
-- **File picker** (`/api/system/pick-files` → paths) → `POST /api/files/import { folderId?, paths }`. The server copies from disk.
-- **Drag and drop** from Explorer. A browser only receives file *contents*, not paths, so the client streams them to `POST /api/files/upload?folderId=` as `multipart/form-data`; the server writes each part straight to a temp file in the target folder and renames it into place when complete. Non-image files are rejected per file and reported back. (In Electron, dropped files expose real paths and use `import` instead.)
+- **File picker** (`/api/system/pick-files` → paths) → `POST /api/files/import { folderId?, path }`. The server copies from disk; the original is untouched.
+- **Drag and drop** from Explorer. A browser only receives file *contents*, not paths, so the client sends each file as the raw body of `POST /api/files/upload?folderId=&name=`. (In Electron, dropped files expose real paths and use `import` instead.)
+
+Each file is streamed to `.mediaview/tmp/`, hashed on the way, then:
+
+1. **Rejected** by name when it isn't a supported image, with a reason: video / audio ("will have their own module"), known unsupported image formats ("Unsupported format (PSD)…"), anything else ("Not an image.").
+2. **Skipped** when an identical image (same hash) is already **in the target album**. An identical image elsewhere is imported normally and shows up as a `duplicate`.
+3. **Rejected** when it can't be read (`sharp` metadata; SVGs must contain `<svg`): "Couldn't read the file — it may be damaged or still downloading." The panel offers *Retry unreadable*.
+4. Moved into the album; a taken name becomes `name (1).ext` (**renamed**). The row gets the hash, dimensions and `added_at` = now.
+
+Where drops go: on an album page or album card → that album; on the Library page → the Inbox; on a category / sub-category page, loose images go to the Inbox and **each dropped folder becomes a new album there** with its images. Dropped folders are read recursively and flattened. The client logs a summary (`POST /api/files/import-done`).
 
 ### 8.4 Move / copy / rename
 
-- Move and rename update `rel_path`, `folder_id`, `category_id`; tags, collections and favorites stay attached through `files.id`.
-- **Copy creates a new file** with a new id. By default tags are copied; collections are not (the copy is a different file). Same hash → it will show up as a duplicate, which is correct.
+- Move and rename update `rel_path`, `folder_id`, `category_id`; tags, collections and favorites stay attached through `files.id`. Images only go into albums or the Inbox.
+- **Name clashes** on move / copy follow a policy (design M3 · 01): **Keep both** (default — `name (1).ext`), **Replace** (the existing image goes to the Recycle Bin; a starred one is never replaced — it keeps both instead) or **Skip**.
+- **Undo a move**: the move returns where each image came from (`undo`); `POST /api/files/undo-move` puts them back (clashes keep both). The toast offers it for 10 s. Copies have no undo (recycle the copies instead).
+- **Copy creates a new file** with a new id, keeping hash, dimensions and description; not stars or collections (the copy is a different file). By default tags are copied (milestone 4). Same hash → it shows up as a duplicate, which is correct.
+- **Rename** changes the base name only (the extension is locked); a name already taken in the folder is an error. Case-only renames work.
+- **Bulk rename** (design M3 · 03): `{ ids, pattern, start, digits }`. `#` is the number (from `start`, zero-padded to `digits`), `*` the original name; numbered in the order the ids are given (the grid's current order). Every new name must be unique in its folder — conflicts refuse the whole rename. Renames go through temporary names (on disk and in the DB) so swaps work.
+- **Folders**: rename, move (`POST /api/folders/:id/move { parentId }`) — the kind follows the new place (a category moved into a category becomes a sub-category; albums can't go to the top level; never into itself) and the files' `category_id` is refreshed. A name already taken there is an error.
+- **Descriptions** of folders and images: up to 600 characters, stored only in the DB (the folder on disk is untouched).
+- **Covers**: a folder's cover must be an image inside it (`PATCH /api/folders/:id { coverFileId }`).
 
 ### 8.5 Media serving
 
@@ -538,7 +556,11 @@ Two entry points, same result — files copied into the target album (or the Inb
 
 ### 8.6 Recycle bin
 
-Recycling moves the file or folder into `.mediaview/recycle-bin/<recycle id>[.ext]`, sets `files.recycled = 1` (all descendants, for folders) and inserts a `recycle_items` row. All rows, tags and collection memberships remain, so restore is lossless. Recycled files are excluded from every query except the Recycle Bin. **Delete permanently** removes the disk item and deletes the rows (cascading tags and collection items). Favorited files refuse to be recycled (checked in the service).
+Recycling moves the file or folder into `.mediaview/recycle-bin/<recycle id>/<name>`, sets `recycled = 1` on the file — or on the folder, every folder and every file under it (migration 002 adds `folders.recycled`) — and inserts a `recycle_items` row with the original path and parent. While recycled, their rows' paths live under the `:bin/<recycle id>/…` namespace (`:` can't occur in Windows names), so the original names are free again and nothing collides; `absPath()` maps that namespace to the bin folder. All rows, tags and collection memberships remain, so restore is lossless. Recycled items are excluded from every query except the Recycle Bin.
+
+- **Starred images are never recycled**: in a selection they're left out (the client asks first: "Recycle 3 of 5 images?"); a folder containing any is refused with the count.
+- **Restore** puts an item back under its original parent; a name taken there keeps both. If that place is gone (missing, recycled, or no longer an album), restore is refused with `LOCATION_GONE` and the user picks a new place (**Restore to…**, `{ targetFolderId }`). A restored folder's kind follows its new place.
+- **Delete permanently** removes the disk item and deletes the rows (cascading tags and collection items). **Empty the bin** does it for everything. Both ask first (plain confirmation). The bin is never emptied automatically.
 
 ---
 
@@ -729,7 +751,9 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 | GET    | `/api/folders?q=`               | Search folders by name, any depth (Search page, Folders tab) |
 | GET    | `/api/folders/:id`              | Folder + breadcrumb ancestors                            |
 | POST   | `/api/folders`                  | Create `{ parentId, kind, name }`                        |
-| PATCH  | `/api/folders/:id`              | Rename, description, cover                               |
+| GET    | `/api/folders/tree`             | Every folder, flat (folder picker)                       |
+| PATCH  | `/api/folders/:id`              | `{ name?, description?, coverFileId? }`                  |
+| POST   | `/api/folders/:id/recycle`      | Recycle (refused while it holds starred images)          |
 | POST   | `/api/folders/:id/move`         | Move `{ parentId }`                                      |
 | POST   | `/api/folders/:id/recycle`      | Send to Recycle Bin                                      |
 
@@ -742,13 +766,17 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 | GET    | `/api/files/locate`            | Same filters + `id` → `{ position: { index, total } }` (viewer prev / next) |
 | POST   | `/api/files/favorite`          | Bulk `{ ids, favorited }`                                  |
 | GET    | `/api/files/:id`               | Details: metadata, tags (with source), collections         |
-| PATCH  | `/api/files/:id`               | Rename, description, favorite                              |
-| POST   | `/api/files/move`              | `{ ids, folderId }`                                        |
-| POST   | `/api/files/copy`              | `{ ids, folderId, copyTags }`                              |
-| POST   | `/api/files/rename-bulk`       | `{ ids, pattern }`                                         |
+| PATCH  | `/api/files/:id`               | `{ name?, description?, favorited? }`                      |
+| POST   | `/api/files/brief`             | `{ ids }` → name, star and folder of each (actions on a selection) |
+| GET    | `/api/files/names?folder=`     | Lowercase file names in a folder (clash previews)          |
+| POST   | `/api/files/move`              | `{ ids, folderId, policy }` → counts, renamed, skipped, `undo` |
+| POST   | `/api/files/undo-move`         | `{ items: undo }`                                          |
+| POST   | `/api/files/copy`              | `{ ids, folderId, policy }` (`copyTags` with milestone 4)  |
+| POST   | `/api/files/rename-bulk`       | `{ ids, pattern, start, digits }`                          |
 | POST   | `/api/files/recycle`           | `{ ids }`                                                  |
-| POST   | `/api/files/import`            | `{ folderId?, paths }` (from the file picker; no folder → Inbox) |
-| POST   | `/api/files/upload?folderId=`  | Multipart upload (drag and drop; no folder → Inbox)        |
+| POST   | `/api/files/import`            | `{ folderId?, path }` — one file from the picker; no folder → Inbox |
+| POST   | `/api/files/upload?folderId=&name=` | One dropped file as the raw body; no folder → Inbox  |
+| POST   | `/api/files/import-done`       | Import summary for the log                                 |
 | POST   | `/api/files/tags`              | Bulk `{ ids, add: [...], remove: [...] }`                  |
 | PUT    | `/api/files/:id/tags`          | Replace manual tags `{ tags: [...] }`                      |
 | GET    | `/api/files/random`            | Same filters as the list, plus `exclude`                   |
@@ -807,7 +835,7 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 | POST   | `/api/health/fix-all`              | Apply the suggested fix to all issues of a kind |
 | GET    | `/api/recycle`                     | Recycled items                                  |
 | POST   | `/api/recycle/:id/restore`         | Restore `{ targetFolderId? }`                   |
-| DELETE | `/api/recycle/:id`                 | Delete permanently                              |
+| POST   | `/api/recycle/delete`              | Delete permanently `{ ids }`                    |
 | DELETE | `/api/recycle`                     | Empty the bin                                   |
 | POST   | `/api/system/open-with`            | Windows "Open with" dialog for a file id        |
 | POST   | `/api/system/pick-files`           | Windows file picker → paths                     |
@@ -924,8 +952,8 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 ## 18. Implementation milestones
 
 1. **Skeleton** — workspaces, Hono + Svelte wired, config, create/open library, migrations, logging, Darkroom theme and Check styles dialog, keymap registry and Help dialog shell.
-2. **Folders & files** — reconciliation, markers, Inbox, hashing, thumbnails, Library / Folder / Album pages, viewer.
-3. **File operations** — import (picker and drag and drop), move, copy, rename, covers, recycle bin, watcher.
+2. **Folders & files** — reconciliation, markers, Inbox, hashing, thumbnails, Library / Folder / Album pages, viewer. *(Done; design `docs/Design/darkroom-milestone-2-pages/`.)*
+3. **File operations** — import (picker and drag and drop), move, copy, rename, covers, recycle bin, watcher. *(Done: see §7.5, §8.3–8.6; design `docs/Design/darkroom-milestone-3-pages/`.)*
 4. **Tags** — types, tags, tag input, tag chips and sidebar, search syntax (include / exclude / any of), aliases and main name, implications, merge.
 5. **Wiki** — tag pages, descriptions, custom fields, related tags.
 6. **Collections** — collection pages, viewer navigation, bulk add, group by collection.

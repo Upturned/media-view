@@ -3,9 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
 import { log } from '../lib/log.ts';
-import { DATA_DIR, toAbsolute } from '../lib/paths.ts';
+import { DATA_DIR } from '../lib/paths.ts';
 import { raiseIssue } from './issues.ts';
-import type { OpenLibrary } from './library.ts';
+import { absPath, type OpenLibrary } from './library.ts';
 
 /**
  * Thumbnails (technical doc §9): longest side 400 px, WebP q80, content-addressed by hash so they
@@ -105,7 +105,7 @@ export function stopThumbnails(): void {
 // ─── Generation ──────────────────────────────────────────────────────────────
 
 async function generate(lib: OpenLibrary, file: ThumbSource, target: string): Promise<void> {
-  const source = toAbsolute(lib.moduleRoot('images'), file.rel_path);
+  const source = absPath(lib, file.rel_path);
   try {
     const meta = await sharp(source, { failOn: 'none' }).metadata();
     // EXIF orientations 5–8 are rotated by 90°: the displayed size is swapped.

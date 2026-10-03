@@ -3,9 +3,8 @@ import { Readable } from 'node:stream';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { notFound } from '../lib/errors.ts';
-import { toAbsolute } from '../lib/paths.ts';
 import { valid } from '../lib/validate.ts';
-import { requireLibrary } from '../services/library.ts';
+import { absPath, requireLibrary } from '../services/library.ts';
 import { getThumbnail, isRaster } from '../services/thumbnails.ts';
 
 /** Originals and thumbnails, addressed by file id (technical doc §8.5). */
@@ -24,9 +23,10 @@ interface MediaRow {
   hash: string | null;
 }
 
-function fileRow(id: number): MediaRow {
+/** The file of an id; recycled ones only when asked (the Recycle Bin shows their thumbnails). */
+function fileRow(id: number, allowRecycled = false): MediaRow {
   const row = requireLibrary().db.prepare(
-    'SELECT id, rel_path, ext, size, mtime, hash FROM files WHERE id = ? AND recycled = 0',
+    `SELECT id, rel_path, ext, size, mtime, hash FROM files WHERE id = ? ${allowRecycled ? '' : 'AND recycled = 0'}`,
   ).get(id) as MediaRow | undefined;
   if (!row) throw notFound('FILE_NOT_FOUND', 'This image no longer exists.');
   return row;
@@ -63,7 +63,7 @@ const params = z.object({ id: z.coerce.number().int().positive() });
 
 function original(row: MediaRow, c: { req: { query(k: string): string | undefined; header(k: string): string | undefined } }): Response {
   const lib = requireLibrary();
-  const file = toAbsolute(lib.moduleRoot('images'), row.rel_path);
+  const file = absPath(lib, row.rel_path);
   if (!fs.existsSync(file)) throw notFound('FILE_MISSING', 'The file is missing on disk.');
   const headers: Record<string, string> = { 'Cache-Control': cacheControl(c.req.query('v') !== undefined) };
   // SVGs can carry scripts: sandbox them when opened directly.
@@ -75,7 +75,7 @@ function original(row: MediaRow, c: { req: { query(k: string): string | undefine
 export const mediaRoutes = new Hono()
   .get('/file/:id', valid('param', params), (c) => original(fileRow(c.req.valid('param').id), c))
   .get('/thumb/:id', valid('param', params), async (c) => {
-    const row = fileRow(c.req.valid('param').id);
+    const row = fileRow(c.req.valid('param').id, true);
     if (!isRaster(row.ext)) return original(row, c); // SVG: served as-is, no thumbnail
     const lib = requireLibrary();
     let thumb: string;

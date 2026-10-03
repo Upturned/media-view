@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,4 +41,27 @@ export function about(): AboutInfo {
     credits: 'Felipe, with Claude',
     formats: { images: IMAGE_EXTENSIONS, videos: [], audio: [], texts: [] },
   };
+}
+
+/** Windows file picker for images (multi-select). Returns absolute paths; empty when cancelled. */
+export async function pickFiles(title: string): Promise<string[]> {
+  const script = `
+    Add-Type -AssemblyName System.Windows.Forms
+    $owner = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true; ShowInTaskbar = $false }
+    $d = New-Object System.Windows.Forms.OpenFileDialog
+    $d.Title = $env:MV_DIALOG_TITLE
+    $d.Multiselect = $true
+    $d.Filter = 'Images|*.jpg;*.jpeg;*.jfif;*.png;*.gif;*.webp;*.svg;*.avif|All files|*.*'
+    if ($d.ShowDialog($owner) -eq 'OK') { [Console]::Out.Write(($d.FileNames -join [char]10)) }
+    $owner.Dispose()`;
+  process.env.MV_DIALOG_TITLE = title;
+  const out = await powershell(script);
+  return out ? out.split('\n').map((p) => p.trim()).filter(Boolean) : [];
+}
+
+/** The Windows "Open with" dialog for a file (path passed as an argument, never through a shell string). */
+export function openWith(file: string): void {
+  execFile('rundll32.exe', ['shell32.dll,OpenAs_RunDLL', file], { windowsHide: false }, () => {
+    // rundll32 reports nothing useful; the dialog is the feedback.
+  });
 }

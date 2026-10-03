@@ -2,7 +2,9 @@
   import type { FolderCard } from '@media-view/shared';
   import { fmt } from '../media.ts';
   import { folderHref, href, navigate } from '../router.svelte.ts';
+  import { importDrop } from '../stores/imports.svelte.ts';
   import { openMenu } from '../stores/menu.svelte.ts';
+  import { openOps, recycleFolder } from '../stores/ops.svelte.ts';
   import { isStyled, word } from '../themes/index.ts';
   import KindIcon from './KindIcon.svelte';
   import Thumb from './Thumb.svelte';
@@ -11,7 +13,9 @@
    * One folder card; its look depends on the kind (user guide §2.5):
    * category → rack tile with cover, sub-category → drawer with a mosaic, album → stacked photos.
    */
-  let { folder, index = 0 }: { folder: FolderCard; index?: number } = $props();
+  let { folder, parentId, index = 0 }: { folder: FolderCard; parentId: number | null; index?: number } = $props();
+
+  let dropping = $state(false);
 
   const link = $derived(folderHref(folder));
   const empty = $derived(folder.imageCount === 0 && folder.subcategoryCount === 0 && folder.albumCount === 0);
@@ -28,10 +32,30 @@
   );
 
   function onContext(e: MouseEvent) {
+    const self = { id: folder.id, name: folder.name, kind: folder.kind, parentId };
     openMenu(e, folder.name, [
       { label: 'Open', action: () => navigate(link) },
       ...(folder.kind !== 'album' ? [{ label: 'View all images', action: () => navigate(`/images/f/${folder.id}/all`) }] : []),
+      { label: 'Rename…', separated: true, action: () => openOps({ kind: 'rename-folder', folder: self }) },
+      { label: 'Move…', action: () => openOps({ kind: 'folder-move', folder: self }) },
+      { label: 'Recycle', danger: true, separated: true, action: () => void recycleFolder(folder) },
     ]);
+  }
+
+  // Album cards take dropped files (design M2 · 02: "Drop to copy into …").
+  function onDragOver(e: DragEvent) {
+    if (folder.kind !== 'album' || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dropping = true;
+  }
+
+  function onDrop(e: DragEvent) {
+    if (folder.kind !== 'album' || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dropping = false;
+    void importDrop(e.dataTransfer, { id: folder.id, label: folder.name });
   }
 </script>
 
@@ -73,7 +97,7 @@
     </div>
   </a>
 {:else}
-  <a class="album" href={link} oncontextmenu={onContext}>
+  <a class="album" href={link} oncontextmenu={onContext} ondragover={onDragOver} ondragleave={() => (dropping = false)} ondrop={onDrop}>
     <div class="stack">
       <div class="sheet back2"></div>
       <div class="sheet back1"></div>
@@ -84,6 +108,9 @@
           This album is empty.
         {/if}
       </div>
+      {#if dropping}
+        <div class="drop"><span>Drop to copy into</span><span class="display">{folder.name} ↓</span></div>
+      {/if}
     </div>
     <div class="meta">
       <span class="kind"><KindIcon kind="album" size={11} />Album</span>
@@ -157,4 +184,20 @@
   .front.empty-box { background: var(--bg); outline: none; font-size: 10.5px; }
   .album:hover .front:not(.empty-box) { outline: 2px solid var(--accent); }
   .album .name { font-size: 26px; }
+  .drop {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 16px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    pointer-events: none;
+    font: 11px var(--font-mono);
+    text-transform: uppercase;
+  }
+  .drop .display { font-size: 34px; line-height: 0.9; }
 </style>
