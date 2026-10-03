@@ -372,7 +372,7 @@ A maintenance page that compares your library folder with what the app remembers
 - **Changed outside the app** — folders or images that were moved or renamed in Windows Explorer. The app is already following them; *Keep* the change, or *Undo* it to put things back where they were. Images moved together are grouped into one item.
 - **Unclear moves** — an image reappeared that matches several identical missing images, each with its own tags. Pick which one it is, or keep it as a new image.
 - **Rule problems** — loose images in a category or sub-category, folders inside an album. *Fix: move the images into a new album; move the folder out.*
-- **Unmarked folders** — new folders created outside the app. The app guesses their kind (folders with images → album; folders with folders → sub-category) and asks you to confirm; empty ones you choose yourself.
+- **Unmarked folders** — new folders created outside the app. They show up right away with the kind the app guessed (folders with images → album; folders with folders → sub-category; empty ones → album, marked as a guess), and you confirm or change it here.
 - **Wrong file types** — videos, audio or other files found among your images.
 
 **Blue — for your information**
@@ -416,7 +416,7 @@ When more styles are available, the same button will open a theme picker with a 
 
 Every tag belongs to exactly one type. The type gives the tag its color and tells you what it means: `alice` as a **Character** is the person in the picture; `alice` as an **Artist** is the person who drew it. Both can exist side by side.
 
-Tag names are case-insensitive.
+Tag names are case-insensitive, and a space and an underscore count as the same: *red dress*, `red_dress` and *Red Dress* are all one tag. Tags are always shown with spaces; in the search box you write them with underscores (see §5.6).
 
 ### 5.2 Aliases and the main name
 
@@ -477,6 +477,7 @@ The app comes with a few suggested fields for the built-in types; you can rename
 | `character:alice`         | Same as above — shorthand, booru style                |
 | `-artist:bob`             | Excludes the **Artist** tag *bob*                     |
 | `beach #sunset`           | Name/folder contains "beach" **and** tagged *sunset*  |
+| `#red_dress`              | Tagged *red dress* — in search, spaces in tag names are written as `_` |
 
 While you type, suggestions appear, colored by tag type and showing how many images use each tag. Aliases are resolved automatically.
 

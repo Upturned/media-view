@@ -1,6 +1,6 @@
 import type { Theme } from './index.ts';
 
-/** Darkroom — from docs/Styles and themes/. Sharp, restrained, technical. */
+/** Darkroom — from docs/Styles and themes/ and docs/Design/darkroom-milestone-2-pages/. */
 export const darkroom: Theme = {
   id: 'darkroom',
   name: 'Darkroom',
@@ -21,9 +21,20 @@ export const darkroom: Theme = {
     '--blue': '#58a6ff',
     '--thumb': '#0e0e0e',
     '--scrim': 'rgba(11, 11, 11, 0.8)',
-    '--radius': '2px',
+    '--film': '#050505',
+    '--sprocket': '#2a2a28',
+    '--radius': '0px',
     '--font-ui': "Bahnschrift, 'DIN Alternate', 'Segoe UI', system-ui, sans-serif",
-    '--font-mono': "'Cascadia Mono', Consolas, monospace",
+    '--font-display': "'Bahnschrift Condensed', 'DIN Condensed', 'Arial Narrow', sans-serif",
+    '--font-mono': "'Cascadia Mono', Consolas, Menlo, monospace",
     '--label-spacing': '0.08em',
+  },
+  words: {
+    category: 'Rack',
+    categories: 'Racks',
+    subcategory: 'Drawer',
+    subcategories: 'Drawers',
+    image: 'frame',
+    images: 'frames',
   },
 };

@@ -13,9 +13,11 @@
   "dependencies": {
     "@hono/node-server": "^1.13.0",
     "@hono/zod-validator": "^0.4.0",
+    "@img/sharp-win32-x64": "^0.35.5",
     "@media-view/shared": "*",
     "better-sqlite3": "^12.0.0",
     "hono": "^4.6.0",
+    "sharp": "^0.35.5",
     "tsx": "^4.19.0",
     "zod": "^3.23.0"
   },
