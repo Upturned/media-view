@@ -12,3 +12,4 @@ The images of one album in a grid. The Inbox uses this same page.
 - With images selected, the yellow bar can also **Move…**, **Copy…**, **Rename…** them in bulk or **Recycle** them. After a move, **Undo** is offered for a few seconds.
 - **Drag images** out of the grid to move them: drop them on the Inbox or a recent album in the bar that appears at the bottom.
 - **Rename · Move · Recycle** under the title act on the album itself.
+- Click the **description** under the title to write a short note about the album (up to 500 characters).

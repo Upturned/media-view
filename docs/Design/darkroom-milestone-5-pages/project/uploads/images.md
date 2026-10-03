@@ -138,8 +138,7 @@ Because your library is made of ordinary folders, you can still change things in
 - The **top bar** is on every page: the media-view logo (back to the Hub), the search box, shortcuts to Tags, Collections, Favorites, Random and the Recycle Bin, the **Library Health** indicator, the theme picker, Settings and **Help** (`?`).
 - A **breadcrumb trail** (e.g. *Images › Fantasy › Elves › Portraits*) shows where you are; click any part of it to jump back up.
 - **Right-click** almost anything — a card, an image, a tag — for the actions available on it.
-- **Drag and drop** images from Windows Explorer onto the app to add them: onto an album page or album card to add them there, anywhere else to send them to the Inbox. On a category or sub-category page, a dropped **folder** becomes a new album there, with its images.
-- **Drag images out of a grid** to move them: a bar appears at the bottom with the Inbox and your recent albums; drop on one, or on *Other album…* to pick one.
+- **Drag and drop** images from Windows Explorer onto the app to add them: onto an album page or album card to add them there, anywhere else to send them to the Inbox.
 
 ### 3.1 Tags, wherever you see them
 
@@ -149,7 +148,7 @@ Tags appear as colored chips (the color comes from the tag's type). They behave 
 |------------------|-------------------------------------------------------------------------|
 | Hover            | Shows the tag's description                                             |
 | Click            | Shows all images with that tag                                          |
-| Ctrl + click     | Opens the tag's wiki page (until wiki pages arrive: edits the tag)       |
+| Ctrl + click     | Opens the tag's wiki page                                               |
 | Middle-click     | Opens the tag's wiki page in a new tab                                  |
 | Right-click      | Menu: *Open wiki page*, *Show all images*, *Edit tag*, *Copy name* (and *Remove from this image* where it applies) |
 
@@ -179,19 +178,6 @@ When Library Health has something waiting for you, its icon in the top bar shows
 
 No badge means everything is in order.
 
-### 3.4 Keyboard
-
-These work on every page; the image viewer adds its own (see §4.5). Press `F1` on any page to see the shortcuts available there.
-
-| Key                  | Action                                                      |
-|----------------------|-------------------------------------------------------------|
-| `F1`                 | Help                                                        |
-| `/`                  | Jump to the search box                                      |
-| `Enter`              | Open the focused card or image (in selection mode: select it) |
-| `Esc`                | Close the open menu or dialog; on the Search page, put the cursor back in the search box |
-| `Enter` in a dialog  | Confirm                                                     |
-| `Enter` or `,` while tagging | Add the typed tag                                   |
-
 ---
 
 ## 4. Pages
@@ -213,7 +199,7 @@ The front page of the Images module: the **Inbox** first, then a grid of all you
 
 Opening a category or sub-category shows what's inside it: its sub-categories and albums as cards, each with its kind, cover and image count.
 
-- The folder's **cover** and **description** are shown at the top. Click the description to edit it — a short note (up to 500 characters) about what the folder holds.
+- The folder's **cover** and **description** are shown at the top.
 - **New sub-category** and **New album** create folders right here.
 - **View all images** shows every image under this folder — from all its albums, however deep — in one grid, with the tag sidebar.
 - Drag files onto an **album card** to add them to that album.
@@ -245,11 +231,7 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 - favorite / unfavorite them
 - send them to the Recycle Bin
 
-**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album right there. When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move, the message at the bottom offers **Undo** for a few seconds. When copying, **Copy tags** (on by default) gives the copies the same tags.
-
-**Renaming in bulk** — write a pattern: `#` is a number and `*` the original name, so `ref_#` gives *ref_01, ref_02…* and `*_#` keeps the names and numbers them. Choose where numbering starts and how many digits it has. Images are numbered in the grid's current order, extensions are kept, and a live preview shows every new name — names that would clash are flagged before anything changes.
-
-**Adding images** — **Add images** opens the Windows file picker, or drag files from Explorer onto the page. Either way, they're copied into this album and the originals are left untouched. A panel at the bottom right shows the progress (you can keep working) and, at the end, what wasn't imported and why: other file types, files that can't be read, or images already in this album (identical ones are skipped).
+**Adding images** — **Add images** opens the Windows file picker, or drag files from Explorer onto the page. Either way, they're copied into this album.
 
 **Right-click an image** for: *Open*, *Open With…*, *Rename*, *Move*, *Copy*, *Add to collection*, *Favorite*, *Recycle*, and **Set as cover of ▸** — the album, any sub-category or the category above it, the current collection, or any of the image's tags (for example, as a character's portrait).
 
@@ -271,36 +253,30 @@ Opens when you click an image. Shows the image as large as possible with its det
 
 When opened from a collection, the viewer shows your position in it (e.g. *3 / 12 in "Chapter 3 refs"*).
 
-**Keyboard shortcuts**
+**Keyboard shortcuts** *(to be revised)*
 
-| Key              | Action                                                                 |
-|------------------|------------------------------------------------------------------------|
-| `←` / `→`        | Previous / next image                                                  |
-| `+` (or `=`) / `-` | Zoom in / out                                                        |
-| `0`              | Reset zoom                                                             |
-| `F`              | Fullscreen                                                             |
-| `R`              | Random image                                                           |
-| `S`              | Start / stop slideshow                                                 |
-| `T`              | Type a tag: puts the cursor in the Tags panel (`Esc` goes back to the images) |
-| `Esc`            | One step back, in this order: exit fullscreen → stop the slideshow → close the tags panel → close the slideshow panel |
-| `Backspace`      | Back to the previous page                                              |
-| `F1`             | Help                                                                   |
-
-Keys that work everywhere are listed in §3.4.
+| Key          | Action                           |
+|--------------|----------------------------------|
+| `←` / `→`    | Previous / next image            |
+| `+` / `-`    | Zoom in / out                    |
+| `0`          | Reset zoom                       |
+| `F`          | Fullscreen                       |
+| `R`          | Random image                     |
+| `S`          | Start / stop slideshow           |
+| `Esc`        | Exit fullscreen / stop slideshow |
+| `Backspace`  | Back to the previous page        |
+| `F1`         | Help                             |
 
 ### 4.6 Search
 
-The search box is in the top bar. On a page with images (an album, the Inbox, *View all images*, a tag) it **filters that page as you type**; switch it to **Everywhere**, or press Enter on any other page, to open the Search page for your whole library. Press `/` to jump to it. While you type it suggests tags and shows how it reads your search (must / never / any of).
-
-The Search page's first tab, **All**, shows the first few results of each kind, each with **See all**:
+Search from the box in the top bar on any page. Results cover your whole library, split into tabs:
 
 - **Images** — matching images, with the same sorting, filtering, tag sidebar and bulk actions as an album.
-- **Albums** — albums whose names match.
-- **Categories & sub-categories** — those whose names match.
-- **Tags** — tags whose names or aliases match.
-- **Collections** — collections whose names match (with collections).
+- **Folders** — categories, sub-categories and albums whose names match.
+- **Tags** — tags whose names or aliases match, linking to their wiki pages.
+- **Collections** — collections whose names match.
 
-Images are found by the full search (words and tags); folders and tags by the words. Plain text and tag filters can be mixed in the same search; see §5.6, or the *Search* tab of the Help window.
+Plain text and tag filters can be mixed in the same search; see §5.6.
 
 ### 4.7 Tags
 
@@ -311,8 +287,6 @@ A directory of every tag in your library.
 - Search the list, sort by name or count, and filter by type.
 - **New tag** creates a tag in advance, before using it on any image.
 - Select several tags to **merge** them (see §5.3) or delete them.
-- **Edit tag** (Ctrl + click, or right-click any tag) changes its name and type, its aliases and main name, what it implies, merges it into another tag or deletes it. Adding or removing an implication that touches more than 30 images asks first.
-- To tag many images at once, select them and choose **Tags…** in the selection bar: it shows how many of them already have each tag, and nothing changes until you press *Apply*.
 
 ### 4.8 Tag wiki page
 
@@ -358,9 +332,7 @@ A list of all your collections, each with its cover, name and number of images.
 
 ### 4.12 Favorites
 
-All your starred images from across the library, in one grid, with the usual sorting, filtering, tag sidebar and bulk actions. Open it from **Favorites** in the top bar or the **★ Favorites** button on the Library page.
-
-It's a view, not a folder: starring an image doesn't move or copy it — it stays in its album, and unstarring it takes it off this page.
+All your starred images from across the library, in one grid, with the usual sorting, filtering, tag sidebar and bulk actions.
 
 ### 4.13 Random
 
@@ -372,8 +344,7 @@ Images and folders you delete go here first.
 
 - **Restore** puts an item back where it came from (or somewhere you choose, if that place no longer exists), with its tags and collections intact.
 - **Delete permanently** removes it from disk.
-- Favorited images are protected — you'll be asked to unfavorite them before they can be recycled. Recycling a selection that includes starred images recycles the others and keeps the starred ones; a folder with starred images inside can't be recycled until they're unstarred.
-- **Empty the bin** deletes everything in it. Nothing is ever deleted from the bin automatically.
+- Favorited images are protected — you'll be asked to unfavorite them before they can be recycled.
 
 ### 4.15 Library Health
 
@@ -387,7 +358,7 @@ A maintenance page that compares your library folder with what the app remembers
 - **Changed outside the app** — folders or images that were moved or renamed in Windows Explorer. The app is already following them; *Keep* the change, or *Undo* it to put things back where they were. Images moved together are grouped into one item.
 - **Unclear moves** — an image reappeared that matches several identical missing images, each with its own tags. Pick which one it is, or keep it as a new image.
 - **Rule problems** — loose images in a category or sub-category, folders inside an album. *Fix: move the images into a new album; move the folder out.*
-- **Unmarked folders** — new folders created outside the app. They show up right away with the kind the app guessed (folders with images → album; folders with folders → sub-category; empty ones → album, marked as a guess), and you confirm or change it here.
+- **Unmarked folders** — new folders created outside the app. The app guesses their kind (folders with images → album; folders with folders → sub-category) and asks you to confirm; empty ones you choose yourself.
 - **Wrong file types** — videos, audio or other files found among your images.
 
 **Blue — for your information**
@@ -431,7 +402,7 @@ When more styles are available, the same button will open a theme picker with a 
 
 Every tag belongs to exactly one type. The type gives the tag its color and tells you what it means: `alice` as a **Character** is the person in the picture; `alice` as an **Artist** is the person who drew it. Both can exist side by side.
 
-Tag names are case-insensitive, and a space and an underscore count as the same: *red dress*, `red_dress` and *Red Dress* are all one tag. Tags are always shown with spaces; in the search box you write them with underscores (see §5.6).
+Tag names are case-insensitive.
 
 ### 5.2 Aliases and the main name
 
@@ -492,7 +463,6 @@ The app comes with a few suggested fields for the built-in types; you can rename
 | `character:alice`         | Same as above — shorthand, booru style                |
 | `-artist:bob`             | Excludes the **Artist** tag *bob*                     |
 | `beach #sunset`           | Name/folder contains "beach" **and** tagged *sunset*  |
-| `#red_dress`              | Tagged *red dress* — in search, spaces in tag names are written as `_` |
 
 While you type, suggestions appear, colored by tag type and showing how many images use each tag. Aliases are resolved automatically.
 

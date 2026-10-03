@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { FileDetail, FileItem, TagRef } from '@media-view/shared';
-  import { onDestroy, untrack } from 'svelte';
+  import { onDestroy, tick, untrack } from 'svelte';
   import { ApiError, client, unwrap } from '../api.ts';
   import DescriptionEditor from '../components/DescriptionEditor.svelte';
   import TagChip from '../components/TagChip.svelte';
@@ -147,6 +147,16 @@
 
   const tagGroups = $derived(file ? groupByType(file.tags) : []);
   let tagsOpen = $state(true);
+  let tagInput: TagInput | undefined = $state();
+
+  /** T: straight to the tag field (opening the panel if needed); Esc goes back to the images. */
+  async function focusTags() {
+    if (fullscreen) return;
+    panels = true;
+    tagsOpen = true;
+    await tick();
+    tagInput?.focus();
+  }
 
   async function recycle() {
     if (!file) return;
@@ -307,6 +317,7 @@
       { key: 'F', description: 'Fullscreen', handler: toggleFullscreen },
       { key: 'R', description: 'Random image', handler: () => void random() },
       { key: 'S', description: 'Start / stop slideshow', handler: () => (slideshow = !slideshow) },
+      { key: 'T', description: 'Type a tag (Esc goes back to the images)', handler: () => void focusTags() },
       {
         key: 'Escape',
         description: 'Exit fullscreen → stop slideshow',
@@ -457,7 +468,7 @@
         <button class="section" onclick={() => (tagsOpen = !tagsOpen)}>02 · Tags <span class="n">{file.tags.length}</span><span>{tagsOpen ? '−' : '+'}</span></button>
         {#if tagsOpen}
           <div class="tags">
-            <TagInput already={file.tags.map((t) => t.id)} onpick={(t) => changeTags([t.id], [])} />
+            <TagInput bind:this={tagInput} already={file.tags.map((t) => t.id)} onpick={(t) => changeTags([t.id], [])} />
             {#each tagGroups as g (g.type.id)}
               <div class="tag-group">
                 <span class="tlabel" style:border-top-color={g.type.color}>{g.type.name}</span>

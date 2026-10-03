@@ -280,12 +280,15 @@ function cardOf(lib: OpenLibrary, id: number): FolderCard {
   return tree.card(tree.byId.get(id)!);
 }
 
+/** Brief context for racks, drawers and albums (tags get long wiki pages instead). */
+export const MAX_FOLDER_DESCRIPTION = 500;
+/** Image descriptions. */
 export const MAX_DESCRIPTION = 600;
 
 export function setFolderDescription(lib: OpenLibrary, id: number, text: string): FolderCard {
   liveFolder(lib, id);
   const value = text.trim();
-  if (value.length > MAX_DESCRIPTION) throw badRequest('TOO_LONG', `Descriptions can be up to ${MAX_DESCRIPTION} characters.`);
+  if (value.length > MAX_FOLDER_DESCRIPTION) throw badRequest('TOO_LONG', `Folder descriptions can be up to ${MAX_FOLDER_DESCRIPTION} characters.`);
   lib.db.prepare('UPDATE folders SET description = ?, updated_at = ? WHERE id = ?').run(value || null, Date.now(), id);
   emit({ type: 'folders-changed' });
   return cardOf(lib, id);

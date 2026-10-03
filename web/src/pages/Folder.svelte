@@ -120,7 +120,7 @@
       <div class="info">
         <span class="kind"><KindIcon kind={folder.kind} size={13} />{kindWord}{isStyled(folder.kind === 'category' ? 'category' : 'subcategory') ? ` · ${folder.kind === 'category' ? 'category' : 'sub-category'}` : ''}</span>
         <h1 class="display title">{folder.name}</h1>
-        <DescriptionEditor text={folder.description} prompt="What lives in this {kindWord.toLowerCase()}?" onsave={saveDescription} />
+        <DescriptionEditor text={folder.description} prompt="What lives in this {kindWord.toLowerCase()}?" max={500} onsave={saveDescription} />
         <div class="stats">
           <div class="stat"><b>{fmt(folder.imageCount)}</b>{word('images')} under here</div>
           <div class="stat"><b>{folder.subcategoryCount}</b>{folder.subcategoryCount === 1 ? word('subcategory') : word('subcategories')}</div>

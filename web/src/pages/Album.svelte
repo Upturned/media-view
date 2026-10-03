@@ -2,6 +2,7 @@
   import type { FolderDetail, InboxSummary } from '@media-view/shared';
   import { ApiError, client, unwrap } from '../api.ts';
   import Breadcrumbs from '../components/Breadcrumbs.svelte';
+  import DescriptionEditor from '../components/DescriptionEditor.svelte';
   import DropOverlay from '../components/DropOverlay.svelte';
   import FolderActions from '../components/FolderActions.svelte';
   import ImageBrowser from '../components/ImageBrowser.svelte';
@@ -79,6 +80,16 @@
     if (searchLabel) return useSearchContext(searchLabel);
   });
 
+  async function saveDescription(text: string) {
+    if (!folder) return;
+    try {
+      folder = await unwrap(client.api.folders[':id'].$patch({ param: { id: String(folder.id) }, json: { description: text } }));
+    } catch (err) {
+      toast((err as Error).message, 'error');
+      throw err;
+    }
+  }
+
   const crumbs = $derived(folder ? [...folder.ancestors, { id: folder.id, kind: folder.kind, name: folder.name }] : []);
 </script>
 
@@ -109,6 +120,9 @@
           {/if}
         </div>
       </div>
+      {#if !all && !isInbox}
+        <div class="desc"><DescriptionEditor text={folder.description} compact max={500} prompt="What’s in this album?" onsave={saveDescription} /></div>
+      {/if}
     </header>
 
     {#key `${folder.id}-${all}`}
@@ -137,6 +151,7 @@
   .all { font-size: 0.45em; color: var(--text2); }
   .hint { font: 12px var(--font-mono); letter-spacing: 0; color: var(--text2); }
   .stats { display: flex; gap: 24px; }
+  .desc { max-width: 760px; padding-top: 4px; }
   .stat b.accent { color: var(--accent); }
   .stat b.starred { color: var(--accent2); }
 

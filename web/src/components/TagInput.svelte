@@ -60,6 +60,11 @@
     return () => clearTimeout(t);
   });
 
+  /** Put the cursor in the field (the viewer's T key). */
+  export function focus(): void {
+    input?.focus();
+  }
+
   function pick(tag: TagRef) {
     onpick(tag);
     value = '';

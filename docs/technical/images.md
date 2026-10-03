@@ -545,7 +545,7 @@ Where drops go: on an album page or album card → that album; on the Library pa
 - **Rename** changes the base name only (the extension is locked); a name already taken in the folder is an error. Case-only renames work.
 - **Bulk rename** (design M3 · 03): `{ ids, pattern, start, digits }`. `#` is the number (from `start`, zero-padded to `digits`), `*` the original name; numbered in the order the ids are given (the grid's current order). Every new name must be unique in its folder — conflicts refuse the whole rename. Renames go through temporary names (on disk and in the DB) so swaps work.
 - **Folders**: rename, move (`POST /api/folders/:id/move { parentId }`) — the kind follows the new place (a category moved into a category becomes a sub-category; albums can't go to the top level; never into itself) and the files' `category_id` is refreshed. A name already taken there is an error.
-- **Descriptions** of folders and images: up to 600 characters, stored only in the DB (the folder on disk is untouched).
+- **Descriptions**, stored only in the DB (the folder on disk is untouched): racks, drawers and albums get a brief one, up to **500** characters, for context; images up to **600**; tag wiki pages up to **20,000** (Markdown, milestone 5).
 - **Covers**: a folder's cover must be an image inside it (`PATCH /api/folders/:id { coverFileId }`).
 
 ### 8.5 Media serving
@@ -884,7 +884,7 @@ Hash-based routing (`#/…`), so the same build works from `http://localhost` an
 | `#/tag-types`            | Tag types (fields in milestone 5)         |
 | `#/collections`          | Collections                               |
 | `#/collections/:id`      | Collection page                           |
-| `#/favorites`            | Favorites                                 |
+| `#/favorites`            | Favorites — a view of every starred image (not a folder); linked from the top bar and the Library page |
 | `#/health`               | Library Health                            |
 | `#/recycle`              | Recycle Bin                               |
 | `#/settings`             | Settings                                  |
@@ -970,7 +970,7 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 2. **Folders & files** — reconciliation, markers, Inbox, hashing, thumbnails, Library / Folder / Album pages, viewer. *(Done; design `docs/Design/darkroom-milestone-2-pages/`.)*
 3. **File operations** — import (picker and drag and drop), move, copy, rename, covers, recycle bin, watcher. *(Done: see §7.5, §8.3–8.6; design `docs/Design/darkroom-milestone-3-pages/`.)*
 4. **Tags** *(done)* — types, tags, tag input, tag chips and sidebar, search syntax (include / exclude / any of), aliases and main name, implications, merge; the Search page, tag galleries, the Tags directory, the Tag types page (without custom fields) and an **Edit tag** dialog for name, type, aliases, implications, merge and delete. Design: `docs/Design/darkroom-milestone-4-pages/`.
-5. **Wiki** — tag pages, descriptions, custom fields, related tags. Editing moves onto the wiki page; the Edit tag dialog stays as a shortcut.
+5. **Wiki** — tag pages, descriptions, custom fields, related tags. Editing moves onto the wiki page; the Edit tag dialog stays as a shortcut. Design: `docs/Design/darkroom-milestone-5-pages/`. Decisions: one **Edit page** mode for the whole page (description, fields, cover) with Save / Discard; descriptions up to 20,000 characters; changing a tag's type lists exactly which field values would be lost before confirming; Ctrl + click and middle-click on a tag open its wiki page; **Related tags** shows the top 12.
 6. **Collections** — collection pages, viewer navigation, bulk add, group by collection.
 7. **Library Health** — all issue kinds and fixes, severity indicator, external-move keep/undo, logs section.
 8. **Polish** — favorites, random, settings, per-page help content, performance pass at 50k images.
@@ -983,7 +983,7 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 - **Search and Download** — planned after the Videos and Audio modules: see `docs/search-and-download.md`.
 - **Search tabs** — Folders and Collections tabs use `GET /api/folders?q=` and `GET /api/collections?q=`; no per-tab counts.
 
-- **Keyboard shortcuts** — decided: the MVP set plus `S` (slideshow) and `F1` (help); `Esc` keeps the MVP order (fullscreen → slideshow → tags panel → slideshow panel). See user guide §3.4 and §4.5. Viewer keys are registered in milestone 2.
+- **Keyboard shortcuts** — decided: the MVP set plus `S` (slideshow), `T` (type a tag; `Esc` leaves the field), `/` (search) and `F1` (help); `Esc` keeps the MVP order (fullscreen → slideshow → tags panel → slideshow panel). See user guide §3.4 and §4.5. The Help dialog's *Shortcuts* tab lists them from the keymap registry, so it never drifts.
 - **Hash algorithm** — decided: SHA-256. Revisit (e.g. xxHash via a bundled WASM build) only if first imports of very large libraries prove slow.
 - **Thumbnail size** — decided: 400 px.
 - **Tag name rules** — decided: names are shown with spaces as typed; `_` and space are equivalent when matching, and search writes them with `_` (§10.1).
