@@ -2,7 +2,11 @@ import { Hono } from 'hono';
 import type { ApiErrorBody } from '@media-view/shared';
 import { AppError } from './lib/errors.ts';
 import { log } from './lib/log.ts';
+import { eventRoutes } from './routes/events.ts';
+import { fileRoutes } from './routes/files.ts';
+import { folderRoutes } from './routes/folders.ts';
 import { libraryRoutes } from './routes/library.ts';
+import { mediaRoutes } from './routes/media.ts';
 import { settingsRoutes } from './routes/settings.ts';
 import { systemRoutes } from './routes/system.ts';
 
@@ -33,8 +37,12 @@ export function createApp(allowedOrigins: Set<string>) {
 
   const api = app
     .route('/api/library', libraryRoutes)
+    .route('/api/folders', folderRoutes)
+    .route('/api/files', fileRoutes)
     .route('/api/settings', settingsRoutes)
-    .route('/api/system', systemRoutes);
+    .route('/api/system', systemRoutes)
+    .route('/api/events', eventRoutes)
+    .route('/media', mediaRoutes);
 
   app.notFound((c) => c.json<ApiErrorBody>({ error: { code: 'NOT_FOUND', message: 'Not found.' } }, 404));
 

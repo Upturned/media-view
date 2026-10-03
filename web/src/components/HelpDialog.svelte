@@ -20,7 +20,7 @@
     { id: 'about', label: 'About' },
   ];
   let active = $state('page');
-  let about: AboutInfo | null = $state(null);
+  let about = $state<AboutInfo | null>(null);
 
   onMount(async () => {
     about = await unwrap(client.api.system.about.$get());

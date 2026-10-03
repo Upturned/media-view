@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { LibraryInfo } from '@media-view/shared';
+import type { LibraryInfo, ScanStatus } from '@media-view/shared';
 import { appDataDir, rememberLibrary } from '../config.ts';
 import { openDatabase, type DB } from '../db/connection.ts';
 import { migrate } from '../db/migrate.ts';
@@ -32,6 +32,17 @@ export interface OpenLibrary {
 }
 
 let current: OpenLibrary | null = null;
+
+/** Background workers attach here (set by the server at boot; tests run without them). */
+interface LibraryHooks {
+  opened(lib: OpenLibrary): void;
+  closing(lib: OpenLibrary): void;
+}
+let hooks: LibraryHooks | null = null;
+
+export function setLibraryHooks(next: LibraryHooks | null): void {
+  hooks = next;
+}
 
 export function getLibrary(): OpenLibrary | null {
   return current;
@@ -117,12 +128,14 @@ export function openLibrary(input: string): OpenLibrary {
   ensureInbox(current);
   rememberLibrary(root);
   log('info', 'library', 'library opened', { path: root, migrations: applied });
+  hooks?.opened(current);
   return current;
 }
 
 export function closeLibrary(): void {
   if (!current) return;
   log('info', 'library', 'library closed', { path: current.root });
+  hooks?.closing(current);
   current.db.close();
   current = null;
   setLogDir(path.join(appDataDir(), 'logs'));
@@ -159,7 +172,7 @@ export function ensureInbox(lib: OpenLibrary): void {
   if (!existed && !isNew) log('info', 'library', 'inbox recreated', { path: dir });
 }
 
-export function libraryInfo(lib: OpenLibrary): LibraryInfo {
+export function libraryInfo(lib: OpenLibrary, scan: ScanStatus): LibraryInfo {
   const count = (sql: string) => (lib.db.prepare(sql).pluck().get() as number) ?? 0;
   return {
     id: lib.meta.id,
@@ -167,13 +180,14 @@ export function libraryInfo(lib: OpenLibrary): LibraryInfo {
     path: lib.root,
     createdAt: lib.meta.createdAt,
     stats: {
-      folders: count("SELECT COUNT(*) FROM folders WHERE module = 'images' AND kind <> 'inbox'"),
-      files: count("SELECT COUNT(*) FROM files WHERE media_type = 'image' AND recycled = 0"),
+      folders: count("SELECT COUNT(*) FROM folders WHERE module = 'images' AND kind <> 'inbox' AND missing_since IS NULL"),
+      categories: count("SELECT COUNT(*) FROM folders WHERE module = 'images' AND kind = 'category' AND missing_since IS NULL"),
+      files: count("SELECT COUNT(*) FROM files WHERE media_type = 'image' AND recycled = 0 AND missing_since IS NULL"),
       inboxFiles: count(
         `SELECT COUNT(*) FROM files f JOIN folders d ON d.id = f.folder_id
-         WHERE d.kind = 'inbox' AND f.recycled = 0`,
+         WHERE d.kind = 'inbox' AND f.recycled = 0 AND f.missing_since IS NULL`,
       ),
     },
-    scan: { status: 'idle' },
+    scan,
   };
 }

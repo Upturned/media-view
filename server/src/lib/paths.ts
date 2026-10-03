@@ -33,11 +33,27 @@ export function assertInside(root: string, candidate: string): void {
 }
 
 /**
- * SQL condition matching every row under `prefix` (not the prefix itself).
+ * SQL condition matching every row under `prefix` (not the prefix itself), as a range:
+ * `prefix/` ≤ path < `prefix0` ('0' is the character right after '/'). The column's NOCASE
+ * collation applies and the (…, rel_path) index is used.
  * Never use LIKE for paths: `_` and `%` are wildcards there and `_` is common in file names.
  */
 export function underPrefix(column: string, prefix: string): { sql: string; params: string[] } {
-  return { sql: `substr(${column}, 1, length(?) + 1) = ? || '/' COLLATE NOCASE`, params: [prefix, prefix] };
+  return { sql: `(${column} >= ? AND ${column} < ?)`, params: [prefix + '/', prefix + '0'] };
+}
+
+export function parentPath(relPath: string): string {
+  const i = relPath.lastIndexOf('/');
+  return i < 0 ? '' : relPath.slice(0, i);
+}
+
+export function baseName(relPath: string): string {
+  return relPath.slice(relPath.lastIndexOf('/') + 1);
+}
+
+export function extension(name: string): string {
+  const i = name.lastIndexOf('.');
+  return i <= 0 ? '' : name.slice(i + 1).toLowerCase();
 }
 
 /** Escape a user text term for `LIKE … ESCAPE '\'`. */

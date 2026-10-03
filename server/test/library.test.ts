@@ -37,7 +37,7 @@ describe('library', () => {
     expect(inbox.rel_path).toBe('Inbox');
     expect(readMarker(path.join(root, 'Images', 'Inbox'))).toEqual({ kind: 'inbox', library: lib.meta.id, folder: inbox.uuid });
 
-    expect(libraryInfo(lib)).toMatchObject({ name: 'My Library', stats: { folders: 0, files: 0, inboxFiles: 0 } });
+    expect(libraryInfo(lib, { status: 'idle', lastScan: null, hashing: 0 })).toMatchObject({ name: 'My Library', stats: { folders: 0, files: 0, inboxFiles: 0 } });
     expect(loadConfig()).toMatchObject({ lastLibrary: root, recentLibraries: [root] });
   });
 

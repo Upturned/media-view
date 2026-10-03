@@ -7,6 +7,7 @@ import { appDataDir, loadConfig } from './config.ts';
 import { createApp } from './app.ts';
 import { applyRetention, flush, getLogDir, log, setLogDir } from './lib/log.ts';
 import { closeLibrary, openLibrary } from './services/library.ts';
+import { installWorkers } from './workers/index.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEV_WEB_PORT = 5173;
@@ -14,6 +15,7 @@ const DEV_WEB_PORT = 5173;
 const config = loadConfig();
 const port = Number(process.env.PORT ?? config.port);
 setLogDir(path.join(appDataDir(), 'logs'));
+installWorkers();
 
 if (config.lastLibrary) {
   try {

@@ -13,6 +13,14 @@
   - These are static mockups, not the real app — clicking around inside them doesn't affect anything.
 - Later, **option (b)**: implement each style as a real theme and replace the iframes with live mini-previews of the actual app (as the theme picker already does).
 
+### 1.1 Page designs (Claude Design handoffs)
+
+- Page designs live in `docs/Design/<handoff>/` as Claude Design handoff bundles (readable HTML/CSS/JS). Milestone 2 pages: `docs/Design/darkroom-milestone-2-pages/` (Library, Folder page, Album grid, Viewer).
+- They're recreated in Svelte, not copied. Parts of a design that belong to a later milestone (tag index, collections, health badge, …) are built only when that milestone lands; until then they're not shown.
+- **Tone:** the designs' copy is playful. It's **toned down** in the app — a little flavor is welcome, but never at the cost of clarity.
+- **Vocabulary per style:** a style may use its own words — Darkroom says *rack* (category), *drawer* (sub-category), *frames* (images), and numbers images like film (`12A`). The docs and Help always use the plain words, so the style's word is paired with the plain one wherever it appears on its own (e.g. a *Racks* heading with "10 categories" next to it). If a style word would read too differently from the docs, the plain word is used instead. Style words live in the theme data (`words`), with the plain words as the fallback.
+- Dropped from the Milestone 2 design: the album stat "since last roll" (no clear meaning). Kept: the Inbox's "N new this week · oldest: X days".
+
 ---
 
 ## 2. What the four styles are

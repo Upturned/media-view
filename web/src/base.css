@@ -17,6 +17,8 @@ a { color: inherit; }
 
 h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 
+input::placeholder { color: #77766f; }
+
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 ::selection { background: var(--accent); color: var(--accent-ink); }
@@ -31,28 +33,41 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 
 .mono { font-family: var(--font-mono); font-size: 13px; }
 
+/* Condensed display type for titles and big numbers. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 0.85;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 8px 14px;
+  height: 42px;
+  padding: 0 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: none;
   color: var(--text);
-  font: inherit;
-  font-size: 13px;
+  font: 700 15px/1 var(--font-display);
   text-transform: uppercase;
-  letter-spacing: var(--label-spacing);
+  letter-spacing: 0.06em;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
 }
-.btn:hover:not(:disabled) { border-color: var(--text2); background: var(--surface2); }
+.btn:hover:not(:disabled) { border-color: var(--text); }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.1); }
-.btn.ghost { background: transparent; border-color: transparent; }
-.btn.ghost:hover:not(:disabled) { background: var(--surface2); border-color: var(--line); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn.ghost { border-color: transparent; }
+.btn.ghost:hover:not(:disabled) { border-color: var(--line); }
+.btn-group { display: flex; }
+.btn-group .btn + .btn { border-left: none; }
 
 .icon-btn {
   display: inline-grid;
@@ -71,16 +86,41 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 
 .page {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 32px 24px 64px;
+  padding: 28px 40px 64px;
 }
 
 .page-header { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
 .page-header h1 { font-size: 28px; text-transform: uppercase; letter-spacing: 0.04em; }
 
+/* "Racks  10 categories · a→z" */
+.section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font: 12px var(--font-mono);
+  text-transform: uppercase;
+  color: var(--text2);
+}
+.section-title strong { font: 700 22px/1 var(--font-display); color: var(--text); }
+
+/* Big number over a small label */
+.stat { display: flex; flex-direction: column; gap: 2px; font: 11px var(--font-mono); color: var(--text2); text-transform: uppercase; }
+.stat b { font: 700 30px/1 var(--font-display); color: var(--text); }
+
 .panel {
   border: 1px solid var(--line);
   background: var(--surface);
   border-radius: var(--radius);
+}
+
+/* Film-strip sprocket holes */
+.sprockets {
+  height: 16px;
+  background-color: var(--bg2);
+  background-image: repeating-linear-gradient(90deg, var(--surface2) 0 10px, transparent 10px 22px);
+  background-size: 100% 7px;
+  background-position: 0 50%;
+  background-repeat: no-repeat;
 }

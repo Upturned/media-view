@@ -3,11 +3,15 @@
  * Routes are added here as pages are built (technical doc §13.1).
  */
 
-export type RouteName = 'hub' | 'images' | 'settings' | 'not-found';
+export type RouteName = 'hub' | 'images' | 'folder' | 'album' | 'all' | 'viewer' | 'settings' | 'not-found';
 
 const ROUTES: [pattern: string, name: RouteName][] = [
   ['/', 'hub'],
   ['/images', 'images'],
+  ['/images/f/:id', 'folder'],
+  ['/images/f/:id/all', 'all'],
+  ['/images/a/:id', 'album'],
+  ['/images/v/:id', 'viewer'],
   ['/settings', 'settings'],
 ];
 
@@ -42,12 +46,40 @@ function match(hash: string): Route {
 
 export const router = $state({ route: match(location.hash) });
 
+/**
+ * Each history entry of the app carries its position (`idx`), so "back" knows whether there is an
+ * app page to go back to — also after replace-navigations and the browser's own back/forward.
+ */
+let index = (history.state as { idx?: number } | null)?.idx ?? 0;
+let replacing = false;
+if ((history.state as { idx?: number } | null)?.idx === undefined) history.replaceState({ idx: 0 }, '');
+
 window.addEventListener('hashchange', () => {
+  const known = (history.state as { idx?: number } | null)?.idx;
+  if (known !== undefined) index = known;
+  else {
+    if (!replacing) index++;
+    history.replaceState({ idx: index }, '');
+  }
+  replacing = false;
   router.route = match(location.hash);
 });
 
-export function navigate(path: string): void {
-  location.hash = '#' + path;
+export function navigate(path: string, opts: { replace?: boolean } = {}): void {
+  const hash = '#' + path.replace(/^#/, '');
+  if (opts.replace) {
+    replacing = true;
+    location.replace(hash);
+  } else location.hash = hash;
+}
+
+/** Back to the previous page of the app, or to `fallback` when there's none (e.g. opened by URL). */
+export function goBack(fallback: string): void {
+  if (index > 0) history.back();
+  else navigate(fallback);
 }
 
 export const href = (path: string) => '#' + path;
+
+export const folderHref = (f: { id: number; kind: string }) =>
+  href(f.kind === 'album' || f.kind === 'inbox' ? `/images/a/${f.id}` : `/images/f/${f.id}`);

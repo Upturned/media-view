@@ -212,7 +212,7 @@ CREATE UNIQUE INDEX folders_one_inbox ON folders(module) WHERE kind = 'inbox';
 
 - **The Inbox** is a special top-level folder (`Images/Inbox/`) that behaves as an album: it holds only images, exactly one exists per module, and it can't be renamed, moved or recycled. It is created with the library and recreated automatically (folder + marker) whenever it is found missing; it never raises a `missing_folder` issue. Imports without an explicit target album go there.
 
-- The tree is an adjacency list (`parent_id`) plus a materialized path (`rel_path`). "Everything under X" is a prefix comparison, `substr(rel_path, 1, length(:prefix) + 1) = :prefix || '/'`; ancestors come from the path segments or a recursive CTE.
+- The tree is an adjacency list (`parent_id`) plus a materialized path (`rel_path`). "Everything under X" is a range on the indexed path, `rel_path >= :prefix || '/' AND rel_path < :prefix || '0'` ('0' is the character right after '/'); ancestors come from the path segments or a recursive CTE.
 - **Structural rules** (an album's or inbox's parent is never an album; categories and the inbox are top-level; albums and the inbox hold no folders) are enforced in `services/folders.ts`, backed by triggers as a safety net:
 
 ```sql
@@ -223,8 +223,8 @@ BEGIN SELECT RAISE(ABORT, 'albums cannot contain folders'); END;
 -- same trigger for UPDATE OF parent_id
 ```
 
-- Moving or renaming a folder rewrites `rel_path` for the folder, all descendant folders and all descendant files in one transaction (`UPDATE … SET rel_path = :new || substr(rel_path, length(:old) + 1) WHERE substr(rel_path, 1, length(:old) + 1) = :old || '/'`).
-- **Path prefixes never use `LIKE`.** `_` and `%` are wildcards in `LIKE` and `_` is common in file names, so `my_album/%` would also match `myXalbum/…`. All prefix matches go through one helper in `lib/paths.ts` that builds the `substr` comparison above (with an explicit `COLLATE NOCASE`: `substr()` doesn't inherit the column's collation). Tests cover names containing `_` and `%`.
+- Moving or renaming a folder rewrites `rel_path` for the folder, all descendant folders and all descendant files in one transaction (`UPDATE … SET rel_path = :new || substr(rel_path, length(:old) + 1) WHERE rel_path >= :old || '/' AND rel_path < :old || '0'`).
+- **Path prefixes never use `LIKE`.** `_` and `%` are wildcards in `LIKE` and `_` is common in file names, so `my_album/%` would also match `myXalbum/…`. All prefix matches go through one helper in `lib/paths.ts` (`underPrefix`) that builds the range above: it compares the column directly, so the column's `NOCASE` collation applies and the `(…, rel_path)` index is used. Tests cover names containing `_` and `%`, and case differences.
 
 ### 6.3 Files
 
@@ -428,31 +428,39 @@ Content (JSON, one line):
 
 ### 7.2 Reconciliation
 
-`workers/scanner.ts` compares the module root with the DB. It runs on library open, on demand (**Rescan** on Library Health) and, scoped to a subtree, when the watcher reports changes.
+`services/reconcile.ts` compares the module root with the DB; `workers/scanner.ts` runs it one pass at a time (a request during a scan schedules one more pass). It runs on library open, on demand (**Rescan** — on the Library page until Library Health exists) and, scoped to a subtree, when the watcher reports changes.
 
 **Pass 1 — walk the disk.** Collect every directory (with its marker, if any) and every file (`size`, `mtime`). Skip `.mediaview/` and dot-files, **except the known marker files** (§7.1), which are read here to identify each directory.
 
 **Pass 2 — match folders.**
 
-1. Marker uuid found in DB → same folder. If its path differs, it was moved/renamed outside the app: update `rel_path` (and descendants) so the app keeps working, clear `missing_since`, and raise an **external move** issue recording the old path, so the user can *Keep* or *Undo* it.
+Directories are processed parents first. Rows are assigned by marker identity first, then by path, so a folder renamed in Explorer isn't mistaken for a new folder created at its old path.
+
+1. Marker uuid found in DB → same folder. If its path differs, it was moved/renamed outside the app: update `rel_path` (and descendants) so the app keeps working, clear `missing_since`, and raise an **external move** issue recording the original path (kept if it moves again before review; cleared if it's moved back), so the user can *Keep* or *Undo* it.
+   - A marker found in **several** directories (a folder copied in Explorer) identifies only one of them — the one at the DB's path if present, otherwise the first found. The others are treated as unmarked.
+   - A marker of this library whose uuid the DB doesn't know (the DB was lost or restored from an old backup) → the folder is re-created with that uuid and the marker's kind.
 2. No marker, but a DB folder exists at that path → same folder; rewrite the missing marker.
-3. No marker, no DB row → **unmarked folder** issue with an inferred kind:
+3. No marker, no DB row → **unmarked folder**. It's **registered right away with an inferred kind**, so its images are visible immediately (e.g. a library created on an existing folder), and an `unmarked_folder` issue asks the user to confirm or change the kind:
    - contains images and no folders → `album`
-   - contains folders and no images → `subcategory` (or `category` at top level)
-   - empty, or both → no guess; the user chooses.
-4. DB folders not matched by any directory → set `missing_since`, raise **missing folder**.
+   - contains folders → `subcategory` (images next to them become loose files)
+   - empty → `album` (a guess; the issue is marked `certain: false`)
+   - at the top level, always `category`.
+4. **Kinds follow position:** a top-level folder is a category, a nested category is a sub-category — so a drawer moved to the top level in Explorer becomes a rack. A folder inside an album or the Inbox isn't registered: it raises **nested in album**, and its images attach to the album.
+5. DB folders not matched by any directory → set `missing_since`, raise **missing folder** (except the Inbox, which is recreated).
 
 **Pass 3 — match files.** For each file on disk:
 
 1. DB row at the same path with the same `size` and `mtime` → unchanged (no hashing).
 2. DB row at the same path, different `size`/`mtime` → content changed: re-hash, update metadata, regenerate thumbnail. Tags stay.
-3. No row at that path → hash it, then look for rows with that hash and `missing_since` set (or whose path no longer exists):
+3. No row at that path → look for rows whose file is gone (`missing_since` set, or path no longer on disk) **with the same size**; only then hash the new file (so a first import hashes nothing up front) and compare hashes:
    - **exactly one** candidate → **moved**: update path and folder, and add it to an **external move** issue grouped by *(old folder → new folder)* — moving 300 files together produces one issue;
    - **several** candidates (identical copies that each had their own tags/favorites) → ambiguous: insert as a new file and raise an **ambiguous_move** issue listing the candidates, so the user picks which record it is. Metadata is never reassigned by guessing;
    - **none** → **new file**, insert.
 
    A hash match against a row whose file still exists on disk is a copy, not a move — it becomes a new file (and a `duplicate`).
 4. DB files not matched → set `missing_since`, raise **missing file**.
+
+New files found on disk get the file's creation time as `added_at` (so "date added" and "new this week" mean something for an imported folder); files imported through the app get the import time.
 
 Files are inserted even when their folder breaks the rules (e.g. loose in a sub-category) so they are never invisible; they get a `folder_id` of the nearest folder and a **rule problem** issue. Such files don't appear in album grids until fixed.
 
@@ -502,7 +510,7 @@ Watcher events caused by the app's own operations are suppressed through a short
 
 ### 8.1 Supported types
 
-Images: `jpg jpeg jfif png gif webp svg avif` (JFIF is JPEG; served as `image/jpeg`). Detected by extension, confirmed by `sharp` metadata on first import (a `.png` that isn't an image becomes a `wrong_type` issue).
+Images: `jpg jpeg jfif png gif webp svg avif` (JFIF is JPEG; served as `image/jpeg`). Detected by extension, confirmed by `sharp` when the thumbnail is made (a `.png` that isn't an image becomes a `wrong_type` issue on `file:<id>`, which rescans leave alone). Windows' own `desktop.ini` and `Thumbs.db` are ignored.
 
 ### 8.2 Hashing
 
@@ -547,8 +555,9 @@ Recycling moves the file or folder into `.mediaview/recycle-bin/<recycle id>[.ex
 
 ### 10.1 Names
 
-- `name` keeps what the user typed (trimmed, inner whitespace collapsed).
-- `name_norm` = NFC → lowercase → trimmed → whitespace collapsed to one space. Uniqueness and lookup always use `name_norm`.
+- `name` keeps what the user typed (trimmed, inner whitespace collapsed) and is what the UI displays: *red dress*.
+- **Space and `_` are the same character for matching.** `name_norm` = NFC → lowercase → `_` replaced by a space → trimmed → whitespace collapsed to one space. So `red dress`, `red_dress` and `Red Dress` are one tag. Uniqueness and lookup (names, aliases, wiki links) always use `name_norm`. A name typed with underscores (`red_dress`) is stored for display with spaces (`red dress`).
+- In the **search box** a tag name can't contain spaces (they separate terms), so tags are written with underscores: `#red_dress`. Autocomplete inserts names that way; everywhere else names are shown with spaces.
 - Forbidden characters in names: `#`, `:`, `,` and leading `-` (they are search syntax). `[` and `]` are forbidden too (wiki links).
 
 ### 10.2 Default tag types and fields
@@ -651,6 +660,8 @@ tagterm := '#' [typekey ':'] name        -- explicit tag
 text    := any other word or "quoted phrase"
 ```
 
+- In a tag term, `name` is a single word: spaces in tag names are written as `_` (`#red_dress`, `character:aerin_valecrest`) and match through `name_norm` (§10.1).
+
 - Tag terms are resolved through §10.3 (aliases included). Unknown tags produce zero results and a hint, not an error.
 - All `~` terms form a single **"any of" group** (booru style): at least one must match. `~` applies to tag terms only.
 - The tag sidebar's include / exclude / any-of states are just a UI over this syntax: toggling a chip rewrites the query string and vice versa, so the two never disagree.
@@ -713,7 +724,8 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 
 | Method | Path                            | Purpose                                                  |
 |--------|---------------------------------|----------------------------------------------------------|
-| GET    | `/api/folders?parent=:id`       | Children (no parent → categories), with counts & covers  |
+| GET    | `/api/folders`                  | Library page: `{ front: { inbox, categories } }` with counts & covers |
+| GET    | `/api/folders?parent=:id`       | `{ children }`: sub-categories and albums, a→z, with counts & covers |
 | GET    | `/api/folders?q=`               | Search folders by name, any depth (Search page, Folders tab) |
 | GET    | `/api/folders/:id`              | Folder + breadcrumb ancestors                            |
 | POST   | `/api/folders`                  | Create `{ parentId, kind, name }`                        |
@@ -725,7 +737,10 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 
 | Method | Path                           | Purpose                                                    |
 |--------|--------------------------------|------------------------------------------------------------|
-| GET    | `/api/files`                   | Query: `q, folder, recursive, favorites, collection, sort, order, group, seed, page` |
+| GET    | `/api/files`                   | Query: `q, folder, recursive, favorites, name, collection, sort, order, group, seed, offset, limit` (≤ 500, default 200) → `{ items, total }` |
+| GET    | `/api/files/ids`               | Same filters → every id in order (Select all)              |
+| GET    | `/api/files/locate`            | Same filters + `id` → `{ position: { index, total } }` (viewer prev / next) |
+| POST   | `/api/files/favorite`          | Bulk `{ ids, favorited }`                                  |
 | GET    | `/api/files/:id`               | Details: metadata, tags (with source), collections         |
 | PATCH  | `/api/files/:id`               | Rename, description, favorite                              |
 | POST   | `/api/files/move`              | `{ ids, folderId }`                                        |
@@ -818,7 +833,7 @@ Hash-based routing (`#/…`), so the same build works from `http://localhost` an
 | `#/images/f/:id`         | Folder page (category / sub-category)     |
 | `#/images/a/:id`         | Album page                                |
 | `#/images/f/:id/all`     | View all images under a folder            |
-| `#/images/v/:fileId`     | Image viewer (context passed in state)    |
+| `#/images/v/:fileId`     | Image viewer; the list it steps through is in the query (`?folder&recursive&sort&order&seed&…`), so it survives a reload |
 | `#/search?q=`            | Search                                    |
 | `#/tags`                 | Tags directory                            |
 | `#/tags/:id`             | Tag wiki page                             |
@@ -928,4 +943,4 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 - **Keyboard shortcuts** — decided: the MVP set plus `S` (slideshow) and `F1` (help); `Esc` keeps the MVP order (fullscreen → slideshow → tags panel → slideshow panel). See user guide §3.4 and §4.5. Viewer keys are registered in milestone 2.
 - **Hash algorithm** — decided: SHA-256. Revisit (e.g. xxHash via a bundled WASM build) only if first imports of very large libraries prove slow.
 - **Thumbnail size** — decided: 400 px.
-- **Tag name rules** — whether to also forbid spaces (booru-style underscores) or keep spaces as typed; the design above keeps spaces.
+- **Tag name rules** — decided: names are shown with spaces as typed; `_` and space are equivalent when matching, and search writes them with `_` (§10.1).
