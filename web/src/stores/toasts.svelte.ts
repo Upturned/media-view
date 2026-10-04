@@ -4,18 +4,24 @@ export interface Toast {
   id: number;
   message: string;
   kind: 'info' | 'error';
-  /** e.g. Undo after a move (design M3 · 01). */
-  action?: { label: string; run: () => void };
+  /** e.g. Go to / Undo after a move (design M3 · 01). */
+  actions: ToastAction[];
+}
+
+export interface ToastAction {
+  label: string;
+  run: () => void;
 }
 
 export const toasts = $state({ list: [] as Toast[] });
 
 let nextId = 1;
 
-export function toast(message: string, kind: Toast['kind'] = 'info', action?: Toast['action']): void {
+export function toast(message: string, kind: Toast['kind'] = 'info', action?: ToastAction | ToastAction[]): void {
   const id = nextId++;
-  untrack(() => toasts.list.push({ id, message, kind, action }));
-  setTimeout(() => dismiss(id), action ? 10_000 : kind === 'error' ? 8000 : 4000);
+  const actions = action ? [action].flat() : [];
+  untrack(() => toasts.list.push({ id, message, kind, actions }));
+  setTimeout(() => dismiss(id), actions.length ? 10_000 : kind === 'error' ? 8000 : 4000);
 }
 
 export function dismiss(id: number): void {

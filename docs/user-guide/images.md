@@ -245,7 +245,7 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 - favorite / unfavorite them
 - send them to the Recycle Bin
 
-**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album right there. When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move, the message at the bottom offers **Undo** for a few seconds. When copying, **Copy tags** (on by default) gives the copies the same tags.
+**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album right there. When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move or copy, the message at the bottom offers **Go to** the destination album and, after a move, **Undo**, for a few seconds. When copying, **Copy tags** (on by default) gives the copies the same tags.
 
 **Renaming in bulk** — write a pattern: `#` is a number and `*` the original name, so `ref_#` gives *ref_01, ref_02…* and `*_#` keeps the names and numbers them. Choose where numbering starts and how many digits it has. Images are numbered in the grid's current order, extensions are kept, and a live preview shows every new name — names that would clash are flagged before anything changes.
 
@@ -265,9 +265,10 @@ Opens when you click an image. Shows the image as large as possible with its det
 - **Tags panel:** the image's tags grouped by type (see §3.1 for clicking them).
   - Add tags by typing: suggestions appear with their type color and image count, and aliases are recognized.
   - If what you type doesn't exist yet, choose **Create "…" as [type ▾]** to create the tag on the spot. Typing `character:frodo` creates it directly as a Character.
+  - Remove a tag with the **×** on it (or right-click → *Remove from this image*).
   - Tags added automatically by an implication (see §5.4) are marked as such and can't be removed on their own — the tooltip tells you which tag implies them.
 - **Collections panel:** which collections the image is in; add it to another one.
-- **Favorite**, **Open With…** (opens the file in another program), **Rename**, **Move**, **Set as cover of ▸**, **Recycle**.
+- **Favorite**, **Open With…** (opens the file in another program), **Rename**, **Move**, **Set as cover of ▸**, **Recycle**. After a move or recycle you stay on the list you were browsing: if the image left it, the next one is shown.
 
 When opened from a collection, the viewer shows your position in it (e.g. *3 / 12 in "Chapter 3 refs"*).
 
@@ -282,7 +283,7 @@ When opened from a collection, the viewer shows your position in it (e.g. *3 / 1
 | `R`              | Random image                                                           |
 | `S`              | Start / stop slideshow                                                 |
 | `T`              | Type a tag: puts the cursor in the Tags panel (`Esc` goes back to the images) |
-| `Esc`            | One step back, in this order: exit fullscreen → stop the slideshow → close the tags panel → close the slideshow panel |
+| `Esc`            | One step back, in this order: exit fullscreen → stop the slideshow → back to the previous page (in the tag field, `Esc` just leaves the field) |
 | `Backspace`      | Back to the previous page                                              |
 | `F1`             | Help                                                                   |
 
