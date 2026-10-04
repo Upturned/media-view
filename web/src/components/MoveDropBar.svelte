@@ -54,7 +54,7 @@
       return;
     }
     try {
-      await transfer('move', files.map((f) => f.id), t.id, t.name, 'keep-both');
+      await transfer('move', files.map((f) => f.id), t, 'keep-both');
     } catch (err) {
       toastError(err);
     }

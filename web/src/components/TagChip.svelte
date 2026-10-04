@@ -57,6 +57,7 @@
   }
 </script>
 
+{#snippet chip()}
 <a
   bind:this={el}
   class="chip"
@@ -76,6 +77,15 @@
   {/if}
   {tag.name}
 </a>
+{/snippet}
+
+{#if onremove && !implied}
+  <span class="removable" style:--c={color} style:--ink={inkFor(color)}>
+    {@render chip()}<button class="x" title="Remove from this image" aria-label="Remove {tag.name} from this image" onclick={onremove}>×</button>
+  </span>
+{:else}
+  {@render chip()}
+{/if}
 
 <style>
   .chip {
@@ -90,6 +100,18 @@
     overflow-wrap: anywhere;
   }
   .chip:hover { outline: 2px solid var(--text); }
+  .removable { display: inline-flex; align-items: stretch; }
+  .x {
+    padding: 0 6px;
+    border: none;
+    border-left: 1px solid color-mix(in oklab, var(--ink) 25%, transparent);
+    background: var(--c);
+    color: var(--ink);
+    font: 14px/1 var(--font-mono);
+    cursor: pointer;
+    opacity: 0.75;
+  }
+  .x:hover { opacity: 1; outline: 2px solid var(--red); }
   .chip.implied {
     padding: 2px 8px;
     border: 1px solid var(--c);

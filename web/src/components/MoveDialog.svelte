@@ -137,7 +137,8 @@
     try {
       if (dialog.kind === 'transfer') {
         remember(node.id);
-        await transfer(mode, dialog.files.map((f) => f.id), node.id, node.name, policy, copyTags);
+        const done = await transfer(mode, dialog.files.map((f) => f.id), node, policy, copyTags);
+        if (done && mode === 'move') dialog.onmoved?.();
       } else if (dialog.kind === 'folder-move') {
         await unwrap(client.api.folders[':id'].move.$post({ param: { id: String(dialog.folder.id) }, json: { parentId: node.id === 0 ? null : node.id } }));
         toast(`Moved “${dialog.folder.name}” to ${node.name}.`);

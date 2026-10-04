@@ -7,10 +7,9 @@
   {#each toasts.list as t (t.id)}
     <div class="toast" class:error={t.kind === 'error'}>
       <button class="msg" onclick={() => dismiss(t.id)}>{t.message}</button>
-      {#if t.action}
-        {@const action = t.action}
+      {#each t.actions as action (action.label)}
         <button class="action" onclick={() => { dismiss(t.id); action.run(); }}>{action.label}</button>
-      {/if}
+      {/each}
     </div>
   {/each}
 </div>

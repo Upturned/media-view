@@ -9,7 +9,7 @@ The images of one album in a grid. The Inbox uses this same page.
 - With images selected, the yellow bar lets you **star / unstar** them or **select all**. `Esc` clears the selection.
 - **Right-click** an image for more.
 - **+ Add images** opens the file picker; you can also drag files (or whole folders) from Explorer onto the page. A panel at the bottom right shows the progress.
-- With images selected, the yellow bar can also **Move…**, **Copy…**, **Rename…** them in bulk or **Recycle** them. After a move, **Undo** is offered for a few seconds.
+- With images selected, the yellow bar can also **Move…**, **Copy…**, **Rename…** them in bulk or **Recycle** them. After a move, **Go to** the album and **Undo** are offered for a few seconds.
 - **Drag images** out of the grid to move them: drop them on the Inbox or a recent album in the bar that appears at the bottom.
 - **Rename · Move · Recycle** under the title act on the album itself.
 - Click the **description** under the title to write a short note about the album (up to 500 characters).

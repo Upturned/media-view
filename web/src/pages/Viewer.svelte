@@ -30,9 +30,9 @@
 
   const STRIP = 13;
 
-  /** The list to step through: the one we came from, or the file's own album. */
+  /** The list to step through: the one we came from (a folder, Favorites, a tag, a search), or else the file's own album. */
   const listQuery: ListQuery = $derived(
-    query.folder !== undefined || !file ? query : { ...query, folder: file.folder.id },
+    query.folder !== undefined || query.favorites || query.tag !== undefined || query.q || !file ? query : { ...query, folder: file.folder.id },
   );
 
   $effect(() => {
@@ -166,6 +166,31 @@
     if (pos && pos.total > 1) {
       const next = await itemAt(pos.index + 1 < pos.total ? pos.index + 1 : pos.index - 1);
       if (next && next.id !== id) return show(next);
+    }
+    back();
+  }
+
+  function move() {
+    if (!file) return;
+    const f = file;
+    // The list as it is now: when opened without one, the album the image is leaving.
+    const list = listQuery;
+    const pos = position;
+    openOps({
+      kind: 'transfer', mode: 'move', files: [f], from: f.folder.name, currentFolderId: f.folder.id,
+      onmoved: () => void afterMove(f.id, list, pos).catch(toastError),
+    });
+  }
+
+  /** Stay in the list we were browsing: if the moved image left it, show the one that took its place. */
+  async function afterMove(movedId: number, list: ListQuery, pos: { index: number; total: number } | null) {
+    if (id !== movedId) return;
+    const still = (await unwrap(client.api.files.locate.$get({ query: { ...toParams(list), id: String(movedId) } }))).position;
+    if (still || id !== movedId) return;
+    if (pos && pos.total > 1) {
+      const index = Math.min(pos.index, pos.total - 2);
+      const next = (await unwrap(client.api.files.$get({ query: { ...toParams(list), offset: String(index), limit: '1' } }))).items[0];
+      if (next && id === movedId) return navigate(viewerHref(next.id, list).slice(1), { replace: true });
     }
     back();
   }
@@ -320,10 +345,11 @@
       { key: 'T', description: 'Type a tag (Esc goes back to the images)', handler: () => void focusTags() },
       {
         key: 'Escape',
-        description: 'Exit fullscreen → stop slideshow',
+        description: 'Exit fullscreen → stop slideshow → back to the previous page',
         handler: () => {
           if (document.fullscreenElement) void document.exitFullscreen();
           else if (slideshow) slideshow = false;
+          else back();
         },
       },
       { key: 'Backspace', description: 'Back to the previous page', handler: back },
@@ -458,7 +484,7 @@
               <button class="fav" class:on={file.favorited} onclick={toggleFavorite}>{file.favorited ? '★ Starred' : '☆ Star'}</button>
               <button onclick={() => file && openWith(file.id)}>Open with…</button>
               <button onclick={() => file && openOps({ kind: 'rename-file', file, where: file.folder.name })}>Rename</button>
-              <button onclick={() => file && openOps({ kind: 'transfer', mode: 'move', files: [file], from: file.folder.name, currentFolderId: file.folder.id })}>Move</button>
+              <button onclick={move}>Move</button>
               <button onclick={coverMenu} disabled={file.folder.kind === 'inbox' && file.ancestors.length === 0}>Cover of ▸</button>
               <button class="recycle" onclick={recycle}>Recycle</button>
             </div>

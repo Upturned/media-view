@@ -8,6 +8,6 @@ Shows one image as large as possible, with its details alongside.
 - **Slideshow** steps through the images on its own; set the interval (1–30 s) next to it.
 - **Random** picks another image from the same list. **Full** shows the image alone, full screen.
 - **Info** shows the file name, its folder (click any part to go there), size, dimensions and dates, and lets you **star** it.
-- **Open with…** opens the image in another program; **Rename**, **Move**, **Cover of ▸** (the album or a folder above it) and **Recycle** act on it. Below them, add a short **description**.
-- **Tags** panel: type a tag and press Enter to add it — `type:name` picks the type, and a new name offers to create the tag. Press **T** from anywhere in the viewer to jump to it, and **Esc** to go back to the images.
-- **Keys:** ← → previous / next · + − zoom · 0 fit · F full · R random · S slideshow · T tags · Esc one step back · Backspace back to the page you came from. The *Shortcuts* tab lists them all.
+- **Open with…** opens the image in another program; **Rename**, **Move** (you stay on the list you were browsing, on the next image; the message offers **Go to** the album and **Undo**), **Cover of ▸** (the album or a folder above it) and **Recycle** act on it. Below them, add a short **description**.
+- **Tags** panel: type a tag and press Enter to add it — `type:name` picks the type, and a new name offers to create the tag. The **×** on a tag removes it from the image (tags added by an implication have a lock instead). Press **T** from anywhere in the viewer to jump to it, and **Esc** to go back to the images.
+- **Keys:** ← → previous / next · + − zoom · 0 fit · F full · R random · S slideshow · T tags · Esc one step back (exit full screen → stop the slideshow → back to the page you came from) · Backspace back to the page you came from. The *Shortcuts* tab lists them all.

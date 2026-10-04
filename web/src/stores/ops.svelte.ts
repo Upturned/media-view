@@ -2,8 +2,9 @@ import type { FolderKind } from '@media-view/shared';
 import { ApiError, client, unwrap } from '../api.ts';
 import { fmt } from '../media.ts';
 import { word } from '../themes/index.ts';
+import { folderHref, navigate } from '../router.svelte.ts';
 import { ask } from './confirm.svelte.ts';
-import { toast, toastError } from './toasts.svelte.ts';
+import { toast, toastError, type ToastAction } from './toasts.svelte.ts';
 
 /**
  * File and folder operations shared by the grid, the viewer, the cards and the Recycle Bin
@@ -20,7 +21,15 @@ export interface BinEntry {
 export type ClashPolicy = 'keep-both' | 'replace' | 'skip';
 
 export type OpsDialog =
-  | { kind: 'transfer'; mode: 'move' | 'copy'; files: { id: number; filename: string }[]; from: string; currentFolderId: number | null }
+  | {
+    kind: 'transfer';
+    mode: 'move' | 'copy';
+    files: { id: number; filename: string }[];
+    from: string;
+    currentFolderId: number | null;
+    /** Called after a move that placed at least one image (the viewer steps on from there). */
+    onmoved?: () => void;
+  }
   | { kind: 'folder-move'; folder: { id: number; name: string; kind: FolderKind; parentId: number | null } }
   | { kind: 'restore'; items: BinEntry[] }
   | { kind: 'rename-file'; file: { id: number; filename: string; v: string }; where: string }
@@ -43,25 +52,31 @@ const images = (n: number) => `${fmt(n)} ${n === 1 ? word('image') : word('image
 
 // ─── Images ──────────────────────────────────────────────────────────────────
 
-export async function transfer(mode: 'move' | 'copy', ids: number[], folderId: number | null, folderName: string, policy: ClashPolicy, copyTags = true): Promise<void> {
+/** Move or copy images into an album (or the Inbox); the toast offers to go there. Resolves to how many were placed. */
+export async function transfer(mode: 'move' | 'copy', ids: number[], dest: { id: number; name: string; kind: string }, policy: ClashPolicy, copyTags = true): Promise<number> {
+  const goTo: ToastAction = {
+    label: `Go to ${dest.name.length > 24 ? `${dest.name.slice(0, 23)}…` : dest.name}`,
+    run: () => navigate(folderHref(dest).slice(1)),
+  };
   if (mode === 'move') {
-    const r = await unwrap(client.api.files.move.$post({ json: { ids, folderId, policy } }));
+    const r = await unwrap(client.api.files.move.$post({ json: { ids, folderId: dest.id, policy } }));
     const extra = [r.renamed.length ? `${r.renamed.length} renamed` : '', r.skipped.length ? `${r.skipped.length} skipped` : '', r.replaced ? `${r.replaced} replaced` : '']
       .filter(Boolean).join(' · ');
-    toast(`Moved ${images(r.done)} to ${folderName}.${extra ? ` (${extra})` : ''}`, 'info', r.undo.length
-      ? {
-        label: 'Undo',
-        run: () => {
-          unwrap(client.api.files['undo-move'].$post({ json: { items: r.undo } }))
-            .then((u) => toast(`Moved ${images(u.done)} back.`))
-            .catch(toastError);
-        },
-      }
-      : undefined);
+    const undo: ToastAction = {
+      label: 'Undo',
+      run: () => {
+        unwrap(client.api.files['undo-move'].$post({ json: { items: r.undo } }))
+          .then((u) => toast(`Moved ${images(u.done)} back.`))
+          .catch(toastError);
+      },
+    };
+    toast(`Moved ${images(r.done)} to ${dest.name}.${extra ? ` (${extra})` : ''}`, 'info', [...(r.done ? [goTo] : []), ...(r.undo.length ? [undo] : [])]);
+    return r.done;
   } else {
-    const r = await unwrap(client.api.files.copy.$post({ json: { ids, folderId, policy, copyTags } }));
+    const r = await unwrap(client.api.files.copy.$post({ json: { ids, folderId: dest.id, policy, copyTags } }));
     const extra = [r.renamed.length ? `${r.renamed.length} renamed` : '', r.skipped.length ? `${r.skipped.length} skipped` : ''].filter(Boolean).join(' · ');
-    toast(`Copied ${images(r.done)} to ${folderName}.${extra ? ` (${extra})` : ''}`);
+    toast(`Copied ${images(r.done)} to ${dest.name}.${extra ? ` (${extra})` : ''}`, 'info', r.done ? goTo : undefined);
+    return r.done;
   }
 }
 
