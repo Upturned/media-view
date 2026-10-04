@@ -13,6 +13,7 @@
   import { live } from '../stores/events.svelte.ts';
   import { openMenu } from '../stores/menu.svelte.ts';
   import { groupByType } from '../stores/tags.svelte.ts';
+  import { ago, collectionHref, removeFromCollection, setCollectionCover } from '../stores/collections.svelte.ts';
   import { openOps, openWith, recycleImages, setCover } from '../stores/ops.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
   import { openDialog } from '../stores/ui.svelte.ts';
@@ -32,8 +33,20 @@
 
   /** The list to step through: the one we came from (a folder, Favorites, a tag, a search), or else the file's own album. */
   const listQuery: ListQuery = $derived(
-    query.folder !== undefined || query.favorites || query.tag !== undefined || query.q || !file ? query : { ...query, folder: file.folder.id },
+    query.folder !== undefined || query.favorites || query.tag !== undefined || query.collection !== undefined || query.q || !file
+      ? query
+      : { ...query, folder: file.folder.id },
   );
+
+  /** Opened from a collection: its name, for the labels (kept after the image leaves it). */
+  let listName = $state('');
+  $effect(() => {
+    const cid = query.collection;
+    if (cid === undefined) return;
+    unwrap(client.api.collections[':id'].$get({ param: { id: String(cid) } }))
+      .then((c) => (listName = c.name))
+      .catch(() => (listName = ''));
+  });
 
   $effect(() => {
     void live.files;
@@ -113,15 +126,37 @@
     }
   }
 
-  /** "Set as cover of ▸": the album, every folder above it, and the image's tags (collections come later). */
+  /** "Set as cover of ▸": the album, every folder above it, the collection it was opened from, and the image's tags. */
+  const coverFolders = $derived(file ? [file.folder, ...[...file.ancestors].reverse()].filter((c) => c.kind !== 'inbox') : []);
+  const fromList = $derived(file && query.collection !== undefined ? file.collections.find((c) => c.id === query.collection) : undefined);
+
   function coverMenu(e: MouseEvent) {
     if (!file) return;
     const f = file;
-    const targets = [f.folder, ...[...f.ancestors].reverse()].filter((c) => c.kind !== 'inbox');
+    const list = fromList;
     openMenu(e, 'Set as cover of…', [
-      ...targets.map((c) => ({ label: `${c.kind === 'album' ? 'Album' : c.kind === 'category' ? 'Category' : 'Sub-category'} · ${c.name}`, action: () => setCover(c.id, c.name, f.id) })),
+      ...coverFolders.map((c) => ({ label: `${c.kind === 'album' ? 'Album' : c.kind === 'category' ? 'Category' : 'Sub-category'} · ${c.name}`, action: () => setCover(c.id, c.name, f.id) })),
+      ...(list ? [{ label: `Collection · ${list.name}`, separated: coverFolders.length > 0, action: () => void setCollectionCover(list, f.id) }] : []),
       ...f.tags.map((t, i) => ({ label: `Tag · ${t.name}`, separated: i === 0, action: () => setTagCover(t, f.id) })),
     ]);
+  }
+
+  // ─── Collections (design M6 · 05) ──────────────────────────────────────────
+
+  let collOpen = $state(true);
+
+  function addToList() {
+    if (file) openOps({ kind: 'add-to-collection', files: [file], where: file.folder.name });
+  }
+
+  /** × in the panel: off that list, never deleted. Off the list being browsed: show the next one. */
+  async function removeFromList(c: { id: number; name: string }) {
+    if (!file) return;
+    const f = file;
+    const list = listQuery;
+    const pos = position;
+    if (!(await removeFromCollection(c, [f.id]))) return;
+    if (query.collection === c.id) await afterMove(f.id, list, pos).catch(toastError);
   }
 
   async function setTagCover(t: TagRef, fileId: number) {
@@ -290,7 +325,8 @@
       return 5;
     }
   }
-  let slideshow = $state(false);
+  // `play=1` (a collection's ▶ Slideshow) starts right away.
+  let slideshow = $state(router.route.query.get('play') === '1');
   let interval = $state(storedInterval());
 
   $effect(() => {
@@ -358,19 +394,23 @@
 
   // ─── Labels ────────────────────────────────────────────────────────────────
 
-  /** Where the list came from: a folder, Favorites, a tag, or a search. */
+  /** Where the list came from: a folder, a collection, Favorites, a tag, or a search. */
   const source = $derived(
-    query.folder !== undefined ? 'folder' : query.favorites ? 'favorites' : query.tag !== undefined ? 'tag' : query.q ? 'search' : 'folder',
+    query.folder !== undefined ? 'folder'
+      : query.collection !== undefined ? 'collection'
+      : query.favorites ? 'favorites' : query.tag !== undefined ? 'tag' : query.q ? 'search' : 'folder',
   );
   const backLabel = $derived(
     !file ? 'Back'
+      : source === 'collection' ? listName || 'Collection'
       : source === 'favorites' ? 'Favorites'
       : source === 'tag' ? 'Tag'
       : source === 'search' ? 'Search'
       : query.recursive && query.folder !== undefined ? 'All images' : file.folder.name,
   );
   const contextKind = $derived(
-    source === 'favorites' ? 'in Favorites'
+    source === 'collection' ? 'in collection'
+      : source === 'favorites' ? 'in Favorites'
       : source === 'tag' ? 'with the tag'
       : source === 'search' ? 'in the search'
       : file?.folder.kind === 'inbox' ? 'in the Inbox' : query.recursive ? 'in a folder' : 'in album',
@@ -397,7 +437,7 @@
         {:else if file}
           <div class="position">
             <span class="display pos">{position ? `${position.index + 1} / ${position.total}` : '—'}</span>
-            <span class="ctx">{contextKind}{#if source === 'folder'}<br /><b>{file.folder.name}</b>{/if}</span>
+            <span class="ctx">{contextKind}{#if source === 'folder'}<br /><b>{file.folder.name}</b>{:else if source === 'collection' && listName}<br /><b>{listName}</b>{/if}</span>
           </div>
           <img
             class="photo"
@@ -452,7 +492,7 @@
               {@const n = stripStart + k + 1}
               <button class="frame" class:on={s.id === id} onclick={() => show(s)} title={s.filename}>
                 <Thumb file={s} fit="cover" />
-                <span class="n">{s.id === id ? `${n}A` : n}</span>
+                <span class="n">{source === 'collection' ? String(n).padStart(2, '0') : s.id === id ? `${n}A` : n}</span>
               </button>
             {/each}
             <button class="nav" onclick={() => step(1)} title="Next (→)" disabled={!position || position.index >= position.total - 1}>▶</button>
@@ -485,7 +525,7 @@
               <button onclick={() => file && openWith(file.id)}>Open with…</button>
               <button onclick={() => file && openOps({ kind: 'rename-file', file, where: file.folder.name })}>Rename</button>
               <button onclick={move}>Move</button>
-              <button onclick={coverMenu} disabled={file.folder.kind === 'inbox' && file.ancestors.length === 0}>Cover of ▸</button>
+              <button onclick={coverMenu} disabled={coverFolders.length === 0 && !fromList && file.tags.length === 0}>Cover of ▸</button>
               <button class="recycle" onclick={recycle}>Recycle</button>
             </div>
             <DescriptionEditor text={file.description} compact prompt="Describe this image…" onsave={saveDescription} />
@@ -507,6 +547,26 @@
             {:else}
               <p class="notags">No tags yet. Type above — Enter adds, and <b>type:name</b> picks the type.</p>
             {/each}
+          </div>
+        {/if}
+        <button class="section" onclick={() => (collOpen = !collOpen)}>03 · Collections <span class="n">{file.collections.length}</span><span>{collOpen ? '−' : '+'}</span></button>
+        {#if collOpen}
+          <div class="colls">
+            {#each file.collections as c (c.id)}
+              {@const here = query.collection === c.id}
+              <div class="coll" class:here>
+                <div class="coll-thumb">{#if c.cover}<Thumb file={c.cover} fit="cover" />{/if}</div>
+                <a class="coll-name" href={collectionHref(c.id)} title="Open this collection">
+                  <span>{c.name}</span>
+                  <span class="coll-meta">{here ? 'browsing this list now' : `${fmt(c.total)} ${c.total === 1 ? 'image' : 'images'} · ${ago(c.updatedAt)}`}</span>
+                </a>
+                <span class="coll-pos">{here && position ? `${position.index + 1} / ${position.total} ◀ here` : `${c.position} / ${c.total}`}</span>
+                <button class="coll-x" onclick={() => removeFromList(c)} title="Remove from this collection — the file stays">✕</button>
+              </div>
+            {:else}
+              <span class="nocolls">Not on any list.</span>
+            {/each}
+            <button class="coll-add" onclick={addToList}>+ Add to collection</button>
           </div>
         {/if}
       </aside>
@@ -631,6 +691,22 @@
   .chips { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
   .notags { margin: 0; font: 11.5px var(--font-mono); color: var(--text2); }
   .notags b { color: var(--text); font-weight: 400; }
+
+  .colls { padding: 8px 20px 28px; display: flex; flex-direction: column; }
+  .coll { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto 26px; align-items: center; gap: 10px; padding: 8px; margin: 0 -8px; border-bottom: 1px solid var(--line); }
+  .coll.here { background: color-mix(in oklab, var(--accent) 12%, transparent); }
+  .coll-thumb { height: 32px; background: var(--thumb); outline: 1px solid var(--line); overflow: hidden; }
+  .coll-name { display: flex; flex-direction: column; gap: 3px; min-width: 0; color: var(--text); text-decoration: none; }
+  .coll-name > span:first-child { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .coll-name:hover > span:first-child { text-decoration: underline; }
+  .coll-meta { font: 10px var(--font-mono); color: var(--text2); text-transform: uppercase; }
+  .coll-pos { font: 11px var(--font-mono); color: var(--text2); white-space: nowrap; }
+  .coll.here .coll-pos { color: var(--accent); }
+  .coll-x { width: 24px; height: 24px; border: 1px solid var(--line); background: none; color: var(--text2); font: 11px sans-serif; cursor: pointer; }
+  .coll-x:hover { color: var(--text); border-color: var(--text); }
+  .nocolls { padding: 10px 0; font: 11.5px var(--font-mono); color: var(--text2); text-transform: uppercase; }
+  .coll-add { margin-top: 12px; height: 34px; border: 1px dashed var(--text2); background: none; color: var(--text2); font: 12px var(--font-mono); text-transform: uppercase; cursor: pointer; }
+  .coll-add:hover { color: var(--text); border-color: var(--text); }
   .info { padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--line); }
   .info .name { font: 700 22px/1.05 var(--font-display); overflow-wrap: anywhere; }
   .path { display: flex; flex-wrap: wrap; align-items: center; font: 11px var(--font-mono); }

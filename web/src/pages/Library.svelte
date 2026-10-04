@@ -4,6 +4,7 @@
   import FolderCardView from '../components/FolderCardView.svelte';
   import DropOverlay from '../components/DropOverlay.svelte';
   import InboxBanner from '../components/InboxBanner.svelte';
+  import ListIcon from '../components/ListIcon.svelte';
   import NameDialog from '../components/NameDialog.svelte';
   import { fmt } from '../media.ts';
   import { href, navigate } from '../router.svelte.ts';
@@ -19,6 +20,7 @@
   let categories: FolderCard[] = $state([]);
   let loaded = $state(false);
   let creating = $state(false);
+  let listCount = $state<number | null>(null);
 
   $effect(() => {
     void live.folders;
@@ -30,6 +32,9 @@
       })
       .catch((err: Error) => toast(err.message, 'error'))
       .finally(() => (loaded = true));
+    unwrap(client.api.collections.$get({ query: {} }))
+      .then((r) => (listCount = r.collections.length))
+      .catch(() => (listCount = null));
   });
 
   async function createCategory(name: string) {
@@ -77,8 +82,11 @@
       </span>
     </div>
     <div class="actions">
-      <a class="btn" href={href('/favorites')}><span class="star">★</span> Favorites</a>
-      <button class="btn" onclick={() => (creating = true)}>+ New {word('category').toLowerCase()}</button>
+      <div class="btn-group">
+        <a class="btn" href={href('/favorites')}><span class="star">★</span> Favorites</a>
+        <a class="btn" href={href('/collections')}><ListIcon size={13} />Collections{#if listCount !== null}<span class="n">{fmt(listCount)}</span>{/if}</a>
+      </div>
+      <button class="btn gap" onclick={() => (creating = true)}>+ New {word('category').toLowerCase()}</button>
       <button class="btn primary" onclick={addImages}>+ Add images</button>
     </div>
   </header>
@@ -124,6 +132,8 @@
   .facts b.accent { color: var(--accent); }
   .actions { margin-left: auto; display: flex; gap: 8px; }
   .star { color: var(--accent2); }
+  .n { font: 11px var(--font-mono); color: var(--text2); }
+  .gap { margin-left: 4px; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px 16px; }
 

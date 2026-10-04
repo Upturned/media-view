@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { ApiErrorBody } from '@media-view/shared';
 import { AppError } from './lib/errors.ts';
 import { log } from './lib/log.ts';
+import { collectionRoutes } from './routes/collections.ts';
 import { eventRoutes } from './routes/events.ts';
 import { fileRoutes } from './routes/files.ts';
 import { folderRoutes } from './routes/folders.ts';
@@ -45,6 +46,7 @@ export function createApp(allowedOrigins: Set<string>) {
     .route('/api/tags', tagRoutes)
     .route('/api/tag-types', tagTypeRoutes)
     .route('/api/tag-fields', fieldRoutes)
+    .route('/api/collections', collectionRoutes)
     .route('/api/settings', settingsRoutes)
     .route('/api/system', systemRoutes)
     .route('/api/events', eventRoutes)

@@ -36,7 +36,11 @@ export type OpsDialog =
   | { kind: 'rename-folder'; folder: { id: number; name: string; kind: FolderKind } }
   | { kind: 'bulk-rename'; files: { id: number; filename: string; folderId: number }[]; where: string; order: string }
   | { kind: 'edit-tag'; tagId: number }
-  | { kind: 'bulk-tag'; files: { id: number; filename: string }[]; where: string };
+  | { kind: 'bulk-tag'; files: { id: number; filename: string }[]; where: string }
+  /** New collection (id null, optionally with a name) or edit one (design M6 · 03). */
+  | { kind: 'collection-edit'; id: number | null; name?: string }
+  /** Add images to a collection, or create one for them (design M6 · 04). */
+  | { kind: 'add-to-collection'; files: { id: number; filename: string }[]; where: string };
 
 export const ops = $state({ dialog: null as OpsDialog | null });
 

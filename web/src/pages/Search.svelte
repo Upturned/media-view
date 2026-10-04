@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { textOf, type FileItem, type FolderCard, type TagSummary } from '@media-view/shared';
+  import { textOf, type CollectionCard as Card, type FileItem, type FolderCard, type TagSummary } from '@media-view/shared';
   import { client, unwrap } from '../api.ts';
+  import CollectionCard from '../components/CollectionCard.svelte';
+  import ListIcon from '../components/ListIcon.svelte';
+  import { collectionHref } from '../stores/collections.svelte.ts';
   import FolderCardView from '../components/FolderCardView.svelte';
   import ImageBrowser from '../components/ImageBrowser.svelte';
   import KindIcon from '../components/KindIcon.svelte';
@@ -19,13 +22,14 @@
    * tag index); folders and tags are matched by the plain words of the query.
    */
 
-  type Tab = 'all' | 'images' | 'albums' | 'folders' | 'tags';
+  type Tab = 'all' | 'images' | 'albums' | 'folders' | 'tags' | 'collections';
   const TABS: { id: Tab; label: string }[] = [
     { id: 'all', label: 'All' },
     { id: 'images', label: 'Images' },
     { id: 'albums', label: 'Albums' },
     { id: 'folders', label: `${word('categories')} & ${word('subcategories')}` },
     { id: 'tags', label: 'Tags' },
+    { id: 'collections', label: 'Collections' },
   ];
 
   const initial = router.route.query.get('q') ?? '';
@@ -50,6 +54,7 @@
   let imageTotal = $state(0);
   let folders = $state<(FolderCard & { path: string })[]>([]);
   let tags = $state<TagSummary[]>([]);
+  let lists = $state<Card[]>([]);
 
   $effect(() => {
     void live.files;
@@ -61,6 +66,7 @@
       imageTotal = 0;
       folders = [];
       tags = [];
+      lists = [];
       return;
     }
     unwrap(client.api.files.$get({ query: { q, sort: 'name', order: 'asc', limit: '12' } }))
@@ -72,15 +78,25 @@
     if (w) {
       unwrap(client.api.folders.search.$get({ query: { q: w } })).then((r) => (folders = r.folders)).catch(toastError);
       unwrap(client.api.tags.$get({ query: { q: w, sort: 'count' } })).then((r) => (tags = r.tags)).catch(toastError);
+      unwrap(client.api.collections.$get({ query: { q: w, sort: 'name' } })).then((r) => (lists = r.collections)).catch(toastError);
     } else {
       folders = [];
       tags = [];
+      lists = [];
     }
   });
 
   const albums = $derived(folders.filter((f) => f.kind === 'album'));
   const racks = $derived(folders.filter((f) => f.kind !== 'album'));
-  const counts = $derived<Record<Tab, number>>({ all: imageTotal + folders.length + tags.length, images: imageTotal, albums: albums.length, folders: racks.length, tags: tags.length });
+  const counts = $derived<Record<Tab, number>>({
+    all: imageTotal + folders.length + tags.length + lists.length,
+    images: imageTotal,
+    albums: albums.length,
+    folders: racks.length,
+    tags: tags.length,
+    collections: lists.length,
+  });
+  const pad = (n: number) => String(n).padStart(2, '0');
   const imageQuery = $derived({ q: search.q, sort: 'name' as const, order: 'asc' as const });
 </script>
 
@@ -179,6 +195,34 @@
           {:else}<p class="none">No tags are named like that.</p>{/if}
         </section>
       {/if}
+
+      {#if tab === 'all'}
+        <section class="lists-row">
+          <div class="section-title"><ListIcon size={14} /><strong>Collections</strong><span>{fmt(lists.length)}</span>
+            {#if lists.length > 4}<button class="see" onclick={() => setTab('collections')}>See all {fmt(lists.length)} →</button>{/if}</div>
+          {#if !words}<p class="none">Collections are matched by the words in your search.</p>
+          {:else if lists.length}
+            <div class="minis">
+              {#each lists.slice(0, 4) as c (c.id)}
+                <a class="mini" href={collectionHref(c.id)}>
+                  <div class="mini-cover">{#if c.covers[0]}<Thumb file={c.covers[0]} fit="cover" />{/if}<span>{pad(1)}</span></div>
+                  <div class="fname"><span class="mini-name">{c.name}</span><span class="path">{fmt(c.count)} {c.count === 1 ? 'image' : 'images'}</span></div>
+                </a>
+              {/each}
+            </div>
+          {:else}<p class="none">No collections are named like that.</p>{/if}
+        </section>
+      {:else if tab === 'collections'}
+        <section>
+          <div class="section-title"><span>{fmt(lists.length)} {lists.length === 1 ? 'collection whose name contains' : 'collections whose names contain'} “{words}” · images inside them are on the images tab only if they match</span></div>
+          {#if !words}<p class="none">Collections are matched by the words in your search.</p>
+          {:else if lists.length}
+            <div class="list-cards">
+              {#each lists as c (c.id)}<CollectionCard collection={c} highlight={words} surface="var(--bg)" />{/each}
+            </div>
+          {:else}<p class="none">No collections are named like that.</p>{/if}
+        </section>
+      {/if}
     </div>
   {/if}
 </div>
@@ -222,6 +266,17 @@
   .tbar { align-self: stretch; }
   .type { justify-self: start; font: 10px var(--font-mono); padding: 2px 6px; text-transform: uppercase; }
   .count { font: 11.5px var(--font-mono); text-align: right; }
+
+  .lists-row { margin: 0 -32px; padding: 16px 32px 16px; border-top: 1px solid var(--line); background: color-mix(in oklab, var(--accent) 6%, transparent); }
+  .lists-row .section-title { align-items: center; color: var(--text); }
+  .lists-row .section-title span { color: var(--text2); }
+  .minis { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .mini { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px; background: var(--bg); outline: 1px solid var(--line); text-decoration: none; color: var(--text); }
+  .mini:hover { outline: 2px solid var(--accent); }
+  .mini-cover { position: relative; height: 60px; background: var(--thumb); overflow: hidden; }
+  .mini-cover span { position: absolute; top: 0; left: 0; padding: 2px 5px; background: var(--bg2); font: 700 12px/1 var(--font-display); color: var(--accent); }
+  .mini-name { font: 700 17px/1 var(--font-display); text-transform: uppercase; text-wrap: pretty; overflow-wrap: anywhere; }
+  .list-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 28px 22px; padding-top: 6px; }
 
   .empty { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 60px 32px; font: 12px var(--font-mono); color: var(--text2); text-transform: uppercase; }
   .empty .display { font-size: 48px; color: var(--text); }
