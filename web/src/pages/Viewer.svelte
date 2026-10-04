@@ -1,8 +1,10 @@
 <script lang="ts">
-  import type { FileDetail, FileItem } from '@media-view/shared';
-  import { onDestroy, untrack } from 'svelte';
+  import type { FileDetail, FileItem, TagRef } from '@media-view/shared';
+  import { onDestroy, tick, untrack } from 'svelte';
   import { ApiError, client, unwrap } from '../api.ts';
   import DescriptionEditor from '../components/DescriptionEditor.svelte';
+  import TagChip from '../components/TagChip.svelte';
+  import TagInput from '../components/TagInput.svelte';
   import KindIcon from '../components/KindIcon.svelte';
   import Thumb from '../components/Thumb.svelte';
   import { registerKeys } from '../keymap.svelte.ts';
@@ -10,6 +12,7 @@
   import { folderHref, goBack, href, navigate, router } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
   import { openMenu } from '../stores/menu.svelte.ts';
+  import { groupByType } from '../stores/tags.svelte.ts';
   import { openOps, openWith, recycleImages, setCover } from '../stores/ops.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
   import { openDialog } from '../stores/ui.svelte.ts';
@@ -110,12 +113,49 @@
     }
   }
 
-  /** "Set as cover of ▸": the album and every folder above it (tags and collections come later). */
+  /** "Set as cover of ▸": the album, every folder above it, and the image's tags (collections come later). */
   function coverMenu(e: MouseEvent) {
     if (!file) return;
     const f = file;
     const targets = [f.folder, ...[...f.ancestors].reverse()].filter((c) => c.kind !== 'inbox');
-    openMenu(e, 'Set as cover of…', targets.map((c) => ({ label: `${c.kind === 'album' ? 'Album' : c.kind === 'category' ? 'Category' : 'Sub-category'} · ${c.name}`, action: () => setCover(c.id, c.name, f.id) })));
+    openMenu(e, 'Set as cover of…', [
+      ...targets.map((c) => ({ label: `${c.kind === 'album' ? 'Album' : c.kind === 'category' ? 'Category' : 'Sub-category'} · ${c.name}`, action: () => setCover(c.id, c.name, f.id) })),
+      ...f.tags.map((t, i) => ({ label: `Tag · ${t.name}`, separated: i === 0, action: () => setTagCover(t, f.id) })),
+    ]);
+  }
+
+  async function setTagCover(t: TagRef, fileId: number) {
+    try {
+      await unwrap(client.api.tags[':id'].$patch({ param: { id: String(t.id) }, json: { coverFileId: fileId } }));
+      toast(`Cover of ${t.name} set.`);
+    } catch (err) {
+      toastError(err);
+    }
+  }
+
+  // ─── Tags ──────────────────────────────────────────────────────────────────
+
+  async function changeTags(add: number[], remove: number[]) {
+    if (!file) return;
+    try {
+      await unwrap(client.api.files.tags.$post({ json: { ids: [file.id], add, remove } }));
+      file = await unwrap(client.api.files[':id'].$get({ param: { id: String(file.id) } }));
+    } catch (err) {
+      toastError(err);
+    }
+  }
+
+  const tagGroups = $derived(file ? groupByType(file.tags) : []);
+  let tagsOpen = $state(true);
+  let tagInput: TagInput | undefined = $state();
+
+  /** T: straight to the tag field (opening the panel if needed); Esc goes back to the images. */
+  async function focusTags() {
+    if (fullscreen) return;
+    panels = true;
+    tagsOpen = true;
+    await tick();
+    tagInput?.focus();
   }
 
   async function recycle() {
@@ -277,6 +317,7 @@
       { key: 'F', description: 'Fullscreen', handler: toggleFullscreen },
       { key: 'R', description: 'Random image', handler: () => void random() },
       { key: 'S', description: 'Start / stop slideshow', handler: () => (slideshow = !slideshow) },
+      { key: 'T', description: 'Type a tag (Esc goes back to the images)', handler: () => void focusTags() },
       {
         key: 'Escape',
         description: 'Exit fullscreen → stop slideshow',
@@ -291,10 +332,23 @@
 
   // ─── Labels ────────────────────────────────────────────────────────────────
 
-  const backLabel = $derived(
-    !file ? 'Back' : query.recursive && query.folder !== undefined ? 'All images' : file.folder.name,
+  /** Where the list came from: a folder, Favorites, a tag, or a search. */
+  const source = $derived(
+    query.folder !== undefined ? 'folder' : query.favorites ? 'favorites' : query.tag !== undefined ? 'tag' : query.q ? 'search' : 'folder',
   );
-  const contextKind = $derived(file?.folder.kind === 'inbox' ? 'in the Inbox' : query.recursive ? 'in a folder' : 'in album');
+  const backLabel = $derived(
+    !file ? 'Back'
+      : source === 'favorites' ? 'Favorites'
+      : source === 'tag' ? 'Tag'
+      : source === 'search' ? 'Search'
+      : query.recursive && query.folder !== undefined ? 'All images' : file.folder.name,
+  );
+  const contextKind = $derived(
+    source === 'favorites' ? 'in Favorites'
+      : source === 'tag' ? 'with the tag'
+      : source === 'search' ? 'in the search'
+      : file?.folder.kind === 'inbox' ? 'in the Inbox' : query.recursive ? 'in a folder' : 'in album',
+  );
   const dims = $derived(file?.width && file.height ? `${fmt(file.width)} × ${fmt(file.height)}` : natW ? `${fmt(natW)} × ${fmt(natH)}` : '—');
 </script>
 
@@ -317,7 +371,7 @@
         {:else if file}
           <div class="position">
             <span class="display pos">{position ? `${position.index + 1} / ${position.total}` : '—'}</span>
-            <span class="ctx">{contextKind}<br /><b>{file.folder.name}</b></span>
+            <span class="ctx">{contextKind}{#if source === 'folder'}<br /><b>{file.folder.name}</b>{/if}</span>
           </div>
           <img
             class="photo"
@@ -409,6 +463,24 @@
               <button class="recycle" onclick={recycle}>Recycle</button>
             </div>
             <DescriptionEditor text={file.description} compact prompt="Describe this image…" onsave={saveDescription} />
+          </div>
+        {/if}
+        <button class="section" onclick={() => (tagsOpen = !tagsOpen)}>02 · Tags <span class="n">{file.tags.length}</span><span>{tagsOpen ? '−' : '+'}</span></button>
+        {#if tagsOpen}
+          <div class="tags">
+            <TagInput bind:this={tagInput} already={file.tags.map((t) => t.id)} onpick={(t) => changeTags([t.id], [])} />
+            {#each tagGroups as g (g.type.id)}
+              <div class="tag-group">
+                <span class="tlabel" style:border-top-color={g.type.color}>{g.type.name}</span>
+                <div class="chips">
+                  {#each g.tags as t (t.id)}
+                    <TagChip tag={t} implied={t.source === 'implied'} onremove={() => changeTags([], [t.id])} />
+                  {/each}
+                </div>
+              </div>
+            {:else}
+              <p class="notags">No tags yet. Type above — Enter adds, and <b>type:name</b> picks the type.</p>
+            {/each}
           </div>
         {/if}
       </aside>
@@ -526,6 +598,13 @@
     cursor: pointer;
   }
   .section span { margin-left: auto; font-family: var(--font-mono); color: var(--text2); }
+  .section .n { margin-left: 8px; font: 11px var(--font-mono); color: var(--text2); }
+  .tags { padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 14px; border-bottom: 1px solid var(--line); }
+  .tag-group { display: grid; grid-template-columns: 78px 1fr; gap: 10px; }
+  .tlabel { font: 700 13px/22px var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; border-top: 3px solid; overflow-wrap: anywhere; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
+  .notags { margin: 0; font: 11.5px var(--font-mono); color: var(--text2); }
+  .notags b { color: var(--text); font-weight: 400; }
   .info { padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--line); }
   .info .name { font: 700 22px/1.05 var(--font-display); overflow-wrap: anywhere; }
   .path { display: flex; flex-wrap: wrap; align-items: center; font: 11px var(--font-mono); }

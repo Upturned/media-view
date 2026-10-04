@@ -3,7 +3,8 @@
  * Routes are added here as pages are built (technical doc §13.1).
  */
 
-export type RouteName = 'hub' | 'images' | 'folder' | 'album' | 'all' | 'viewer' | 'recycle' | 'settings' | 'not-found';
+export type RouteName =
+  | 'hub' | 'images' | 'folder' | 'album' | 'all' | 'viewer' | 'search' | 'tags' | 'tag-types' | 'tag' | 'wiki' | 'favorites' | 'recycle' | 'settings' | 'not-found';
 
 const ROUTES: [pattern: string, name: RouteName][] = [
   ['/', 'hub'],
@@ -12,6 +13,12 @@ const ROUTES: [pattern: string, name: RouteName][] = [
   ['/images/f/:id/all', 'all'],
   ['/images/a/:id', 'album'],
   ['/images/v/:id', 'viewer'],
+  ['/search', 'search'],
+  ['/tags', 'tags'],
+  ['/tag-types', 'tag-types'],
+  ['/tags/:id', 'wiki'],
+  ['/tags/:id/images', 'tag'],
+  ['/favorites', 'favorites'],
   ['/recycle', 'recycle'],
   ['/settings', 'settings'],
 ];

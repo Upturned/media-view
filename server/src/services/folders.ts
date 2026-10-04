@@ -280,12 +280,15 @@ function cardOf(lib: OpenLibrary, id: number): FolderCard {
   return tree.card(tree.byId.get(id)!);
 }
 
+/** Brief context for racks, drawers and albums (tags get long wiki pages instead). */
+export const MAX_FOLDER_DESCRIPTION = 500;
+/** Image descriptions. */
 export const MAX_DESCRIPTION = 600;
 
 export function setFolderDescription(lib: OpenLibrary, id: number, text: string): FolderCard {
   liveFolder(lib, id);
   const value = text.trim();
-  if (value.length > MAX_DESCRIPTION) throw badRequest('TOO_LONG', `Descriptions can be up to ${MAX_DESCRIPTION} characters.`);
+  if (value.length > MAX_FOLDER_DESCRIPTION) throw badRequest('TOO_LONG', `Folder descriptions can be up to ${MAX_FOLDER_DESCRIPTION} characters.`);
   lib.db.prepare('UPDATE folders SET description = ?, updated_at = ? WHERE id = ?').run(value || null, Date.now(), id);
   emit({ type: 'folders-changed' });
   return cardOf(lib, id);
@@ -310,4 +313,21 @@ export function folderTree(lib: OpenLibrary): { id: number; parentId: number | n
   return tree.rows
     .map((r) => ({ id: r.id, parentId: r.parent_id, kind: r.kind, name: r.name, imageCount: tree.count(r.id) }))
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+/**
+ * Folders whose name contains every word of `text` (the Search page): racks, drawers and albums, with
+ * where they are (`Fantasy \ Elves`). Names starting with the first word come first.
+ */
+export function searchFolders(lib: OpenLibrary, text: string): (FolderCard & { path: string })[] {
+  const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+  const tree = new FolderTree(lib);
+  return tree.rows
+    .filter((r) => r.kind !== 'inbox' && words.every((w) => r.name.toLowerCase().includes(w)))
+    .sort((a, b) =>
+      Number(!b.name.toLowerCase().startsWith(words[0]!)) - Number(!a.name.toLowerCase().startsWith(words[0]!))
+      || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+    .slice(0, 500)
+    .map((r) => ({ ...tree.card(r), path: tree.ancestors(r).map((c) => c.name).join(' \\ ') }));
 }

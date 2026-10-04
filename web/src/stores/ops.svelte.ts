@@ -25,7 +25,9 @@ export type OpsDialog =
   | { kind: 'restore'; items: BinEntry[] }
   | { kind: 'rename-file'; file: { id: number; filename: string; v: string }; where: string }
   | { kind: 'rename-folder'; folder: { id: number; name: string; kind: FolderKind } }
-  | { kind: 'bulk-rename'; files: { id: number; filename: string; folderId: number }[]; where: string; order: string };
+  | { kind: 'bulk-rename'; files: { id: number; filename: string; folderId: number }[]; where: string; order: string }
+  | { kind: 'edit-tag'; tagId: number }
+  | { kind: 'bulk-tag'; files: { id: number; filename: string }[]; where: string };
 
 export const ops = $state({ dialog: null as OpsDialog | null });
 
@@ -41,7 +43,7 @@ const images = (n: number) => `${fmt(n)} ${n === 1 ? word('image') : word('image
 
 // ─── Images ──────────────────────────────────────────────────────────────────
 
-export async function transfer(mode: 'move' | 'copy', ids: number[], folderId: number | null, folderName: string, policy: ClashPolicy): Promise<void> {
+export async function transfer(mode: 'move' | 'copy', ids: number[], folderId: number | null, folderName: string, policy: ClashPolicy, copyTags = true): Promise<void> {
   if (mode === 'move') {
     const r = await unwrap(client.api.files.move.$post({ json: { ids, folderId, policy } }));
     const extra = [r.renamed.length ? `${r.renamed.length} renamed` : '', r.skipped.length ? `${r.skipped.length} skipped` : '', r.replaced ? `${r.replaced} replaced` : '']
@@ -57,7 +59,7 @@ export async function transfer(mode: 'move' | 'copy', ids: number[], folderId: n
       }
       : undefined);
   } else {
-    const r = await unwrap(client.api.files.copy.$post({ json: { ids, folderId, policy } }));
+    const r = await unwrap(client.api.files.copy.$post({ json: { ids, folderId, policy, copyTags } }));
     const extra = [r.renamed.length ? `${r.renamed.length} renamed` : '', r.skipped.length ? `${r.skipped.length} skipped` : ''].filter(Boolean).join(' · ');
     toast(`Copied ${images(r.done)} to ${folderName}.${extra ? ` (${extra})` : ''}`);
   }

@@ -6,7 +6,7 @@ const SERVER = `http://127.0.0.1:${process.env.PORT ?? 4321}`;
 export default defineConfig({
   plugins: [svelte()],
   server: {
-    port: 5173,
+    port: 2080,
     strictPort: true,
     host: '127.0.0.1',
     proxy: { '/api': SERVER, '/media': SERVER },

@@ -11,6 +11,7 @@ import { fileDetail } from './files.ts';
 import { liveFolder, MAX_DESCRIPTION } from './folders.ts';
 import type { OpenLibrary } from './library.ts';
 import { recycleFiles } from './recycle.ts';
+import { copyFileTags } from './tags.ts';
 
 /** Moving, copying and renaming images (technical doc §8.4, §7.3; design M3 · 01–03). */
 
@@ -166,7 +167,8 @@ export function undoMove(lib: OpenLibrary, items: { id: number; folderId: number
 }
 
 /** Copy images into an album: each copy is a new image with a new id; collections don't follow. */
-export async function copyFiles(lib: OpenLibrary, ids: number[], targetId: number | null, policy: ClashPolicy = 'keep-both'): Promise<TransferResult & { ids: number[] }> {
+/** `copyTags`: the copies get the originals' tags (the Copy dialog's checkbox, on by default). */
+export async function copyFiles(lib: OpenLibrary, ids: number[], targetId: number | null, policy: ClashPolicy = 'keep-both', copyTags = true): Promise<TransferResult & { ids: number[] }> {
   const target = imageTarget(lib, targetId);
   const root = lib.moduleRoot('images');
   const categoryId = categoryIdOf(lib, target.rel_path);
@@ -190,6 +192,7 @@ export async function copyFiles(lib: OpenLibrary, ids: number[], targetId: numbe
         f.hash, f.width, f.height, f.description, Date.now(),
       ).lastInsertRowid as number;
       result.ids.push(id);
+      if (copyTags) copyFileTags(lib.db, f.id, id);
     } catch (err) {
       fs.rmSync(to, { force: true });
       throw err;

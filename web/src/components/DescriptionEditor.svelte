@@ -11,15 +11,17 @@
     prompt = 'Describe it…',
     onsave,
     compact = false,
+    max = 600,
   }: {
     text: string | null;
     placeholder?: string;
     prompt?: string;
     onsave: (text: string) => Promise<void>;
     compact?: boolean;
+    /** Character limit (folders 500, images 600). */
+    max?: number;
   } = $props();
 
-  const MAX = 600;
   let editing = $state(false);
   let draft = $state('');
   let busy = $state(false);
@@ -34,7 +36,7 @@
   }
 
   async function save() {
-    if (draft.length > MAX || busy) return;
+    if (draft.length > max || busy) return;
     busy = true;
     try {
       await onsave(draft.trim());
@@ -60,10 +62,10 @@
   <div class="editor" class:compact>
     <textarea bind:this={area} bind:value={draft} onkeydown={onKey} rows={compact ? 4 : 5} placeholder={prompt}></textarea>
     <div class="bar">
-      <span class:over={draft.length > MAX}>{draft.length} / {MAX}</span>
+      <span class:over={draft.length > max}>{draft.length} / {max}</span>
       <span class="dim">· ctrl+enter saves · esc cancels</span>
       <button class="push" onclick={() => (editing = false)}>Cancel</button>
-      <button class="save" disabled={draft.length > MAX || busy} onclick={save}>Save</button>
+      <button class="save" disabled={draft.length > max || busy} onclick={save}>Save</button>
     </div>
   </div>
 {:else}

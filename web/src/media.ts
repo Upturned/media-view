@@ -11,6 +11,10 @@ export interface ListQuery {
   recursive?: boolean;
   favorites?: boolean;
   name?: string;
+  /** A search in the search syntax. */
+  q?: string;
+  /** Images with this tag (tag galleries). */
+  tag?: number;
   sort: SortKey;
   order: 'asc' | 'desc';
   seed?: number;
@@ -22,6 +26,8 @@ export function toParams(q: ListQuery): Record<string, string> {
   if (q.recursive) p.recursive = '1';
   if (q.favorites) p.favorites = '1';
   if (q.name?.trim()) p.name = q.name.trim();
+  if (q.q?.trim()) p.q = q.q.trim();
+  if (q.tag !== undefined) p.tag = String(q.tag);
   if (q.seed !== undefined) p.seed = String(q.seed);
   return p;
 }
@@ -34,6 +40,8 @@ export function fromParams(p: URLSearchParams): ListQuery {
     recursive: p.get('recursive') === '1',
     favorites: p.get('favorites') === '1',
     name: p.get('name') ?? undefined,
+    q: p.get('q') ?? undefined,
+    tag: num('tag'),
     sort: sort && ['name', 'modified', 'added', 'size', 'random'].includes(sort) ? sort : 'name',
     order: p.get('order') === 'desc' ? 'desc' : 'asc',
     seed: num('seed'),

@@ -6,7 +6,7 @@ A personal, offline media library. Design docs live in [`docs/`](docs/).
 
 ```sh
 npm install
-npm run dev      # server on :4321 + Vite on http://localhost:5173 (hot reload)
+npm run dev      # server on :4321 + Vite on http://localhost:2080 (hot reload)
 ```
 
 Production-style: `npm run build` then `npm start` → http://localhost:4321.

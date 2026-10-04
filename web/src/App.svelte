@@ -8,22 +8,30 @@
   import MoveDropBar from './components/MoveDropBar.svelte';
   import OpsDialogs from './components/OpsDialogs.svelte';
   import Toasts from './components/Toasts.svelte';
+  import TagTooltip from './components/TagTooltip.svelte';
   import TopBar from './components/TopBar.svelte';
   import { registerKeys } from './keymap.svelte.ts';
   import Album from './pages/Album.svelte';
+  import Favorites from './pages/Favorites.svelte';
   import Folder from './pages/Folder.svelte';
   import Hub from './pages/Hub.svelte';
   import Library from './pages/Library.svelte';
   import NotFound from './pages/NotFound.svelte';
   import RecycleBin from './pages/RecycleBin.svelte';
+  import Search from './pages/Search.svelte';
+  import TagGallery from './pages/TagGallery.svelte';
+  import TagsDirectory from './pages/TagsDirectory.svelte';
+  import TagTypes from './pages/TagTypes.svelte';
   import Settings from './pages/Settings.svelte';
   import Viewer from './pages/Viewer.svelte';
   import Welcome from './pages/Welcome.svelte';
+  import Wiki from './pages/Wiki.svelte';
   import { router } from './router.svelte.ts';
   import { confirmState } from './stores/confirm.svelte.ts';
   import { connectEvents, live } from './stores/events.svelte.ts';
   import { installDragTracking } from './stores/imports.svelte.ts';
   import { library, refreshLibrary } from './stores/library.svelte.ts';
+  import { loadTagTypes } from './stores/tags.svelte.ts';
   import { toast } from './stores/toasts.svelte.ts';
   import { openDialog, ui } from './stores/ui.svelte.ts';
 
@@ -38,7 +46,11 @@
     void live.files;
     void live.folders;
     void live.scanning;
-    const t = setTimeout(() => refreshLibrary().catch((err: Error) => toast(err.message, 'error')), 150);
+    const t = setTimeout(() => {
+      refreshLibrary()
+        .then(() => (library.info ? loadTagTypes() : undefined))
+        .catch((err: Error) => toast(err.message, 'error'));
+    }, 150);
     return () => clearTimeout(t);
   });
 
@@ -74,6 +86,18 @@
     <Album all />
   {:else if page === 'viewer'}
     <Viewer />
+  {:else if page === 'search'}
+    <Search />
+  {:else if page === 'tags'}
+    <TagsDirectory />
+  {:else if page === 'tag-types'}
+    <TagTypes />
+  {:else if page === 'tag'}
+    {#key router.route.params.id}<TagGallery />{/key}
+  {:else if page === 'wiki'}
+    {#key router.route.params.id}<Wiki />{/key}
+  {:else if page === 'favorites'}
+    <Favorites />
   {:else if page === 'recycle'}
     <RecycleBin />
   {:else if page === 'settings'}
@@ -96,6 +120,7 @@
 <ContextMenu />
 <MoveDropBar />
 <ImportPanel />
+<TagTooltip />
 <Toasts />
 
 <style>

@@ -16,6 +16,7 @@
   const tabs = [
     { id: 'page', label: 'This page' },
     { id: 'shortcuts', label: 'Shortcuts' },
+    { id: 'search', label: 'Search' },
     { id: 'formats', label: 'Formats' },
     { id: 'about', label: 'About' },
   ];
@@ -55,6 +56,8 @@
         </tbody>
       </table>
       <p class="muted">The full shortcut set is still being revised.</p>
+    {:else if active === 'search'}
+      <Markdown source={pages['../help/search-syntax.md'] ?? ''} />
     {:else if active === 'formats'}
       {#if about}
         <dl>
