@@ -153,19 +153,19 @@ Tags appear as colored chips (the color comes from the tag's type). They behave 
 | Middle-click     | Opens the tag's wiki page in a new tab                                  |
 | Right-click      | Menu: *Open wiki page*, *Show all images*, *Edit tag*, *Copy name* (and *Remove from this image* where it applies) |
 
-The one exception is the **index** on grid pages, where clicking a tag **filters** the grid instead (see §3.2).
+The one exception is the **tag sidebar** on grid pages, where clicking a tag **filters** the grid instead (see §3.2).
 
-### 3.2 The index (tags and collections)
+### 3.2 The tag sidebar
 
-Grid pages (albums, folders, search, favorites, collections, tag galleries) have a side panel, the **index**, listing the tags used by the images you're looking at, grouped and colored by type, with counts. At the top, a **Collections** section lists the collections those images are on, with counts; each row also has a small **↗** that opens the collection. Click a section's title to collapse or expand it (the app remembers).
+Grid pages (albums, folders, search, favorites, collections, tag galleries) have a side panel listing the tags used by the images you're looking at, grouped and colored by type, with counts.
 
 | Action        | Result                                                                     |
 |---------------|----------------------------------------------------------------------------|
-| Click         | Cycles the tag or collection through **must** → **never** → off           |
-| Ctrl + click  | Adds it to the **any of** group (images with at least one of them)        |
+| Click         | Cycles the tag through **include** → **exclude** → off                     |
+| Ctrl + click  | Adds the tag to the **any of** group (images with at least one of them)    |
 | Right-click   | The usual tag menu                                                         |
 
-*Must* tags and collections must all match, *never* ones must all be absent, and at least one of the *any of* group must match. The search box always shows the equivalent search (see §5.6), so you can tweak it by hand.
+Included tags must all be present, excluded tags must all be absent, and at least one tag of the *any of* group must be present. The search box always shows the equivalent search (see §5.6), so you can tweak it by hand.
 
 ### 3.3 Library Health indicator
 
@@ -205,7 +205,6 @@ The starting page. It shows one card per module (Images, Videos, Audio, Text-Wri
 The front page of the Images module: the **Inbox** first, then a grid of all your **categories**, each with its cover image, name and total number of images.
 
 - Click a category to open it.
-- **★ Favorites** and **Collections** (next to it in the header) open those pages, like the links in the top bar.
 - **New category** creates a new top-level folder.
 - **Add images** (or drag files onto the page) sends images to the Inbox.
 - Right-click a category to rename it, set its cover, edit its description, or send it to the Recycle Bin.
@@ -231,7 +230,7 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 
 **Sorting** — by name, date modified, date added, file size or random; ascending or descending.
 
-**Group by collection** — the **Group: None / Collection** switch next to Sort splits the grid into one section per collection (collections in alphabetical order, images in each collection's own order, which you can reverse per section). Each section's header shows how many of these images the collection holds and opens it. An image in several collections appears in each of their sections (marked *2×*) — it's still one image, so selecting it in either section selects it once. Images in no collection come last, under *Not in a collection*. The switch is on every grid of images: albums, *All images*, Favorites, Search and tag galleries.
+**Group by collection** — splits the grid into one section per collection (collections in alphabetical order, images in each collection's own order, which you can reverse). An image in several collections appears in each of their sections; images in no collection come last, under *Not in a collection*.
 
 **Filtering** — all filters stack:
 - favorites only
@@ -240,7 +239,7 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 
 **Selecting and bulk actions** — select several images (click, Ctrl-click, Shift-click, or *Select all*) and then:
 - add or remove tags
-- add them to a collection (**+ Collection**, see §4.11)
+- add them to a collection
 - move or copy them to another album
 - rename them in bulk
 - favorite / unfavorite them
@@ -252,7 +251,7 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 
 **Adding images** — **Add images** opens the Windows file picker, or drag files from Explorer onto the page. Either way, they're copied into this album and the originals are left untouched. A panel at the bottom right shows the progress (you can keep working) and, at the end, what wasn't imported and why: other file types, files that can't be read, or images already in this album (identical ones are skipped).
 
-**Right-click an image** for: *Open*, *Open With…*, *Rename*, *Move*, *Copy*, *Add to collection…*, *Favorite*, *Recycle*, and **Set as cover of ▸** — the album, any sub-category or the category above it, the collection (on a collection page), or any of the image's tags (for example, as a character's portrait).
+**Right-click an image** for: *Open*, *Open With…*, *Rename*, *Move*, *Copy*, *Add to collection*, *Favorite*, *Recycle*, and **Set as cover of ▸** — the album, any sub-category or the category above it, the current collection, or any of the image's tags (for example, as a character's portrait).
 
 ### 4.5 Image viewer
 
@@ -268,10 +267,10 @@ Opens when you click an image. Shows the image as large as possible with its det
   - If what you type doesn't exist yet, choose **Create "…" as [type ▾]** to create the tag on the spot. Typing `character:frodo` creates it directly as a Character.
   - Remove a tag with the **×** on it (or right-click → *Remove from this image*).
   - Tags added automatically by an implication (see §5.4) are marked as such and can't be removed on their own — the tooltip tells you which tag implies them.
-- **Collections panel** (below Tags): the collections the image is on — click one to open it, **×** takes the image off that list (never deletes it) — and **+ Add to collection**.
-- **Favorite**, **Open With…** (opens the file in another program), **Rename**, **Move**, **Set as cover of ▸**, **Recycle**. After a move, a recycle, or taking the image off the collection you're browsing, you stay on that list: if the image left it, the next one is shown.
+- **Collections panel:** which collections the image is in; add it to another one.
+- **Favorite**, **Open With…** (opens the file in another program), **Rename**, **Move**, **Set as cover of ▸**, **Recycle**. After a move or recycle you stay on the list you were browsing: if the image left it, the next one is shown.
 
-When opened from a collection, the viewer shows your position in it (e.g. *3 / 12 in collection "Chapter 3 refs"*), steps through it in the collection page's order (its own order unless you sorted by name or size), the back button names the collection, and **Cover of ▸** also offers the collection.
+When opened from a collection, the viewer shows your position in it (e.g. *3 / 12 in "Chapter 3 refs"*).
 
 **Keyboard shortcuts**
 
@@ -300,7 +299,7 @@ The Search page's first tab, **All**, shows the first few results of each kind, 
 - **Albums** — albums whose names match.
 - **Categories & sub-categories** — those whose names match.
 - **Tags** — tags whose names or aliases match.
-- **Collections** — collections whose names match, as cards (its own tab, too).
+- **Collections** — collections whose names match (with collections).
 
 Images are found by the full search (words and tags); folders and tags by the words. Plain text and tag filters can be mixed in the same search; see §5.6, or the *Search* tab of the Help window.
 
@@ -323,11 +322,11 @@ Every tag has its own wiki page. Open it with **Ctrl + click** on the tag (middl
 
 - **Header** — the tag's main name, its type (in the type's color), its **cover image** (for example a character's portrait), its aliases (*"also known as …"*), how many images have it and when the page was last edited.
 - **Description** — free text in Markdown: `**bold**`, `*italic*`, `## heading`, `- list`, `> quote`, and links. Link another tag by writing `[[name]]`, `[[type:name]]` or `[[type:name|text to show]]`, so pages connect like a real wiki; aliases work too. A link to a tag that doesn't exist yet shows **dashed in amber**, marked *missing*; click it to create the tag (you pick its type). The first paragraph is also the tooltip you see when hovering the tag anywhere in the app.
-- **Images** — the 7 newest images with the tag, with **See all** opening the full gallery with sorting, filtering and the index.
-- **Collections** — the collections holding images with this tag, the ones with the most first, each with how many of its images have the tag. **See all** expands the list in place.
+- **Images** — the 7 newest images with the tag, with **See all** opening the full gallery with sorting, filtering and the tag sidebar.
 - **Implies / Implied by** — e.g. a character's page shows its source; a source's page lists its characters (see §5.4).
 - **Related tags** — the 12 tags that most often appear on the same images, with the share of this tag's images that also have them.
 - **Info** — the tag's **custom fields** (see §5.5), such as a character's species or an artist's website. Empty fields are hidden (the box says how many).
+- **Collections** — collections containing images with this tag *(with collections, milestone 6)*.
 
 **Editing.** **✎ Edit page** (or **E**) switches the whole page into one edit mode: the description, the cover (**Change cover…**) and every custom field. Nothing is saved until **Save page** (**Ctrl + S**); **Discard** (or **Esc**) drops the changes, asking first if there are any.
 
@@ -351,24 +350,18 @@ The page has two tabs: **Name · color · order**, where you **create new types*
 
 ### 4.10 Collections
 
-All your collections, each as a numbered contact strip: its cover, the next few images in order, its name, number of images and the first line of its description. Open it from **Collections** in the top bar or on the Library page.
+A list of all your collections, each with its cover, name and number of images.
 
-- **Sort** by name, number of images or recently changed, and filter by name.
-- **New collection** creates an empty collection (also offered when the filter finds nothing).
+- **New collection** creates an empty collection.
 - Click a collection to open it.
 
 ### 4.11 Collection page
 
-- **Header** — cover, name, description and number of images, with **Edit**, **Delete**, **Random** and **▶ Slideshow** (in the page's order).
-- **Images** in the collection's own order, each numbered with its place in the list. **Drag** images to reorder them; drag a selection to move it together.
-- **Sort** by own order (the default), name or size, ascending or descending. Reordering works only in own order with no filter on — otherwise a quiet hint says so. The numbers always show the list's own order.
-- Open any image to step through the collection in the viewer, in the page's order.
-- **Remove from collection** in the selection bar (never deletes the files), plus the usual bulk actions. The index works as on other grids.
-- **Edit** — name, description (up to 500 characters) and cover: *First image* (the default) or one you choose. If the chosen cover is taken off the list, the first image is used again.
-- **Delete** asks first; the images stay where they are, and the message after it offers **Undo** for a few seconds.
-- Names are unique: capitals, and spaces vs. `_`, don't count (*Chapter 3 refs* and *chapter_3_refs* are the same name).
-
-**Adding images** — select images in any grid and press **+ Collection**, or right-click one and choose **Add to collection…** (also in the viewer's Collections panel). Pick a list (type to filter; the three you added to most recently are at the top) or type a new name to create one on the spot; double-click adds right away. Each list shows how many of the chosen images it already has. Images are added at the end; ones already on the list stay where they are, and the message says so (*Added 2 · 3 were already in Chapter 3 refs*), with **Go to**.
+- **Header** — name, cover and description.
+- **Images** in the collection's own order. Drag images to reorder them.
+- Open any image to step through the collection in order in the viewer.
+- **Remove from collection** (never deletes the file), plus the usual bulk actions.
+- **Edit** the name, cover and description, or **delete** the collection (the images stay where they are).
 
 ### 4.12 Favorites
 
@@ -514,12 +507,8 @@ On **Tag types › Custom fields**, pick a type on the left to see its fields: t
 | `-artist:bob`             | Excludes the **Artist** tag *bob*                     |
 | `beach #sunset`           | Name/folder contains "beach" **and** tagged *sunset*  |
 | `#red_dress`              | Tagged *red dress* — in search, spaces in tag names are written as `_` |
-| `@chapter_3`              | On the collection *Chapter 3* (the exact name; capitals don't count) |
-| `@"Court outfits — final pass"` | Names with punctuation go in quotes            |
-| `#rain -@wallpapers`      | Tagged *rain* and **not** on *Wallpapers*             |
-| `~@wallpapers ~#sunset`   | On *Wallpapers* **or** tagged *sunset* — tags and collections share the *any of* group |
 
-While you type, suggestions appear, colored by tag type and showing how many images use each tag; after `@` they list collections. Picking one writes the name in the right form for you. Aliases are resolved automatically.
+While you type, suggestions appear, colored by tag type and showing how many images use each tag. Aliases are resolved automatically.
 
 ---
 

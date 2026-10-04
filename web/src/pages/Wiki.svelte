@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { prettyFieldDate, type FieldDef, type FieldInput, type FieldValue, type ThumbRef, type WikiPage } from '@media-view/shared';
+  import { prettyFieldDate, type CollectionCard, type FieldDef, type FieldInput, type FieldValue, type ThumbRef, type WikiPage } from '@media-view/shared';
   import { ApiError, client, unwrap } from '../api.ts';
   import CreateLinkedTagDialog from '../components/CreateLinkedTagDialog.svelte';
   import FieldEditor from '../components/FieldEditor.svelte';
   import ImagePickerDialog, { type PickedImage, type PickTarget } from '../components/ImagePickerDialog.svelte';
+  import ListIcon from '../components/ListIcon.svelte';
+  import { collectionHref } from '../stores/collections.svelte.ts';
   import TagChip from '../components/TagChip.svelte';
   import Thumb from '../components/Thumb.svelte';
   import WikiArticle from '../components/WikiArticle.svelte';
@@ -45,6 +47,16 @@
     void live.files;
     // While editing, the draft stays as it is; the page reloads after saving or discarding.
     if (!editing) void load();
+  });
+
+  // ── Collections holding the tag's images (design M6 · 09), most first ──
+  let lists = $state<CollectionCard[]>([]);
+  let listsOpen = $state(false);
+  $effect(() => {
+    void live.files;
+    unwrap(client.api.collections.$get({ query: { tag: String(id) } }))
+      .then((r) => (lists = r.collections))
+      .catch(() => (lists = []));
   });
 
   const color = $derived(page ? typeColor(page.typeId) : 'var(--line)');
@@ -189,6 +201,7 @@
         {#if page.aliases.length}<span class="aka">also known as {#each page.aliases as a, i (a)}{#if i}, {/if}<b>{a}</b>{/each}</span>{/if}
         <div class="bottom">
           <div class="stat"><b>{fmt(page.count)}</b>{page.count === 1 ? word('image') : word('images')}</div>
+          {#if lists.length}<div class="stat"><b>{fmt(lists.length)}</b>{lists.length === 1 ? 'list' : 'lists'}</div>{/if}
           <span class="edited">page edited {edited(page.updatedAt)}</span>
           <div class="actions">
             <button class="hbtn" onclick={() => openOps({ kind: 'edit-tag', tagId: page!.id })}>Edit tag</button>
@@ -222,6 +235,34 @@
             <p class="none">No images with this tag yet.</p>
           {/if}
         </section>
+
+        {#if lists.length}
+          <section>
+            <div class="sec"><span class="sh lists-h"><ListIcon size={14} />Collections</span><span class="sn">lists holding images tagged {page.name} · most first</span></div>
+            <div class="lists">
+              <div class="list-grid">
+              {#each listsOpen ? lists : lists.slice(0, 5) as c (c.id)}
+                <a class="list" href={collectionHref(c.id)}>
+                  <div class="list-sheet">
+                    <div class="list-cover">{#if c.covers[0]}<Thumb file={c.covers[0]} fit="cover" />{/if}<span>01</span></div>
+                    <div class="list-strip">
+                      {#each [1, 2, 3] as k (k)}<div>{#if c.covers[k]}<Thumb file={c.covers[k]} fit="cover" />{/if}</div>{/each}
+                    </div>
+                  </div>
+                  <span class="list-name">{c.name}</span>
+                  <span class="list-n"><b>{fmt(c.tagged ?? 0)} of {fmt(c.count)}</b> tagged</span>
+                  <div class="list-bar"><div style:width="{c.count ? Math.round(((c.tagged ?? 0) / c.count) * 100) : 0}%" style:background={color}></div></div>
+                </a>
+              {/each}
+              </div>
+              {#if lists.length > 5}
+                <button class="all" onclick={() => (listsOpen = !listsOpen)}>
+                  <span class="display">{listsOpen ? 'Fewer ↑' : 'See all →'}</span><span class="sn">{fmt(lists.length)}</span>
+                </button>
+              {/if}
+            </div>
+          </section>
+        {/if}
 
         <div class="two">
           <section>
@@ -381,6 +422,23 @@
   .all { grid-column: 8; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; padding: 10px; border: 1px solid var(--text); color: var(--text); text-decoration: none; }
   .all:hover { background: var(--surface); }
   .all .display { font-size: 22px; line-height: 0.95; }
+
+  .lists-h { display: flex; align-items: center; gap: 10px; }
+  .lists { display: flex; align-items: stretch; gap: 12px; }
+  .list-grid { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px 12px; }
+  .lists .all { flex: none; width: 110px; align-self: flex-start; aspect-ratio: 110 / 120; align-items: flex-start; background: none; text-align: left; cursor: pointer; }
+  .list { display: flex; flex-direction: column; gap: 8px; min-width: 0; text-decoration: none; color: var(--text); }
+  .list-sheet { display: flex; flex-direction: column; gap: 4px; padding: 5px; background: var(--bg2); outline: 1px solid var(--line); }
+  .list:hover .list-sheet { outline: 2px solid var(--accent); }
+  .list-cover { position: relative; aspect-ratio: 16 / 10; background: var(--thumb); overflow: hidden; }
+  .list-cover span { position: absolute; top: 0; left: 0; padding: 2px 5px; background: var(--bg2); font: 700 12px/1 var(--font-display); color: var(--accent); }
+  .list-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .list-strip div { aspect-ratio: 3 / 2; background: var(--thumb); overflow: hidden; }
+  .list-name { font: 700 17px/1 var(--font-display); text-transform: uppercase; text-wrap: pretty; overflow-wrap: anywhere; }
+  .list-n { font: 10.5px var(--font-mono); color: var(--text2); }
+  .list-n b { color: var(--text); font-weight: 400; }
+  .list-bar { height: 3px; background: var(--surface2); }
+  .list-bar div { height: 100%; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .related { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
