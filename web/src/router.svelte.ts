@@ -4,7 +4,7 @@
  */
 
 export type RouteName =
-  | 'hub' | 'images' | 'folder' | 'album' | 'all' | 'viewer' | 'search' | 'tags' | 'tag-types' | 'tag' | 'favorites' | 'recycle' | 'settings' | 'not-found';
+  | 'hub' | 'images' | 'folder' | 'album' | 'all' | 'viewer' | 'search' | 'tags' | 'tag-types' | 'tag' | 'wiki' | 'favorites' | 'recycle' | 'settings' | 'not-found';
 
 const ROUTES: [pattern: string, name: RouteName][] = [
   ['/', 'hub'],
@@ -16,8 +16,7 @@ const ROUTES: [pattern: string, name: RouteName][] = [
   ['/search', 'search'],
   ['/tags', 'tags'],
   ['/tag-types', 'tag-types'],
-  // The wiki page (#/tags/:id) arrives in milestone 5; until then it shows the tag's images.
-  ['/tags/:id', 'tag'],
+  ['/tags/:id', 'wiki'],
   ['/tags/:id/images', 'tag'],
   ['/favorites', 'favorites'],
   ['/recycle', 'recycle'],

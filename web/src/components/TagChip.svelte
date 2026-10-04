@@ -3,62 +3,73 @@
   import { href } from '../router.svelte.ts';
   import { openMenu } from '../stores/menu.svelte.ts';
   import { openOps } from '../stores/ops.svelte.ts';
-  import { inkFor, typeColor, typeOf } from '../stores/tags.svelte.ts';
+  import { inkFor, typeColor } from '../stores/tags.svelte.ts';
   import { toast } from '../stores/toasts.svelte.ts';
+  import { hideTagTip, releaseTagTip, showTagTip } from '../stores/tooltip.svelte.ts';
 
   /**
    * A tag, colored by its type. Behaves the same everywhere (user guide §3.1): click → its images,
-   * Ctrl + click → edit (the wiki page arrives in milestone 5), middle-click → new tab, right-click → menu.
+   * Ctrl + click → wiki page, middle-click → wiki page in a new tab, right-click → menu, hover → tooltip.
    * Implied tags are outlined with a lock and can't be removed on their own.
    */
   let {
     tag,
     implied = false,
-    impliedBy = '',
     onremove,
   }: {
     tag: TagRef;
     implied?: boolean;
-    /** For the tooltip of an implied tag. */
-    impliedBy?: string;
     /** Shows "Remove from this image" (manual tags only). */
     onremove?: () => void;
   } = $props();
 
   const color = $derived(typeColor(tag.typeId));
-  const title = $derived(
-    `${typeOf(tag.typeId)?.name ?? 'Tag'} · ${tag.name}${implied ? ` — implied${impliedBy ? ` by ${impliedBy}` : ''}, can’t be removed on its own` : ''}\nClick: images · Ctrl+click: edit`,
-  );
+  let el: HTMLAnchorElement | undefined = $state();
+
+  // A chip removed while hovered (after a click, or a list update) takes its tooltip with it.
+  $effect(() => {
+    const node = el;
+    return () => releaseTagTip(node);
+  });
 
   function click(e: MouseEvent) {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      openOps({ kind: 'edit-tag', tagId: tag.id });
+      location.hash = `#/tags/${tag.id}`;
     }
   }
 
+  function aux(e: MouseEvent) {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    window.open(`#/tags/${tag.id}`, '_blank');
+  }
+
   function menu(e: MouseEvent) {
+    hideTagTip();
     openMenu(e, tag.name, [
+      { label: 'Open wiki page', action: () => (location.hash = `#/tags/${tag.id}`) },
       { label: 'Show all images', action: () => (location.hash = `#/tags/${tag.id}/images`) },
       { label: 'Edit tag…', action: () => openOps({ kind: 'edit-tag', tagId: tag.id }) },
-      {
-        label: 'Copy name',
-        action: () => navigator.clipboard.writeText(tag.name).then(() => toast(`Copied “${tag.name}”.`)),
-      },
+      { label: 'Copy name', action: () => navigator.clipboard.writeText(tag.name).then(() => toast(`Copied “${tag.name}”.`)) },
       ...(onremove && !implied ? [{ label: 'Remove from this image', danger: true, separated: true, action: onremove }] : []),
     ]);
   }
 </script>
 
 <a
+  bind:this={el}
   class="chip"
   class:implied
   href={href(`/tags/${tag.id}/images`)}
-  {title}
   style:--c={color}
   style:--ink={inkFor(color)}
   onclick={click}
+  onauxclick={aux}
+  onmousedown={(e) => e.button === 1 && e.preventDefault()}
   oncontextmenu={menu}
+  onmouseenter={(e) => showTagTip(tag, e.currentTarget as HTMLElement, implied)}
+  onmouseleave={hideTagTip}
 >
   {#if implied}
     <svg width="9" height="10" viewBox="0 0 10 11" aria-hidden="true"><rect x="1" y="5" width="8" height="6" fill="currentColor" /><rect x="2.6" y="1" width="4.8" height="6" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.4" /></svg>

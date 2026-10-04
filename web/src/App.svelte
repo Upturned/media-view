@@ -8,6 +8,7 @@
   import MoveDropBar from './components/MoveDropBar.svelte';
   import OpsDialogs from './components/OpsDialogs.svelte';
   import Toasts from './components/Toasts.svelte';
+  import TagTooltip from './components/TagTooltip.svelte';
   import TopBar from './components/TopBar.svelte';
   import { registerKeys } from './keymap.svelte.ts';
   import Album from './pages/Album.svelte';
@@ -24,6 +25,7 @@
   import Settings from './pages/Settings.svelte';
   import Viewer from './pages/Viewer.svelte';
   import Welcome from './pages/Welcome.svelte';
+  import Wiki from './pages/Wiki.svelte';
   import { router } from './router.svelte.ts';
   import { confirmState } from './stores/confirm.svelte.ts';
   import { connectEvents, live } from './stores/events.svelte.ts';
@@ -92,6 +94,8 @@
     <TagTypes />
   {:else if page === 'tag'}
     {#key router.route.params.id}<TagGallery />{/key}
+  {:else if page === 'wiki'}
+    {#key router.route.params.id}<Wiki />{/key}
   {:else if page === 'favorites'}
     <Favorites />
   {:else if page === 'recycle'}
@@ -116,6 +120,7 @@
 <ContextMenu />
 <MoveDropBar />
 <ImportPanel />
+<TagTooltip />
 <Toasts />
 
 <style>

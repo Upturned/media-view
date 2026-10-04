@@ -15,6 +15,7 @@
     already = [],
     allowCreate = true,
     note,
+    types,
   }: {
     placeholder?: string;
     onpick: (tag: TagRef) => void;
@@ -23,6 +24,8 @@
     allowCreate?: boolean;
     /** Extra text per suggestion (e.g. "on 3/12"). */
     note?: (tag: TagSuggestion) => string;
+    /** Only tags of these types (tag-reference fields). */
+    types?: number[];
   } = $props();
 
   let value = $state('');
@@ -38,7 +41,7 @@
     const t = m ? tagTypes.list.find((x) => x.key === m[1]!.toLowerCase()) : undefined;
     return t ? { typeId: t.id, name: m![2]!.trim() } : { typeId: null, name: value.trim().replace(/^#/, '') };
   });
-  const createAs = $derived(typeOf(createTypeId ?? typed.typeId ?? defaultType()?.id ?? 0) ?? defaultType());
+  const createAs = $derived(typeOf(createTypeId ?? typed.typeId ?? types?.[0] ?? defaultType()?.id ?? 0) ?? defaultType());
   const exact = $derived(suggestions.some((s) => s.name.toLowerCase() === typed.name.replace(/_/g, ' ').toLowerCase() && (!typed.typeId || s.typeId === typed.typeId)));
   const showCreate = $derived(allowCreate && !!typed.name && !exact && !tagNameProblem(typed.name));
 
@@ -52,7 +55,7 @@
     const t = setTimeout(() => {
       unwrap(client.api.tags.suggest.$get({ query: { q, limit: '8' } }))
         .then((r) => {
-          suggestions = r.tags;
+          suggestions = types?.length ? r.tags.filter((t) => types.includes(t.typeId)) : r.tags;
           active = 0;
         })
         .catch(() => (suggestions = []));
@@ -82,7 +85,7 @@
   }
 
   function cycleType() {
-    const list = tagTypes.list;
+    const list = types?.length ? tagTypes.list.filter((t) => types.includes(t.id)) : tagTypes.list;
     const i = list.findIndex((t) => t.id === createAs?.id);
     createTypeId = list[(i + 1) % list.length]!.id;
   }

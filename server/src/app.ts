@@ -8,7 +8,7 @@ import { folderRoutes } from './routes/folders.ts';
 import { libraryRoutes } from './routes/library.ts';
 import { mediaRoutes } from './routes/media.ts';
 import { recycleRoutes } from './routes/recycle.ts';
-import { tagRoutes, tagTypeRoutes } from './routes/tags.ts';
+import { fieldRoutes, tagRoutes, tagTypeRoutes } from './routes/tags.ts';
 import { settingsRoutes } from './routes/settings.ts';
 import { systemRoutes } from './routes/system.ts';
 
@@ -44,6 +44,7 @@ export function createApp(allowedOrigins: Set<string>) {
     .route('/api/recycle', recycleRoutes)
     .route('/api/tags', tagRoutes)
     .route('/api/tag-types', tagTypeRoutes)
+    .route('/api/tag-fields', fieldRoutes)
     .route('/api/settings', settingsRoutes)
     .route('/api/system', systemRoutes)
     .route('/api/events', eventRoutes)

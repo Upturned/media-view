@@ -4,8 +4,9 @@
   import { fmt, formatDate } from '../media.ts';
   import { ask } from '../stores/confirm.svelte.ts';
   import { closeOps, openOps } from '../stores/ops.svelte.ts';
-  import { inkFor, tagTypes, typeColor } from '../stores/tags.svelte.ts';
+  import { inkFor, tagTypes, typeColor, typeOf } from '../stores/tags.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
+  import { navigate, router } from '../router.svelte.ts';
   import DialogFrame from './DialogFrame.svelte';
   import TagInput from './TagInput.svelte';
 
@@ -52,6 +53,22 @@
     if (!tag || !dirty || problem || busy) return;
     busy = true;
     try {
+      if (typeId !== tag.typeId) {
+        // Field values with no matching field (same name and kind) on the new type are lost: say which.
+        const { lost } = await unwrap(client.api.tags[':id']['type-change'].$get({ param: { id: String(tag.id) }, query: { typeId: String(typeId) } }));
+        if (lost.length) {
+          const to = typeOf(typeId)?.name ?? 'the new type';
+          const ok = await ask({
+            tone: 'danger',
+            title: `Change to ${to}?`,
+            sub: `${tag.name} · ${lost.length} ${lost.length === 1 ? 'field value' : 'field values'} would be lost`,
+            body: `${to} tags don’t have ${lost.length === 1 ? 'this field' : 'these fields'}, so ${lost.length === 1 ? 'its value is' : 'their values are'} cleared from the wiki page:`,
+            items: lost.map((l) => ({ name: l.label, note: l.value.length > 80 ? `${l.value.slice(0, 77)}…` : l.value })),
+            button: `Change type & clear ${lost.length}`,
+          });
+          if (!ok) return;
+        }
+      }
       tag = await unwrap(client.api.tags[':id'].$patch({ param: { id: String(tag.id) }, json: { name, typeId } }));
       name = tag.name;
       nameError = '';
@@ -212,6 +229,9 @@
 
     {#snippet footer()}
       <button class="dbtn red-outline" onclick={() => (confirmDelete = true)}>Delete tag</button>
+      {#if router.route.name !== 'wiki' || router.route.params.id !== String(tag?.id)}
+        <button class="dbtn" onclick={() => { const id = tag!.id; closeOps(); navigate(`/tags/${id}`); }}>Wiki page →</button>
+      {/if}
       <button class="dbtn push" onclick={closeOps}>{dirty ? 'Cancel' : 'Close'}</button>
       <button class="dbtn primary" disabled={!dirty || !!problem || busy} onclick={save}>Save changes</button>
     {/snippet}

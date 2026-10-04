@@ -716,7 +716,7 @@ LIMIT :limit OFFSET :offset;
 - **The top-bar search box** filters the **current grid** when the page has one (album, Inbox, View all, tag gallery) — the scope chip says so — and can switch to *Everywhere*, which opens the Search page. On any other page it opens the Search page. Its suggestions show tags (type color, count, aliases as "alias ⇒ name") and how the query is read (must / never / any of).
 - **The Search page** (`#/search?q=&in=`) searches the whole library (or a folder, `in=`). Its first tab, **All**, shows the first few results of each kind — Images, Albums, Racks & drawers, Tags (and Collections from milestone 6) — each with **See all**, which opens that kind's own tab. Folders and tags are matched by the plain-text words of the query; images by the full syntax, with the tag index on the side.
 - **Implications apply to existing images**: adding or removing one re-computes the implied tags of every image carrying the tag. When that touches more than **30 images**, the app asks first, with the count.
-- **Ctrl + click on a tag** opens the Edit tag dialog until the wiki page exists (milestone 5).
+- **Ctrl + click on a tag** opens its wiki page (milestone 5); middle-click opens it in a new tab.
 - **Deleting a tag** removes it from every image, after a plain confirmation showing how many images use it.
 
 ### 11.3 Group by collection
@@ -795,10 +795,13 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 |--------|---------------------------------------|-----------------------------------------------------|
 | GET    | `/api/tags`                           | List: `q` (name or alias contains), `type`, `sort` (name / count), `limit` — with counts and aliases |
 | GET    | `/api/tags/suggest?q=&limit=`         | Autocomplete: names and aliases, prefix first then by count; `type:` narrows; reports the matched alias |
-| GET    | `/api/tags/resolve?names=`            | Batch resolve (wiki links) — milestone 5            |
-| GET    | `/api/tags/:id`                       | Tag, aliases, implies / implied by, cover, count (wiki payload grows in milestone 5) |
+| GET    | `/api/tags/resolve?names=`            | Batch resolve wiki links (comma-separated `type:name` or `name`, aliases count) → `{ tags: { [ref]: TagRef | null } }` |
+| GET    | `/api/tags/:id`                       | Tag, aliases, implies / implied by, cover, count, description |
+| GET    | `/api/tags/:id/page`                  | Wiki page: the tag plus `updatedAt`, the type's `fields`, the tag's field `values`, `related` (top 12) and `preview` (7 newest images) |
+| PUT    | `/api/tags/:id/page`                  | Save the page in one transaction: `{ description?, coverFileId?, fields?: { [fieldId]: { value? | fileId? | tagIds? } } }` — all or nothing |
+| GET    | `/api/tags/:id/type-change?typeId=`   | Field values a type change would lose → `{ lost: [{ fieldId, label, value }] }` |
 | POST   | `/api/tags`                           | Create `{ name, typeId? }` (`type:name` works)       |
-| PATCH  | `/api/tags/:id`                       | `{ name?, typeId?, coverFileId? }` (description and field values in milestone 5) |
+| PATCH  | `/api/tags/:id`                       | `{ name?, typeId?, coverFileId? }` — a type change moves field values by key and kind |
 | POST   | `/api/tags/delete`                    | Delete `{ ids }` — they come off every image        |
 | POST   | `/api/tags/merge`                     | `{ sourceIds, targetId, keepAliases }`              |
 | POST   | `/api/tags/:id/aliases`               | Add alias `{ alias }`                               |
@@ -816,14 +819,17 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 
 | Method | Path                                   | Purpose                                     |
 |--------|----------------------------------------|---------------------------------------------|
-| GET    | `/api/tag-types`                       | Types (fields join in milestone 5)          |
+| GET    | `/api/tag-types`                       | `{ types, fields }` — every type, and every custom field with how many tags filled it in |
 | POST   | `/api/tag-types`                       | Create `{ name, color }`                    |
 | PATCH  | `/api/tag-types/:id`                   | `{ name?, color?, isDefault? }` — the key follows the name (`body_parts`) |
 | POST   | `/api/tag-types/:id/move`              | `{ delta: -1 | 1 }` reorder                   |
 | DELETE | `/api/tag-types/:id`                   | Delete (only if it has no tags and isn't the default) |
-| POST   | `/api/tag-types/:id/fields`            | Add field                                   |
-| PATCH  | `/api/tag-types/:id/fields/:fieldId`   | Edit / reorder field                        |
-| DELETE | `/api/tag-types/:id/fields/:fieldId`   | Delete field (and its values)               |
+| POST   | `/api/tag-types/:id/fields`            | Add field `{ label, kind, options? }` (the key comes from the label and never changes) |
+| PATCH  | `/api/tag-fields/:id`                  | `{ label?, options? }` — values that no longer fit the options are dropped |
+| POST   | `/api/tag-fields/:id/move`             | `{ delta: -1 | 1 }` reorder                  |
+| GET    | `/api/tag-fields/:id/kind-costs`       | For each kind, how many values switching to it would clear |
+| POST   | `/api/tag-fields/:id/kind`             | `{ kind, clearLost }` — refused (409) while values would be lost and `clearLost` is false |
+| DELETE | `/api/tag-fields/:id`                  | Delete field (and its values)               |
 
 ### 12.6 Collections
 
@@ -879,9 +885,9 @@ Hash-based routing (`#/…`), so the same build works from `http://localhost` an
 | `#/images/v/:fileId`     | Image viewer; the list it steps through is in the query (`?folder&recursive&sort&order&seed&…`), so it survives a reload |
 | `#/search?q=&tab=`       | Search (tabs: all, images, albums, folders, tags) |
 | `#/tags`                 | Tags directory                            |
-| `#/tags/:id`             | Tag wiki page (milestone 5; until then, the tag gallery) |
+| `#/tags/:id`             | Tag wiki page (view, and its Edit page mode) |
 | `#/tags/:id/images`      | Tag gallery (all images with the tag)     |
-| `#/tag-types`            | Tag types (fields in milestone 5)         |
+| `#/tag-types?tab=`       | Tag types; `tab=fields` opens Custom fields |
 | `#/collections`          | Collections                               |
 | `#/collections/:id`      | Collection page                           |
 | `#/favorites`            | Favorites — a view of every starred image (not a folder); linked from the top bar and the Library page |
@@ -902,8 +908,9 @@ Hash-based routing (`#/…`), so the same build works from `http://localhost` an
 - `CheckStylesDialog` — tabs with the style mockups in sandboxed iframes (§13.4).
 - `DropZone` — page-level and per-album-card drop targets, upload progress, per-file error report.
 - `CoverMenu` — the *Set as cover of ▸* submenu: ancestors of the file (from the breadcrumb), the current collection (if any) and the file's tags.
-- `WikiView` / `WikiEditor` — Markdown render with tag links; editor with preview.
-- `InfoBox` — renders a tag's custom fields from the type's field definitions; `FieldEditor` per field kind.
+- `WikiArticle` / `WikiEditor` — Markdown (marked, sanitized with DOMPurify) with a `[[type:name|label]]` inline extension; links resolve in one `/api/tags/resolve` call per page and are cached until tags change. The editor has a toolbar, Edit / Split / Preview (remembered per browser) and `[[` suggestions.
+- `FieldEditor` — one editor per custom field kind; client-side checks share `shared/field-values.ts` with the server. `ImagePickerDialog` — the tag's images, then the whole library. `CustomFields` — the Tag types tab. `CreateLinkedTagDialog` — creates the tag of a missing link.
+- `TagTooltip` — one hover card for every `TagChip`: type, name, first paragraph of the description (about 200 characters), count; details fetched on hover and cached for 30 s.
 - `Viewer` — zoom/pan/slideshow ported from the MVP; receives a *navigation context* (the query that produced the list) so prev/next page through the server instead of relying on sessionStorage.
 
 ### 13.3 State
@@ -970,7 +977,7 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 2. **Folders & files** — reconciliation, markers, Inbox, hashing, thumbnails, Library / Folder / Album pages, viewer. *(Done; design `docs/Design/darkroom-milestone-2-pages/`.)*
 3. **File operations** — import (picker and drag and drop), move, copy, rename, covers, recycle bin, watcher. *(Done: see §7.5, §8.3–8.6; design `docs/Design/darkroom-milestone-3-pages/`.)*
 4. **Tags** *(done)* — types, tags, tag input, tag chips and sidebar, search syntax (include / exclude / any of), aliases and main name, implications, merge; the Search page, tag galleries, the Tags directory, the Tag types page (without custom fields) and an **Edit tag** dialog for name, type, aliases, implications, merge and delete. Design: `docs/Design/darkroom-milestone-4-pages/`.
-5. **Wiki** — tag pages, descriptions, custom fields, related tags. Editing moves onto the wiki page; the Edit tag dialog stays as a shortcut. Design: `docs/Design/darkroom-milestone-5-pages/`. Decisions: one **Edit page** mode for the whole page (description, fields, cover) with Save / Discard; descriptions up to 20,000 characters; changing a tag's type lists exactly which field values would be lost before confirming; Ctrl + click and middle-click on a tag open its wiki page; **Related tags** shows the top 12.
+5. **Wiki** *(done)* — tag pages, descriptions, custom fields, related tags. Editing moves onto the wiki page; the Edit tag dialog stays as a shortcut. Design: `docs/Design/darkroom-milestone-5-pages/`. Decisions: one **Edit page** mode for the whole page (description, fields, cover) with Save / Discard; descriptions up to 20,000 characters; changing a tag's type lists exactly which field values would be lost before confirming; Ctrl + click and middle-click on a tag open its wiki page; **Related tags** shows the top 12.
 6. **Collections** — collection pages, viewer navigation, bulk add, group by collection.
 7. **Library Health** — all issue kinds and fixes, severity indicator, external-move keep/undo, logs section.
 8. **Polish** — favorites, random, settings, per-page help content, performance pass at 50k images.

@@ -48,6 +48,7 @@
 
   function menu(e: MouseEvent, t: TagRef) {
     openMenu(e, t.name, [
+      { label: 'Open wiki page', action: () => (location.hash = `#/tags/${t.id}`) },
       { label: 'Show all images', action: () => (location.hash = `#/tags/${t.id}/images`) },
       { label: 'Edit tag…', action: () => openOps({ kind: 'edit-tag', tagId: t.id }) },
       { label: 'Only this tag', separated: true, action: () => setQuery(setTagState('', typeKeys(), { typeKey: tagTypeKey(t), name: t.name }, 'must')) },

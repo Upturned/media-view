@@ -1,12 +1,14 @@
-import type { TagRef, TagTypeInfo } from '@media-view/shared';
+import type { FieldDef, TagRef, TagTypeInfo } from '@media-view/shared';
 import { client, unwrap } from '../api.ts';
 
 /** Tag types: colors, names and order are used everywhere a tag is shown. */
-export const tagTypes = $state({ list: [] as TagTypeInfo[], loaded: false });
+export const tagTypes = $state({ list: [] as TagTypeInfo[], fields: [] as FieldDef[], loaded: false });
 
 export async function loadTagTypes(): Promise<void> {
   try {
-    tagTypes.list = (await unwrap(client.api['tag-types'].$get())).types;
+    const r = await unwrap(client.api['tag-types'].$get());
+    tagTypes.list = r.types;
+    tagTypes.fields = r.fields;
   } finally {
     tagTypes.loaded = true;
   }
@@ -42,3 +44,6 @@ export function groupByType<T extends { typeId: number }>(tags: T[]): { type: Ta
     .map((type) => ({ type, tags: tags.filter((t) => t.typeId === type.id) }))
     .filter((g) => g.tags.length > 0);
 }
+
+/** A type's custom fields, in order. */
+export const fieldsOf = (typeId: number) => tagTypes.fields.filter((f) => f.typeId === typeId);

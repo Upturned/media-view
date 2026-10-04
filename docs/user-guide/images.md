@@ -147,9 +147,9 @@ Tags appear as colored chips (the color comes from the tag's type). They behave 
 
 | Action           | Result                                                                  |
 |------------------|-------------------------------------------------------------------------|
-| Hover            | Shows the tag's description                                             |
+| Hover            | Shows the tag's type, the first paragraph of its wiki page and how many images have it |
 | Click            | Shows all images with that tag                                          |
-| Ctrl + click     | Opens the tag's wiki page (until wiki pages arrive: edits the tag)       |
+| Ctrl + click     | Opens the tag's wiki page                                                |
 | Middle-click     | Opens the tag's wiki page in a new tab                                  |
 | Right-click      | Menu: *Open wiki page*, *Show all images*, *Edit tag*, *Copy name* (and *Remove from this image* where it applies) |
 
@@ -311,22 +311,28 @@ A directory of every tag in your library.
 - Search the list, sort by name or count, and filter by type.
 - **New tag** creates a tag in advance, before using it on any image.
 - Select several tags to **merge** them (see §5.3) or delete them.
-- **Edit tag** (Ctrl + click, or right-click any tag) changes its name and type, its aliases and main name, what it implies, merges it into another tag or deletes it. Adding or removing an implication that touches more than 30 images asks first.
+- Click a tag to see its images; **Ctrl + click** opens its wiki page.
+- **Edit tag** (right-click any tag, or the button on its wiki page) changes its name and type, its aliases and main name, what it implies, merges it into another tag or deletes it. Adding or removing an implication that touches more than 30 images asks first.
 - To tag many images at once, select them and choose **Tags…** in the selection bar: it shows how many of them already have each tag, and nothing changes until you press *Apply*.
 
 ### 4.8 Tag wiki page
 
-Every tag has its own wiki page.
+Every tag has its own wiki page. Open it with **Ctrl + click** on the tag (middle-click opens it in a new tab), *Open wiki page* in the tag's menu, or **Wiki page →** in its gallery.
 
-- **Header** — the tag's main name, its type (in the type's color), its **cover image** (for example a character's portrait) and its aliases, shown as *"also known as …"*.
-- **Info box** — the tag's **custom fields** (see §5.5), such as a character's species or an artist's website. Empty fields are hidden.
-- **Description** — free text with basic formatting (headings, bold, lists, links). You can link to other tags by writing `[[character:frodo]]`, so pages connect to each other like a real wiki. The first paragraph is also the tooltip you see when hovering the tag anywhere in the app.
-- **Preview** — a strip of images carrying the tag, with **See all** opening the full gallery with sorting, filtering and the tag sidebar.
-- **Relationships**
-  - **Implies / Implied by** — e.g. a character's page shows its source; a source's page lists its characters (see §5.4).
-  - **Related tags** — tags that often appear together with this one, worked out automatically from your images.
-- **Collections** — collections containing images with this tag.
-- **Edit** the name, type, cover, description, fields, aliases and implications; choose which name is the main one (see §5.2); **merge** it into another tag; or **delete** it.
+- **Header** — the tag's main name, its type (in the type's color), its **cover image** (for example a character's portrait), its aliases (*"also known as …"*), how many images have it and when the page was last edited.
+- **Description** — free text in Markdown: `**bold**`, `*italic*`, `## heading`, `- list`, `> quote`, and links. Link another tag by writing `[[name]]`, `[[type:name]]` or `[[type:name|text to show]]`, so pages connect like a real wiki; aliases work too. A link to a tag that doesn't exist yet shows **dashed in amber**, marked *missing*; click it to create the tag (you pick its type). The first paragraph is also the tooltip you see when hovering the tag anywhere in the app.
+- **Images** — the 7 newest images with the tag, with **See all** opening the full gallery with sorting, filtering and the tag sidebar.
+- **Implies / Implied by** — e.g. a character's page shows its source; a source's page lists its characters (see §5.4).
+- **Related tags** — the 12 tags that most often appear on the same images, with the share of this tag's images that also have them.
+- **Info** — the tag's **custom fields** (see §5.5), such as a character's species or an artist's website. Empty fields are hidden (the box says how many).
+- **Collections** — collections containing images with this tag *(with collections, milestone 6)*.
+
+**Editing.** **✎ Edit page** (or **E**) switches the whole page into one edit mode: the description, the cover (**Change cover…**) and every custom field. Nothing is saved until **Save page** (**Ctrl + S**); **Discard** (or **Esc**) drops the changes, asking first if there are any.
+
+- The description editor has buttons for bold, italic, heading, list, quote and tag links, and shows the text, a live preview, or both side by side (**Edit / Split / Preview**). Typing `[[` suggests tags — ↑ ↓ to choose, **Enter** or **Tab** to insert, **Esc** to dismiss. Below it: how many links the page has and which are missing (click one to create it). Up to **20,000** characters.
+- Each field has an editor that suits its kind (see §5.5); fields with something wrong are outlined in red, and the page can't be saved until they're fixed.
+- Images (the cover, or an *Image* field) are chosen in the **image picker**: the tag's own images first, then — once you type — the whole library, by file name or search syntax. The side panel shows where the image is and whether it has the tag; any image can be used, and it's only referenced, never moved or tagged. Double-click uses an image right away.
+- Name, type, aliases, implications, merge and delete stay in **Edit tag** (the button in the header); choose which name is the main one there too (see §5.2).
 
 ### 4.9 Tag types
 
@@ -339,7 +345,7 @@ Where you manage the kinds of tags that exist. The app comes with:
 | **Source**    | The story, book, game or series a character comes from    |
 | **Artist**    | Who drew the image or took the picture                    |
 
-You can **create new types**, rename them, pick their color, change the order they're shown in, and **define their custom fields** (see §5.5).
+The page has two tabs: **Name · color · order**, where you **create new types**, rename them, pick their color and change the order they're shown in; and **Custom fields**, where each type's fields are defined (see §5.5).
 
 ### 4.10 Collections
 
@@ -470,13 +476,20 @@ Each field has a **name** and a **kind**:
 | Text            | Character › *Full name*                         |
 | Long text       | Character › *Personality*                       |
 | Number          | Character › *Age*                               |
-| Date            | Source › *Release date*                         |
-| Link            | Artist › *Website*                              |
+| Date            | Source › *Release date* — a year, year-month or full date (`1954`, `1954-07`, `1954-07-29`) |
+| Link            | Artist › *Website* — starts with `http://`, `https://` or `file://` |
 | Choice          | Source › *Kind* (book, game, series, film…)     |
-| Image           | Character › *Reference sheet*                   |
-| Tag reference   | Character › *Related characters*                |
+| Image           | Character › *Reference sheet* — any image in the library |
+| Tag reference   | Character › *Related characters* — one tag, or several in a chosen order |
 
-The app comes with a few suggested fields for the built-in types; you can rename, reorder or delete them, and add your own. Fields left empty are simply not shown.
+The app comes with a few suggested fields for the built-in types; you can rename, reorder or delete them, and add your own. Fields left empty are simply not shown. Text holds up to 500 characters, long text up to 5,000.
+
+On **Tag types › Custom fields**, pick a type on the left to see its fields: their order (▲ ▼), name, kind, and how many of the type's tags have filled each one in. **Settings ▾** holds what a kind needs: the **options** of a *Choice*, the **unit** shown after a *Number* (`cm`, `years`), and for a *Tag reference* which **types** it allows and whether it takes **multiple** tags. Removing a choice clears it from the tags that had it.
+
+- **Changing a field's kind** keeps the values that can be read as the new kind: the menu shows, for each kind, whether all values convert or how many would be cleared. If some would be, the app says so and asks before clearing them. Turning a field into a *Choice* makes its existing values the options. *Image* and *Tag reference* fields can't convert to or from other kinds.
+- **Deleting a field** removes its values from every tag, after asking.
+- **Changing a tag's type** keeps the values of fields that the new type also has (same name and kind); before saving, **Edit tag** lists exactly which values would be lost.
+- **Merging tags** fills the kept tag's empty fields from the merged ones, and tag references to the merged tags point to the kept one.
 
 ### 5.6 Search syntax
 

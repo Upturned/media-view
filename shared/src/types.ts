@@ -151,3 +151,61 @@ export interface TagCoverage extends TagRef {
   /** On every image that has it, it's only implied. */
   impliedOnly: boolean;
 }
+
+// ─── Wiki and custom fields (milestone 5) ───────────────────────────────────
+
+export type FieldKind = 'text' | 'longtext' | 'number' | 'date' | 'link' | 'choice' | 'image' | 'tagref';
+
+export interface FieldOptions {
+  /** choice */
+  choices?: string[];
+  /** number: shown after the value ("years") */
+  unit?: string;
+  /** tagref: allowed tag type ids (empty = any) */
+  types?: number[];
+  /** tagref: several, in a chosen order */
+  multi?: boolean;
+}
+
+export interface FieldDef {
+  id: number;
+  typeId: number;
+  key: string;
+  label: string;
+  kind: FieldKind;
+  position: number;
+  options: FieldOptions;
+  /** Tags of the type with a value in this field. */
+  filled: number;
+}
+
+/** A field's value on a tag: `value` for text-like kinds, `file` for images, `tags` for tag references. */
+export interface FieldValue {
+  fieldId: number;
+  value: string | null;
+  file: (ThumbRef & { filename: string }) | null;
+  tags: TagRef[];
+}
+
+/** What a page save sends per field (only the part matching the kind is used). */
+export interface FieldInput {
+  value?: string | null;
+  fileId?: number | null;
+  tagIds?: number[];
+}
+
+export interface RelatedTag extends TagRef {
+  /** Images carrying both tags. */
+  together: number;
+  /** Share of this tag's images that also carry the related one (0–100). */
+  pct: number;
+}
+
+export interface WikiPage extends TagDetail {
+  updatedAt: number;
+  fields: FieldDef[];
+  values: FieldValue[];
+  related: RelatedTag[];
+  /** Newest images with the tag. */
+  preview: ThumbRef[];
+}

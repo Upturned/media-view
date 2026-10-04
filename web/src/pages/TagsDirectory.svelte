@@ -98,6 +98,7 @@
 
   function menu(e: MouseEvent, t: TagSummary) {
     openMenu(e, t.name, [
+      { label: 'Open wiki page', action: () => navigate(`/tags/${t.id}`) },
       { label: 'Show all images', action: () => navigate(`/tags/${t.id}/images`) },
       { label: 'Edit tag…', action: () => openOps({ kind: 'edit-tag', tagId: t.id }) },
       { label: selected.has(t.id) ? 'Deselect' : 'Select', separated: true, action: () => toggle(t) },
@@ -140,7 +141,7 @@
         {#each g.tags as t (t.id)}
           <div class="tag" class:sel={selected.has(t.id)} oncontextmenu={(e) => menu(e, t)} role="row" tabindex="-1">
             <button class="box" class:on={selected.has(t.id)} onclick={() => toggle(t)} aria-label="Select {t.name}">{selected.has(t.id) ? '✓' : ''}</button>
-            <a class="name" href={href(`/tags/${t.id}/images`)} onclick={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); openOps({ kind: 'edit-tag', tagId: t.id }); } else if (selected.size > 0) { e.preventDefault(); toggle(t); } }}>
+            <a class="name" href={href(`/tags/${t.id}/images`)} onclick={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); navigate(`/tags/${t.id}`); } else if (selected.size > 0) { e.preventDefault(); toggle(t); } }}>
               <span>{t.name}</span>
               {#if t.aliases.length}<span class="aka">aka {t.aliases.join(', ')}</span>{/if}
             </a>

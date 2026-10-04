@@ -12,7 +12,7 @@
   import { toastError } from '../stores/toasts.svelte.ts';
   import { word } from '../themes/index.ts';
 
-  /** All images with a tag (design M4 · 07). The wiki page joins in milestone 5. */
+  /** All images with a tag (design M4 · 07). The tag’s wiki page is one click away. */
 
   const id = $derived(Number(router.route.params.id));
   let tag = $state<TagDetail | null>(null);
@@ -80,6 +80,7 @@
           <div class="actions btn-group">
             <button class="btn" onclick={() => openOps({ kind: 'edit-tag', tagId: tag!.id })}>Edit tag</button>
             <button class="btn" onclick={random} disabled={tag.count === 0}>⚄ Random</button>
+            <a class="btn" href={href(`/tags/${tag.id}`)}>Wiki page →</a>
           </div>
         </div>
       </div>

@@ -1,18 +1,20 @@
 <script lang="ts">
   import type { TagTypeInfo } from '@media-view/shared';
   import { client, unwrap } from '../api.ts';
-  import { href } from '../router.svelte.ts';
+  import CustomFields from '../components/CustomFields.svelte';
+  import { href, navigate, router } from '../router.svelte.ts';
   import { loadTagTypes, inkFor, tagTypes } from '../stores/tags.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
 
   /**
    * Tag types (user guide §4.9; design M4 · 04): rename, recolor, reorder, pick the default.
-   * Custom fields arrive with milestone 5.
+   * The Custom fields tab (design M5 · 04) defines the info fields of each type’s wiki pages.
    */
 
   const SWATCHES = ['#6B7A99', '#2E9E5B', '#B0487A', '#D08A1E', '#3B82C4', '#8E5BD6', '#C0392B', '#1F9E9E', '#7A8B2E', '#5C5C58'];
   const BUILT_IN = ['general', 'character', 'source', 'artist'];
 
+  const tab = $derived(router.route.query.get('tab') === 'fields' ? 'fields' : 'types');
   let palette = $state<number | null>(null);
   let names = $state<Record<number, string>>({});
 
@@ -43,10 +45,19 @@
   <div class="crumbs"><a href={href('/tags')}>Tags</a><span>/</span><span class="here">Tag types</span></div>
   <header class="head">
     <h1 class="display title">Tag types</h1>
-    <p>Every tag has exactly one type. The type sets its color, and the order here is the order types appear in sidebars, panels and the directory.</p>
-    <button class="btn primary" onclick={addType}>+ New type</button>
+    <div class="tabs">
+      <button class:on={tab === 'types'} onclick={() => navigate('/tag-types', { replace: true })}>Name · color · order</button>
+      <button class:on={tab === 'fields'} onclick={() => navigate('/tag-types?tab=fields', { replace: true })}>Custom fields</button>
+    </div>
+    {#if tab === 'types'}
+      <p>Every tag has exactly one type. The type sets its color, and the order here is the order types appear in sidebars, panels and the directory.</p>
+      <button class="btn primary" onclick={addType}>+ New type</button>
+    {/if}
   </header>
 
+  {#if tab === 'fields'}
+    <CustomFields />
+  {:else}
   <div class="table">
     <div class="row th"><span>Order</span><span>Color</span><span>Name</span><span>Preview</span><span class="r">Tags</span><span class="c">Default</span><span></span></div>
     {#each tagTypes.list as t, i (t.id)}
@@ -88,6 +99,7 @@
     {/each}
     <p class="note">New tags get the default type unless typed as <b>type:name</b>. A type can only be deleted once it has no tags.</p>
   </div>
+  {/if}
 </div>
 
 <style>
@@ -99,6 +111,9 @@
   .title { font-size: clamp(56px, 7vw, 96px); line-height: 0.8; }
   .head p { margin: 0 0 4px; max-width: 520px; font-size: 14px; line-height: 1.5; color: var(--text2); }
   .head .btn { margin-left: auto; }
+  .tabs { display: flex; flex: none; margin-bottom: 4px; border: 1px solid var(--line); font: 12px var(--font-mono); text-transform: uppercase; }
+  .tabs button { padding: 7px 14px; border: none; background: none; color: var(--text2); font: inherit; text-transform: inherit; cursor: pointer; }
+  .tabs button.on { background: var(--text); color: var(--bg); font-weight: 700; }
 
   .table { margin-top: 14px; }
   .row { position: relative; display: grid; grid-template-columns: 90px 76px minmax(0, 1fr) 220px 120px 150px 110px; align-items: center; min-height: 64px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--bg); }

@@ -1,11 +1,13 @@
 import {
   displayTagName, normTagName, tagNameProblem, typeKeyOf,
-  type FileTag, type TagCoverage, type TagDetail, type TagRef, type TagSuggestion, type TagSummary, type TagTypeInfo,
+  type FieldInput, type FileTag, type RelatedTag, type TagCoverage, type TagDetail, type TagRef, type TagSuggestion, type TagSummary,
+  type TagTypeInfo, type WikiPage,
 } from '@media-view/shared';
 import type { DB } from '../db/connection.ts';
 import { badRequest, conflict, notFound } from '../lib/errors.ts';
 import { emit } from '../lib/events.ts';
 import { log } from '../lib/log.ts';
+import { listFields, moveValuesToType, setValues, valuesOf } from './fields.ts';
 import { thumbRef } from './folders.ts';
 import type { OpenLibrary } from './library.ts';
 
@@ -19,6 +21,7 @@ interface TagRow {
   description: string | null;
   cover_file_id: number | null;
   created_at: number;
+  updated_at: number;
 }
 
 const LIVE_FILE = 'f.recycled = 0 AND f.missing_since IS NULL';
@@ -303,6 +306,7 @@ export function updateTag(lib: OpenLibrary, id: number, change: { name?: string;
     }
     db.prepare('UPDATE tags SET name = ?, name_norm = ?, type_id = ?, updated_at = ? WHERE id = ?')
       .run(name, normTagName(name), typeId, Date.now(), id);
+    if (typeId !== t.type_id) moveValuesToType(db, id, t.type_id, typeId);
     if (typeId !== t.type_id) {
       for (const a of db.prepare('SELECT alias, alias_norm FROM tag_aliases WHERE tag_id = ?').all(id) as { alias: string; alias_norm: string }[]) {
         const clash = db.prepare('SELECT 1 FROM tags WHERE type_id = ? AND name_norm = ? UNION SELECT 1 FROM tag_aliases WHERE type_id = ? AND alias_norm = ? AND tag_id <> ?')
@@ -516,11 +520,23 @@ export function mergeTags(lib: OpenLibrary, sourceIds: number[], targetId: numbe
         throw conflict('IMPLICATION_CYCLE', `Merging ${a.name} into ${target.name} would make an implication loop.`);
       }
 
+      // 4. Custom fields: B's values win; B's empty fields (same key and kind) take A's. References to A point to B.
+      const bFields = new Map((db.prepare('SELECT id, key, kind FROM tag_type_fields WHERE type_id = ?').all(target.type_id) as { id: number; key: string; kind: string }[]).map((f) => [f.key, f]));
+      for (const f of db.prepare('SELECT id, key, kind FROM tag_type_fields WHERE type_id = ?').all(a.type_id) as { id: number; key: string; kind: string }[]) {
+        const bf = bFields.get(f.key);
+        if (!bf || bf.kind !== f.kind) continue;
+        db.prepare('INSERT OR IGNORE INTO tag_field_values (tag_id, field_id, value, file_id) SELECT ?, ?, value, file_id FROM tag_field_values WHERE tag_id = ? AND field_id = ?').run(targetId, bf.id, a.id, f.id);
+        if (!db.prepare('SELECT 1 FROM tag_field_refs WHERE tag_id = ? AND field_id = ?').get(targetId, bf.id)) {
+          db.prepare('INSERT OR IGNORE INTO tag_field_refs (tag_id, field_id, ref_tag_id, position) SELECT ?, ?, ref_tag_id, position FROM tag_field_refs WHERE tag_id = ? AND field_id = ? AND ref_tag_id <> ?').run(targetId, bf.id, a.id, f.id, targetId);
+        }
+      }
+      db.prepare('UPDATE OR IGNORE tag_field_refs SET ref_tag_id = ? WHERE ref_tag_id = ? AND tag_id <> ?').run(targetId, a.id, targetId);
+
       // 5. Description and cover: B's win; empty ones take A's.
       db.prepare('UPDATE tags SET description = COALESCE(description, ?), cover_file_id = COALESCE(cover_file_id, ?), updated_at = ? WHERE id = ?')
         .run(a.description, a.cover_file_id, Date.now(), targetId);
 
-      // 6. A goes (custom-field values arrive with milestone 5).
+      // 6. A goes (its remaining values and references cascade).
       db.prepare('DELETE FROM tags WHERE id = ?').run(a.id);
     }
     recomputeImplied(db, touched);
@@ -581,4 +597,92 @@ export function tagCoverage(lib: OpenLibrary, fileIds: number[]): TagCoverage[] 
      GROUP BY t.id ORDER BY n DESC, t.name`,
   ).all(...fileIds) as { id: number; type_id: number; name: string; n: number; implied_only: number }[];
   return rows.map((r) => ({ ...ref(r), count: r.n, impliedOnly: r.implied_only === 1 }));
+}
+
+// ─── Wiki (milestone 5) ──────────────────────────────────────────────────────
+
+export const MAX_WIKI = 20_000;
+const RELATED = 12;
+const PREVIEW = 7;
+
+/**
+ * Related tags (technical doc §10.7): co-occurrence, weighted so ubiquitous tags don't dominate.
+ * `pct` is the share of this tag's images that also carry the other one.
+ */
+export function relatedTags(lib: OpenLibrary, id: number): RelatedTag[] {
+  const { db } = lib;
+  const own = counts(db, [id]).get(id) ?? 0;
+  if (!own) return [];
+  const rows = db.prepare(
+    `SELECT t.id, t.type_id, t.name, COUNT(*) AS together,
+            (SELECT COUNT(*) FROM file_tags x JOIN files xf ON xf.id = x.file_id WHERE x.tag_id = t.id AND xf.recycled = 0 AND xf.missing_since IS NULL) AS total
+     FROM file_tags a
+     JOIN files f ON f.id = a.file_id AND ${LIVE_FILE}
+     JOIN file_tags b ON b.file_id = a.file_id AND b.tag_id <> a.tag_id
+     JOIN tags t ON t.id = b.tag_id
+     WHERE a.tag_id = ?
+     GROUP BY t.id`,
+  ).all(id) as { id: number; type_id: number; name: string; together: number; total: number }[];
+  return rows
+    .sort((x, y) => (y.together * y.together) / y.total - (x.together * x.together) / x.total || x.name.localeCompare(y.name))
+    .slice(0, RELATED)
+    .map((r) => ({ ...ref(r), together: r.together, pct: Math.round((r.together / own) * 100) }));
+}
+
+export function wikiPage(lib: OpenLibrary, id: number): WikiPage {
+  const { db } = lib;
+  const detail = tagDetail(lib, id);
+  const t = tagRow(lib, id);
+  const preview = db.prepare(
+    `SELECT f.id, f.hash, f.mtime FROM file_tags ft JOIN files f ON f.id = ft.file_id
+     WHERE ft.tag_id = ? AND ${LIVE_FILE} ORDER BY f.added_at DESC, f.id DESC LIMIT ?`,
+  ).all(id, PREVIEW) as { id: number; hash: string | null; mtime: number }[];
+  return {
+    ...detail,
+    updatedAt: t.updated_at,
+    fields: listFields(lib, t.type_id),
+    values: valuesOf(lib, id),
+    related: relatedTags(lib, id),
+    preview: preview.map(thumbRef),
+  };
+}
+
+/** Save the whole page at once (design M5 · 02): description, cover and field values. */
+export function savePage(lib: OpenLibrary, id: number, page: { description?: string | null; coverFileId?: number | null; fields?: Record<string, FieldInput> }): WikiPage {
+  const { db } = lib;
+  const t = tagRow(lib, id);
+  db.transaction(() => {
+    if (page.description !== undefined) {
+      const text = (page.description ?? '').trim();
+      if (text.length > MAX_WIKI) throw badRequest('TOO_LONG', `Wiki pages can be up to ${MAX_WIKI.toLocaleString('en-US')} characters.`);
+      db.prepare('UPDATE tags SET description = ? WHERE id = ?').run(text || null, id);
+    }
+    if (page.coverFileId !== undefined) {
+      if (page.coverFileId !== null && !db.prepare('SELECT 1 FROM files WHERE id = ? AND recycled = 0').get(page.coverFileId)) {
+        throw notFound('FILE_NOT_FOUND', 'That image no longer exists.');
+      }
+      db.prepare('UPDATE tags SET cover_file_id = ? WHERE id = ?').run(page.coverFileId, id);
+    }
+    if (page.fields) setValues(lib, id, t.type_id, page.fields);
+    db.prepare('UPDATE tags SET updated_at = ? WHERE id = ?').run(Date.now(), id);
+  })();
+  changed();
+  return wikiPage(lib, id);
+}
+
+/**
+ * Resolve wiki links in one call: each name is `type:name` or `name` (aliases count). Untyped names
+ * matching several tags resolve to the first; unknown ones to null.
+ */
+export function resolveNames(lib: OpenLibrary, names: string[]): Record<string, TagRef | null> {
+  const { db } = lib;
+  const out: Record<string, TagRef | null> = {};
+  for (const raw of names) {
+    const { typeId, name } = splitTyped(db, raw);
+    const key = typeId ? (db.prepare('SELECT key FROM tag_types WHERE id = ?').pluck().get(typeId) as string) : null;
+    const [first] = resolveTerm(db, key, name);
+    const t = first !== undefined ? (db.prepare('SELECT id, type_id, name FROM tags WHERE id = ?').get(first) as { id: number; type_id: number; name: string }) : undefined;
+    out[raw] = t ? ref(t) : null;
+  }
+  return out;
 }
