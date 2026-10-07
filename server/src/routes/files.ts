@@ -22,6 +22,8 @@ const fileQuery = z.object({
   q: z.string().max(2000).optional(),
   tag: z.coerce.number().int().positive().optional(),
   collection: z.coerce.number().int().positive().optional(),
+  untagged: flag,
+  fresh: flag,
   sort: z.enum(['name', 'modified', 'added', 'size', 'random', 'position']).default('name'),
   order: z.enum(['asc', 'desc']).default('asc'),
   seed: z.coerce.number().int().optional(),

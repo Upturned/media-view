@@ -25,7 +25,7 @@ interface ThumbSource {
 
 export const isRaster = (ext: string) => ext !== 'svg';
 
-function thumbDir(lib: OpenLibrary): string {
+export function thumbDir(lib: OpenLibrary): string {
   return path.join(lib.root, DATA_DIR, 'thumbnails');
 }
 

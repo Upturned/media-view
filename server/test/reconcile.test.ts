@@ -51,7 +51,7 @@ describe('reconciliation: importing an existing tree', () => {
 
     // Registered right away, but the kind still waits for confirmation; an empty folder is a guess.
     const unmarked = issues(lib, 'unmarked_folder');
-    expect(unmarked).toHaveLength(6);
+    expect(unmarked).toHaveLength(4); // not the two top-level folders: always categories, nothing to confirm
     expect(unmarked.find((i) => i.payload.path === 'Fantasy/Empty')?.payload).toMatchObject({ inferred: 'album', certain: false });
   });
 
@@ -204,6 +204,7 @@ describe('reconciliation: rules', () => {
     t.file('Fantasy/loose.png');
     t.file('Fantasy/Portraits/Nested/deep.png');
     t.file('Fantasy/Portraits/notes.txt');
+    t.file('Fantasy/Portraits/archive.zip');
     t.file('Fantasy/Portraits/desktop.ini');
     await scan();
 
@@ -216,13 +217,15 @@ describe('reconciliation: rules', () => {
     expect(kinds).toEqual([
       `loose_files folder:${folderByPath(lib, 'Fantasy')!.id}`,
       'loose_files root',
+      'moved_file path:Fantasy/Portraits/notes.txt', // a text file: moved to Texts by itself, with a notice
       'nested_in_album path:Fantasy/Portraits/Nested',
-      'wrong_type path:Fantasy/Portraits/notes.txt',
+      'wrong_type path:Fantasy/Portraits/archive.zip',
     ]);
+    expect(fs.existsSync(path.join(lib.moduleRoot('texts'), 'Fantasy', 'Portraits', 'notes.txt'))).toBe(true);
 
     // Fixed on disk: the issues go away on the next scan.
     t.remove('Fantasy/loose.png');
-    t.remove('Fantasy/Portraits/notes.txt');
+    t.remove('Fantasy/Portraits/archive.zip');
     await scan();
     expect(issues(lib, 'wrong_type')).toEqual([]);
     expect(issues(lib, 'loose_files').map((i) => i.subject)).toEqual(['root']);

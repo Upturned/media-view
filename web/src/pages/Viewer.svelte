@@ -33,7 +33,7 @@
 
   /** The list to step through: the one we came from (a folder, Favorites, a tag, a search), or else the file's own album. */
   const listQuery: ListQuery = $derived(
-    query.folder !== undefined || query.favorites || query.tag !== undefined || query.collection !== undefined || query.q || !file
+    query.folder !== undefined || query.favorites || query.tag !== undefined || query.collection !== undefined || query.untagged || query.q || !file
       ? query
       : { ...query, folder: file.folder.id },
   );
@@ -398,11 +398,13 @@
   const source = $derived(
     query.folder !== undefined ? 'folder'
       : query.collection !== undefined ? 'collection'
+      : query.untagged ? 'untagged'
       : query.favorites ? 'favorites' : query.tag !== undefined ? 'tag' : query.q ? 'search' : 'folder',
   );
   const backLabel = $derived(
     !file ? 'Back'
       : source === 'collection' ? listName || 'Collection'
+      : source === 'untagged' ? 'Untagged'
       : source === 'favorites' ? 'Favorites'
       : source === 'tag' ? 'Tag'
       : source === 'search' ? 'Search'
@@ -410,6 +412,7 @@
   );
   const contextKind = $derived(
     source === 'collection' ? 'in collection'
+      : source === 'untagged' ? 'untagged'
       : source === 'favorites' ? 'in Favorites'
       : source === 'tag' ? 'with the tag'
       : source === 'search' ? 'in the search'

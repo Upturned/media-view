@@ -95,6 +95,8 @@ export interface FileItem {
   position?: number | null;
   /** In a collection's list: the album it lives in, as a path (`Fantasy › Elves › Portraits`). */
   where?: string;
+  /** Found on disk by a scan (not imported through the app) and not marked as seen yet. */
+  isNew?: boolean;
 }
 
 export interface FileDetail extends FileItem {
@@ -278,4 +280,118 @@ export interface CollectionCount extends CollectionRef {
   count: number;
   /** All live images on the list. */
   size: number;
+}
+
+// ─── Library Health (milestone 7) ───────────────────────────────────────────
+
+/** Red, amber, blue — and white notices, which aren't problems and never count on the badge. */
+export type HealthSeverity = 'error' | 'warning' | 'info' | 'notice';
+
+export type IssueKind =
+  | 'missing_folder' | 'missing_file' | 'external_move' | 'ambiguous_move' | 'loose_files'
+  | 'nested_in_album' | 'unmarked_folder' | 'wrong_type' | 'unsupported' | 'moved_file' | 'duplicate' | 'orphan_thumbs';
+
+/** Counts for the top-bar badge (red + amber make the number; blue only shows a dot). */
+export interface HealthSummary {
+  error: number;
+  warning: number;
+  /** Stored info issues (duplicates…), without the untagged images. */
+  info: number;
+  /** White notices (never on the badge). */
+  notice: number;
+  /** Untagged images outside the Inbox, and how many of them are NEW. */
+  untagged: number;
+  fresh: number;
+}
+
+/** A copy in a group of identical images. */
+export interface DuplicateCopy {
+  id: number;
+  path: string;
+  folderId: number;
+  /** Manual tags (implied ones follow them). */
+  tags: TagRef[];
+  favorited: boolean;
+  collections: CollectionRef[];
+  description: string | null;
+  addedAt: number;
+}
+
+/** Why a copy is suggested — or why there's no default and the user must choose. */
+export type DuplicateReason = 'only-tagged' | 'oldest' | 'starred' | 'different-tags' | 'two-starred';
+
+export type IssueDetails =
+  /** One item for the folder and everything in it: `folders` missing folders inside, `images` images. */
+  | { kind: 'missing_folder'; folderId: number; path: string; folderKind: FolderKind; name: string; images: number; folders: number }
+  | { kind: 'missing_file'; fileId: number; path: string; filename: string; thumb: ThumbRef | null; tags: TagRef[]; favorited: boolean; collections: number }
+  | { kind: 'external_move'; entity: 'folder'; folderId: number; name: string; from: string; to: string }
+  | {
+    kind: 'external_move';
+    entity: 'files';
+    fromFolder: string;
+    toFolder: string;
+    files: { id: number; filename: string; from: string; to: string; thumb: ThumbRef | null }[];
+  }
+  | {
+    kind: 'ambiguous_move';
+    file: { id: number; path: string; thumb: ThumbRef | null };
+    candidates: { id: number; path: string; tags: TagRef[]; favorited: boolean; collections: number; description: string | null }[];
+  }
+  | { kind: 'loose_files'; folderId: number | null; path: string; count: number; paths: string[] }
+  | { kind: 'nested_in_album'; path: string; albumId: number; albumPath: string; moveOutTo: string }
+  | { kind: 'unmarked_folder'; folderId: number; path: string; current: FolderKind; inferred: FolderKind; certain: boolean; images: number; folders: number; topLevel: boolean }
+  /** A file no module takes (or an image that can't be read: `unreadable`, with its `fileId`). */
+  | { kind: 'wrong_type'; path: string; ext: string; fileId: number | null; unreadable: boolean }
+  | { kind: 'unsupported'; path: string; ext: string }
+  /** White notice: the scan moved a video, audio or text file to its module's folder. `to` is from the library root. */
+  | { kind: 'moved_file'; from: string; to: string; module: 'videos' | 'audio' | 'texts' }
+  | { kind: 'duplicate'; hash: string; thumb: ThumbRef | null; copies: DuplicateCopy[]; keepId: number | null; reason: DuplicateReason };
+
+export interface HealthIssue {
+  id: number;
+  kind: IssueKind;
+  severity: HealthSeverity;
+  detectedAt: number;
+  details: IssueDetails;
+}
+
+export interface HealthReport {
+  summary: HealthSummary;
+  issues: HealthIssue[];
+  /** Untagged images by album (most first). */
+  untaggedAlbums: { folderId: number; path: string; count: number; fresh: number }[];
+  /** Images set aside with "Leave untagged" (the "Left untagged (n)" link). */
+  leftUntagged: number;
+  /** Files the user chose to ignore: they stay where they are ("Not tracked", white). */
+  untracked: UntrackedFile[];
+  /** Ignored and recorded files per format, ever: which formats are worth supporting next. */
+  formatStats: { ext: string; ignored: number; recorded: number }[];
+  thumbnails: { count: number; bytes: number };
+  logs: { files: number; bytes: number };
+  lastScan: number | null;
+}
+
+export interface UntrackedFile {
+  path: string;
+  ext: string;
+  reason: 'unsupported' | 'wrong_type';
+  ignoredAt: number;
+}
+
+/** What a fix can be asked to do, per issue kind (technical doc §7.4). */
+export type FixAction =
+  | { action: 'recreate' } | { action: 'forget' }
+  | { action: 'locate'; path: string }
+  | { action: 'keep' } | { action: 'undo' }
+  | { action: 'pick'; candidateId: number } | { action: 'keep-new' }
+  | { action: 'new-album'; name: string } | { action: 'into-album'; albumId: number | null }
+  | { action: 'move-out' } | { action: 'convert'; name: string }
+  | { action: 'confirm'; folderKind?: 'category' | 'subcategory' | 'album' }
+  | { action: 'recycle' } | { action: 'ignore' } | { action: 'record' } | { action: 'ok' }
+  | { action: 'keep-one'; keepId: number } | { action: 'merge'; keepId: number };
+
+export interface FixResult {
+  message: string;
+  /** For fixes that only dismiss an issue (Keep, Keep as new, Confirm): bring it back. */
+  reopen?: { kind: IssueKind; subject: string; payload: string };
 }

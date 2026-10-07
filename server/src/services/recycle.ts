@@ -20,7 +20,8 @@ import { rewritePrefix } from './tree.ts';
 
 interface RecycleRow {
   id: number;
-  entity: 'file' | 'folder';
+  /** 'other': a stray file the app doesn't track (a wrong file type), found by its stored name. */
+  entity: 'file' | 'folder' | 'other';
   entity_id: number;
   original_rel_path: string;
   original_parent_id: number | null;
@@ -74,6 +75,22 @@ export function recycleFiles(lib: OpenLibrary, ids: number[]): { recycled: numbe
   return result;
 }
 
+/** Recycle a stray file the app doesn't track (Library Health's "wrong file types"), restorable like the rest. */
+export function recycleStray(lib: OpenLibrary, relPath: string): void {
+  const { db } = lib;
+  const from = toAbsolute(lib.moduleRoot('images'), relPath);
+  if (!fs.existsSync(from)) throw notFound('FILE_NOT_FOUND', 'This file is no longer there.');
+  const name = path.basename(from);
+  db.transaction(() => {
+    const rid = db.prepare(
+      `INSERT INTO recycle_items (entity, entity_id, original_rel_path, original_parent_id, stored_name, recycled_at)
+       VALUES ('other', 0, ?, NULL, ?, ?)`,
+    ).run(relPath, name, Date.now()).lastInsertRowid as number;
+    moveOnDisk(from, absPath(lib, binRel(rid, name)));
+  })();
+  log('info', 'recycle', 'stray file recycled', { path: relPath });
+}
+
 /** Recycle a folder with everything in it. Refused while it holds starred images. */
 export function recycleFolder(lib: OpenLibrary, id: number): void {
   const { db } = lib;
@@ -107,10 +124,10 @@ export function recycleFolder(lib: OpenLibrary, id: number): void {
 
 export interface BinItem {
   id: number;
-  entity: 'file' | 'folder';
+  entity: 'file' | 'folder' | 'other';
   name: string;
-  /** Image, or the folder's kind. */
-  kind: 'image' | FolderKind;
+  /** Image, the folder's kind, or another kind of file. */
+  kind: 'image' | 'other' | FolderKind;
   /** e.g. "2 albums · 58 images" for folders. */
   inner: string | null;
   /** Where it came from, `Fantasy\Elves\Portraits`. */
@@ -136,6 +153,18 @@ export function listBin(lib: OpenLibrary): BinItem[] {
   return rows.map((r) => {
     const parentDir = r.original_rel_path.includes('/') ? r.original_rel_path.slice(0, r.original_rel_path.lastIndexOf('/')) : '';
     const location = parentDir.replaceAll('/', '\\') || 'Images';
+    if (r.entity === 'other') {
+      let size = 0;
+      try {
+        size = fs.statSync(absPath(lib, binRel(r.id, r.stored_name))).size;
+      } catch {
+        // gone from the bin folder
+      }
+      return {
+        id: r.id, entity: 'other', name: r.stored_name, kind: 'other', inner: null, location,
+        locationGone: false, recycledAt: r.recycled_at, size, images: 0, thumb: null,
+      } satisfies BinItem;
+    }
     if (r.entity === 'file') {
       const f = db.prepare('SELECT id, hash, mtime, size FROM files WHERE id = ?').get(r.entity_id) as { id: number; hash: string | null; mtime: number; size: number } | undefined;
       return {
@@ -178,6 +207,18 @@ export function restore(lib: OpenLibrary, recycleId: number, targetId?: number |
   const { db } = lib;
   const r = recycleRow(lib, recycleId);
   const root = lib.moduleRoot('images');
+
+  if (r.entity === 'other') {
+    // Back to its old folder on disk (recreated if needed); the next scan reports it again.
+    const dir = r.original_rel_path.includes('/') ? r.original_rel_path.slice(0, r.original_rel_path.lastIndexOf('/')) : '';
+    const dirAbs = dir ? toAbsolute(root, dir) : root;
+    fs.mkdirSync(dirAbs, { recursive: true });
+    const { base, ext } = splitExt(r.stored_name);
+    moveOnDisk(absPath(lib, binRel(r.id, r.stored_name)), path.join(dirAbs, uniqueName(dirAbs, base, ext)));
+    db.prepare('DELETE FROM recycle_items WHERE id = ?').run(r.id);
+    dropBinDir(lib, r.id);
+    return { folderId: null };
+  }
 
   if (r.entity === 'file') {
     const targetFolder = targetId ?? r.original_parent_id;
@@ -254,7 +295,7 @@ export function deletePermanently(lib: OpenLibrary, recycleIds: number[]): { del
     db.transaction(() => {
       if (r.entity === 'file') {
         db.prepare('DELETE FROM files WHERE id = ?').run(r.entity_id);
-      } else {
+      } else if (r.entity === 'folder') {
         const under = underPrefix('rel_path', binRel(r.id, r.stored_name));
         db.prepare(`UPDATE folders SET cover_file_id = NULL WHERE cover_file_id IN (SELECT id FROM files WHERE ${under.sql})`).run(...under.params);
         db.prepare(`DELETE FROM files WHERE ${under.sql}`).run(...under.params);
