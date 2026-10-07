@@ -4,6 +4,7 @@ import { AppError } from './lib/errors.ts';
 import { log } from './lib/log.ts';
 import { collectionRoutes } from './routes/collections.ts';
 import { eventRoutes } from './routes/events.ts';
+import { healthRoutes } from './routes/health.ts';
 import { fileRoutes } from './routes/files.ts';
 import { folderRoutes } from './routes/folders.ts';
 import { libraryRoutes } from './routes/library.ts';
@@ -47,6 +48,7 @@ export function createApp(allowedOrigins: Set<string>) {
     .route('/api/tag-types', tagTypeRoutes)
     .route('/api/tag-fields', fieldRoutes)
     .route('/api/collections', collectionRoutes)
+    .route('/api/health', healthRoutes)
     .route('/api/settings', settingsRoutes)
     .route('/api/system', systemRoutes)
     .route('/api/events', eventRoutes)

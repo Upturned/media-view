@@ -1,10 +1,15 @@
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { isImageFile, type FolderKind } from '@media-view/shared';
 import type { DB } from '../db/connection.ts';
+import { expectChange } from '../lib/expected.ts';
+import { isUnsupportedImage, moduleFor, type OtherModule } from '../lib/formats.ts';
 import { hashFile } from '../lib/hash.ts';
 import { log } from '../lib/log.ts';
 import { writeMarker } from '../lib/markers.ts';
-import { baseName, extension, parentPath, toAbsolute } from '../lib/paths.ts';
+import { splitExt, uniqueName } from '../lib/names.ts';
+import { baseName, extension, MODULE_ROOTS, parentPath, toAbsolute, toDbPath } from '../lib/paths.ts';
 import { walk, type DiskDir, type DiskFile } from '../lib/walk.ts';
 import { clearIssue, getIssuePayload, IssueSweep, raiseIssue, type IssueKind } from './issues.ts';
 import { ensureInbox, type OpenLibrary } from './library.ts';
@@ -50,7 +55,7 @@ interface FileRow {
 }
 
 /** Issue kinds a full scan recomputes from scratch. The others are events that wait for the user. */
-const STATE_KINDS: IssueKind[] = ['missing_folder', 'missing_file', 'loose_files', 'nested_in_album', 'wrong_type'];
+const STATE_KINDS: IssueKind[] = ['missing_folder', 'missing_file', 'loose_files', 'nested_in_album', 'wrong_type', 'unsupported'];
 
 /** Files Windows (or other tools) drop into folders; never reported as wrong types. */
 const IGNORED_FILES = new Set(['desktop.ini', 'thumbs.db', 'ehthumbs.db']);
@@ -86,8 +91,11 @@ export async function reconcile(lib: OpenLibrary): Promise<ReconcileResult> {
   db.transaction(() => {
     applyFiles(db, plan, resolved, sweep, result);
     // Pass 4 — rules.
-    checkRules(snapshot.files, resolved, sweep);
+    checkRules(lib, snapshot.files, resolved, sweep);
     sweep.finish();
+    db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('first_scan_done', '1')").run();
+    // A top-level folder is always a category: nothing to confirm (also clears ones raised before that rule).
+    db.prepare("DELETE FROM health_issues WHERE kind = 'unmarked_folder' AND subject IN (SELECT 'folder:' || id FROM folders WHERE parent_id IS NULL)").run();
   })();
 
   result.durationMs = Date.now() - started;
@@ -287,8 +295,9 @@ function insertNewFolder(
   ).run(uuid, parent?.id ?? null, kind, name, d.relPath, now, now).lastInsertRowid as number;
   writeMarker(toAbsolute(lib.moduleRoot('images'), d.relPath), kind, lib.meta.id, uuid);
 
-  if (!restoredUuid) {
+  if (!restoredUuid && parent) {
     // Registered right away so its images are visible; the kind still waits for confirmation.
+    // (A top-level folder is always a category: nothing to confirm.)
     raiseIssue(db, 'unmarked_folder', `folder:${id}`, { folderId: id, path: d.relPath, inferred: kind, certain: inferred.certain });
   }
   result.foldersAdded++;
@@ -381,9 +390,11 @@ function applyFiles(db: DB, plan: FilePlan, resolved: Map<string, FolderRow>, sw
     }
   }
 
+  // Found on disk: after the library's first scan, these are arrivals from outside the app (NEW).
+  const seen = db.prepare("SELECT 1 FROM settings WHERE key = 'first_scan_done'").get() ? 0 : 1;
   const insert = db.prepare(
-    `INSERT INTO files (media_type, folder_id, category_id, filename, rel_path, ext, size, mtime, hash, added_at)
-     VALUES ('image', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO files (media_type, folder_id, category_id, filename, rel_path, ext, size, mtime, hash, added_at, origin, seen)
+     VALUES ('image', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scan', ${seen})`,
   );
   const moveRow = db.prepare(
     `UPDATE files SET rel_path = ?, filename = ?, ext = ?, folder_id = ?, category_id = ?, mtime = ?, missing_since = NULL WHERE id = ?`,
@@ -457,12 +468,23 @@ function nearestFolder(relPath: string, resolved: Map<string, FolderRow>): Folde
 
 // ─── Pass 4: rules ───────────────────────────────────────────────────────────
 
-function checkRules(files: DiskFile[], resolved: Map<string, FolderRow>, sweep: IssueSweep): void {
+function checkRules(lib: OpenLibrary, files: DiskFile[], resolved: Map<string, FolderRow>, sweep: IssueSweep): void {
+  const { db } = lib;
   const loose = new Map<string, string[]>();
+  // Files the user chose to ignore stay where they are, unreported; the list forgets ones that are gone.
+  const untracked = new Set((db.prepare('SELECT rel_path FROM untracked_files').pluck().all() as string[]).map(key));
+  const onDisk = new Set(files.map((f) => key(f.relPath)));
+  for (const p of untracked) if (!onDisk.has(p)) db.prepare('DELETE FROM untracked_files WHERE rel_path = ?').run(p);
+
   for (const f of files) {
     const name = baseName(f.relPath);
     if (!isImageFile(name)) {
-      if (!IGNORED_FILES.has(name.toLowerCase())) sweep.raise('wrong_type', `path:${f.relPath}`, { path: f.relPath, ext: extension(name) });
+      if (IGNORED_FILES.has(name.toLowerCase()) || untracked.has(key(f.relPath))) continue;
+      const ext = extension(name);
+      const module = moduleFor(ext);
+      if (module) moveToModule(lib, f.relPath, module);
+      else if (isUnsupportedImage(ext)) sweep.raise('unsupported', `path:${f.relPath}`, { path: f.relPath, ext });
+      else sweep.raise('wrong_type', `path:${f.relPath}`, { path: f.relPath, ext });
       continue;
     }
     const dir = parentPath(f.relPath);
@@ -476,5 +498,27 @@ function checkRules(files: DiskFile[], resolved: Map<string, FolderRow>, sweep: 
   }
   for (const [subject, paths] of loose) {
     sweep.raise('loose_files', subject, { count: paths.length, paths: paths.slice(0, 50) });
+  }
+}
+
+/**
+ * A video, audio or text file among the images goes to its module's folder, at the same relative
+ * path (a free name if taken), and leaves a notice (white) for the user.
+ */
+function moveToModule(lib: OpenLibrary, relPath: string, module: OtherModule): void {
+  const from = toAbsolute(lib.moduleRoot('images'), relPath);
+  const dest = toAbsolute(lib.moduleRoot(module), relPath);
+  try {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    const { base, ext } = splitExt(path.basename(dest));
+    const to = path.join(path.dirname(dest), uniqueName(path.dirname(dest), base, ext));
+    expectChange(from, to);
+    fs.renameSync(from, to);
+    const toRel = `${MODULE_ROOTS[module]}/${toDbPath(path.relative(lib.moduleRoot(module), to))}`;
+    raiseIssue(lib.db, 'moved_file', `path:${relPath}`, { from: relPath, to: toRel, module });
+    log('info', 'scan', 'moved to its module', { from: relPath, to: toRel });
+  } catch (err) {
+    log('warn', 'scan', 'could not move to its module', { path: relPath, message: (err as Error).message });
+    raiseIssue(lib.db, 'wrong_type', `path:${relPath}`, { path: relPath, ext: extension(relPath) });
   }
 }

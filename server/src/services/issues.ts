@@ -1,12 +1,12 @@
+import type { HealthSeverity, IssueKind } from '@media-view/shared';
 import type { DB } from '../db/connection.ts';
+import { emit } from '../lib/events.ts';
 
-/** Library Health issues (technical doc §7.4). The UI for them arrives in milestone 7. */
+/** Library Health issues (technical doc §7.4): raised by the scan, the hasher and the thumbnailer. */
 
-export type IssueKind =
-  | 'missing_folder' | 'missing_file' | 'external_move' | 'ambiguous_move' | 'loose_files'
-  | 'nested_in_album' | 'unmarked_folder' | 'wrong_type' | 'duplicate' | 'orphan_thumbs';
+export type { IssueKind };
 
-const SEVERITY: Record<IssueKind, 'error' | 'warning' | 'info'> = {
+export const SEVERITY: Record<IssueKind, HealthSeverity> = {
   missing_folder: 'error',
   missing_file: 'error',
   external_move: 'warning',
@@ -15,6 +15,8 @@ const SEVERITY: Record<IssueKind, 'error' | 'warning' | 'info'> = {
   nested_in_album: 'warning',
   unmarked_folder: 'warning',
   wrong_type: 'warning',
+  unsupported: 'warning',
+  moved_file: 'notice',
   duplicate: 'info',
   orphan_thumbs: 'info',
 };
@@ -79,4 +81,5 @@ export function refreshDuplicates(db: DB): void {
     for (const g of groups) sweep.raise('duplicate', `hash:${g.hash}`, { fileIds: g.ids.split(',').map(Number) });
     sweep.finish();
   })();
+  emit({ type: 'health-changed' });
 }

@@ -169,15 +169,15 @@ Grid pages (albums, folders, search, favorites, collections, tag galleries) have
 
 ### 3.3 Library Health indicator
 
-When Library Health has something waiting for you, its icon in the top bar shows a badge with the number of open items, colored by the most serious one:
+When Library Health has something waiting for you, its icon in the top bar shows a badge with the number of open problems, colored by the most serious one:
 
 | Color     | Meaning                                                                          |
 |-----------|----------------------------------------------------------------------------------|
 | **Red**   | Something is missing — folders or images the app can't find                      |
 | **Amber** | Something needs a decision — rule problems, unmarked folders, changes made outside the app, wrong file types |
-| **Blue**  | Just so you know — duplicates, new images, thumbnail cleanup                     |
+| **Blue**  | Just so you know — untagged images, duplicates, thumbnail cleanup                |
 
-No badge means everything is in order.
+The number counts only red and amber items. Blue items are listed on the Library Health page; when they're all that's left, the badge shows a small blue dot instead of a number. White items — notices, and files the app doesn't track — never show on the badge. No badge means everything is in order.
 
 ### 3.4 Keyboard
 
@@ -391,23 +391,31 @@ Images and folders you delete go here first.
 
 ### 4.15 Library Health
 
-A maintenance page that compares your library folder with what the app remembers and lists anything that needs attention, grouped and colored by severity (see §3.3). Each item comes with suggested fixes you can apply one by one, or all at once with **Apply to all**.
+A maintenance page that compares your library folder with what the app remembers and lists anything that needs attention, grouped and colored by severity (see §3.3). Each item comes with suggested fixes you can apply one by one, or all at once with **Apply to all** — which always asks first, listing what it will do (e.g. *recreate 3 folders and their markers*). Items that need your choice (like duplicates with different tags) are skipped by Apply to all, and it says how many.
 
 **Red — missing**
 - **Missing folders** — folders the app remembers but can't find. *Recreate* them, or *Forget* them.
-- **Missing images** — pictures the app remembers but can't find, shown with their old tags. *Locate…* them, or *Forget* them.
+- **Missing images** — pictures the app remembers but can't find, shown with their old tags. *Locate…* them (the file you pick must be the same image — its content is checked), or *Forget* them.
+- *Forget* deletes what the app remembers about them — tags, stars, descriptions, places in collections — so it asks twice: the usual confirmation, then *Are you sure?*
 
 **Amber — needs a decision**
 - **Changed outside the app** — folders or images that were moved or renamed in Windows Explorer. The app is already following them; *Keep* the change, or *Undo* it to put things back where they were. Images moved together are grouped into one item.
 - **Unclear moves** — an image reappeared that matches several identical missing images, each with its own tags. Pick which one it is, or keep it as a new image.
 - **Rule problems** — loose images in a category or sub-category, folders inside an album. *Fix: move the images into a new album; move the folder out.*
 - **Unmarked folders** — new folders created outside the app. They show up right away with the kind the app guessed (folders with images → album; folders with folders → sub-category; empty ones → album, marked as a guess), and you confirm or change it here.
-- **Wrong file types** — videos, audio or other files found among your images.
+- **Wrong file types** — files among your images that no module takes (a `.zip`, an `.exe`…): *Recycle* or *Ignore*. Videos, audio and texts are moved to their own folders automatically (see the white notices below).
+- **Not supported** — image formats the app can't show yet (PSD, HEIC, RAW…). *Ignore* leaves the file where it is (it's then listed under *Not tracked*); *Record* moves it into the library's hidden Invalid folder, where you can still find it in Explorer. Both are counted, per format, in the table at the bottom of the page.
 
 **Blue — for your information**
-- **New images** — pictures added from outside the app, ready to be tagged.
-- **Duplicates** — identical images stored in more than one place.
+- **Untagged images** — images outside the Inbox that have no tags yet, grouped by album. Ones that arrived from outside the app (copied in with Explorer, a sync tool…) carry a **NEW** mark; a filter shows just those. Tag them right here, one by one — each row has a tag field, and a tagged image leaves the list — or **Open as grid** to see them all in one grid and tag them in bulk. **Mark as seen** clears the NEW mark (the image stays on the list); **Leave untagged** takes an image off the list, for pictures you never mean to tag (screenshots, scans, wallpapers). Both work on one image or a selection.
+- **Duplicates** — identical images stored in more than one place. The app suggests which copy to keep: the only tagged one, else the oldest; a starred copy is always kept. When the copies have different tags, choose: **Keep one** (the dialog shows which tags would be lost) or **Merge into…** one copy, which then gets all the tags, the star, a description and every place in a collection. The other copies go to the Recycle Bin.
 - **Thumbnail cleanup** — remove cached thumbnails that no longer belong to any image.
+
+**White — notices**
+- **Moved automatically** — videos, audio and texts found among your images were moved to `Videos\`, `Audio\` or `Texts\`, keeping their folders. *OK* dismisses the notice.
+- **Not tracked** — files you chose to ignore. They stay where they are and are listed here, so nothing in your library is ever forgotten: *Track again* or *Record*.
+
+**Unsupported formats** — at the bottom, how many files of each format were ignored or recorded so far, to show which formats are worth supporting next.
 
 **Logs** — the app keeps a log of errors, every fix applied on this page and every bulk operation (see §7). This section shows how much space the logs use, with **Open logs folder** and **Clear logs**.
 

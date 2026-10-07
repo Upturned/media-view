@@ -1,13 +1,28 @@
 <script lang="ts">
   import { href, router } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
+  import { badgeOf, health, loadHealthSummary } from '../stores/health.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
   import { openDialog } from '../stores/ui.svelte.ts';
   import { fmt } from '../media.ts';
   import { word } from '../themes/index.ts';
   import SearchBox from './SearchBox.svelte';
 
-  // Random and the Health badge join as their milestones land.
+  // Random joins with milestone 8.
+
+  // The Health badge (user guide §3.3): reloads when issues, files or folders change.
+  $effect(() => {
+    void live.health;
+    void live.files;
+    void live.folders;
+    if (!library.info) return;
+    const t = setTimeout(() => void loadHealthSummary(), 200);
+    return () => clearTimeout(t);
+  });
+  const badge = $derived(badgeOf(health.summary));
+  const badgeTitle = $derived(health.summary
+    ? [`${health.summary.error} missing`, `${health.summary.warning} need a decision`, `${health.summary.info + (health.summary.untagged ? 1 : 0)} just so you know`].join(' · ')
+    : 'Library Health');
   const scanning = $derived(live.scanning || library.info?.scan.status === 'scanning');
   const hashing = $derived(library.info?.scan.hashing ?? 0);
 </script>
@@ -35,6 +50,12 @@
     <a href={href('/recycle')} class:active={router.route.name === 'recycle'}>Bin</a>
     <a href={href('/settings')} class:active={router.route.name === 'settings'}>Settings</a>
   </nav>
+  {#if library.info}
+    <a class="health {badge.tone}" class:active={router.route.name.startsWith('health')} href={href('/health')} title={badgeTitle}>
+      <span class="hl">Health</span>
+      {#if badge.count}<span>{fmt(badge.count)}</span>{:else if badge.tone === 'blue'}<span class="dot"></span>{/if}
+    </a>
+  {/if}
   <button class="theme" title="Check styles" onclick={() => openDialog('styles')}><span class="swatch"></span>Darkroom</button>
   <button class="help" title="Help (F1)" onclick={() => openDialog('help')}>?</button>
 </header>
@@ -90,6 +111,25 @@
   }
   nav a:hover { color: var(--text); background: var(--surface); }
   nav a.active { color: var(--text); background: var(--surface); box-shadow: inset 0 -3px 0 var(--accent); }
+
+  .health {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    border-left: 1px solid var(--line);
+    color: var(--text2);
+    font: 700 13px/1 var(--font-mono);
+    text-decoration: none;
+  }
+  .health:hover { color: var(--text); background: var(--surface); }
+  .health .hl { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .health.red { background: var(--red); color: #fff; }
+  .health.amber { background: var(--amber); color: #111; }
+  .health.red:hover, .health.amber:hover { filter: brightness(1.08); }
+  .health.active { box-shadow: inset 0 -3px 0 var(--text); }
+  .health.none.active, .health.blue.active { color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
 
   .theme {
     display: flex;

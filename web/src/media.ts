@@ -17,6 +17,9 @@ export interface ListQuery {
   tag?: number;
   /** Images on this collection (collection pages); allows the `position` sort. */
   collection?: number;
+  /** Library Health's untagged images (and only the NEW ones with `fresh`). */
+  untagged?: boolean;
+  fresh?: boolean;
   sort: SortKey;
   order: 'asc' | 'desc';
   seed?: number;
@@ -31,6 +34,8 @@ export function toParams(q: ListQuery): Record<string, string> {
   if (q.q?.trim()) p.q = q.q.trim();
   if (q.tag !== undefined) p.tag = String(q.tag);
   if (q.collection !== undefined) p.collection = String(q.collection);
+  if (q.untagged) p.untagged = '1';
+  if (q.untagged && q.fresh) p.fresh = '1';
   if (q.seed !== undefined) p.seed = String(q.seed);
   return p;
 }
@@ -46,6 +51,8 @@ export function fromParams(p: URLSearchParams): ListQuery {
     q: p.get('q') ?? undefined,
     tag: num('tag'),
     collection: num('collection'),
+    untagged: p.get('untagged') === '1',
+    fresh: p.get('fresh') === '1',
     sort: sort && ['name', 'modified', 'added', 'size', 'random', 'position'].includes(sort) ? sort : 'name',
     order: p.get('order') === 'desc' ? 'desc' : 'asc',
     seed: num('seed'),

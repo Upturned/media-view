@@ -30,12 +30,13 @@
     coverTargets = [],
     addTo,
     collection,
+    untaggedView = false,
     searchable = true,
     emptyText = 'Nothing here yet.',
     ontotal,
   }: {
     /** The folder (and whether to include everything under it), a tag, a collection; nothing = the whole library. */
-    scope: { folder?: number; recursive?: boolean; tag?: number; favorites?: boolean; collection?: number };
+    scope: { folder?: number; recursive?: boolean; tag?: number; favorites?: boolean; collection?: number; untagged?: boolean; fresh?: boolean };
     /** Whether the top-bar search filters this grid (and the index shows). */
     searchable?: boolean;
     /** The place, for dialogs: "Portraits", "all images in Fantasy". */
@@ -46,6 +47,11 @@
     addTo?: { id: number; label: string };
     /** On a collection page: the list itself (own order, numbers, reorder, remove). */
     collection?: CollectionRef;
+    /**
+     * Library Health's untagged images as a grid (design M7 · 06): NEW marks, Mark as seen / Leave
+     * untagged, and images that get tagged stay (dimmed) until Refresh, so the grid doesn't jump.
+     */
+    untaggedView?: boolean;
     emptyText?: string;
     ontotal?: (total: number) => void;
   } = $props();
@@ -123,6 +129,8 @@
     recursive: scope.recursive,
     tag: scope.tag,
     collection: scope.collection,
+    untagged: scope.untagged,
+    fresh: scope.fresh,
     favorites: scope.favorites || favorites,
     q: searchable ? search.q : undefined,
     name,
@@ -184,11 +192,20 @@
   // New query: start over. Changes elsewhere (scan, favorites): reload what's on screen without blanking.
   // Only the query and the live counter trigger this; everything else is read untracked.
   let lastKey = '';
+  /** Untagged view: images that left the list since it loaded (tagged, set aside…), shown dimmed. */
+  const stale = new SvelteSet<number>();
+  let refreshes = $state(0);
   $effect(() => {
     void live.files;
+    void refreshes;
     const key = JSON.stringify(requestParams);
     untrack(() => {
       const fresh = key !== lastKey;
+      if (untaggedView && !fresh && lastKey) {
+        void markStale();
+        return;
+      }
+      stale.clear();
       lastKey = key;
       generation++;
       allIds = null;
@@ -221,6 +238,34 @@
     const n = grouped ? plainTotal : total;
     if (n !== null) ontotal?.(n);
   });
+
+  async function markStale() {
+    try {
+      const now = new Set((await unwrap(client.api.files.ids.$get({ query: toParams(query) }))).ids);
+      for (const page of Object.values(pages)) for (const item of page) if (!now.has(item.id)) stale.add(item.id);
+    } catch {
+      // keep what's shown
+    }
+  }
+
+  function refresh() {
+    lastKey = '';
+    refreshes++;
+  }
+
+  async function untaggedAction(action: 'seen' | 'leave') {
+    try {
+      const chosen = (await ids()).filter((id) => selected.has(id));
+      const r = await unwrap(client.api.health.untagged[action].$post({ json: { ids: chosen } }));
+      toast(action === 'seen' ? `Marked ${fmt(r.changed)} as seen · NEW marks cleared` : `Left ${fmt(r.changed)} untagged · off this view`, 'info', {
+        label: 'Undo',
+        run: () => void unwrap(client.api.health.untagged[action === 'seen' ? 'seen' : 'put-back'].$post({ json: { ids: chosen } })).catch(toastError),
+      });
+      selected.clear();
+    } catch (err) {
+      toastError(err);
+    }
+  }
 
   const itemAt = (i: number): FileItem | GroupedFileItem | undefined => pages[Math.floor(i / PAGE)]?.[i % PAGE];
 
@@ -583,6 +628,7 @@
       {/if}
       <input class="filter" bind:value={nameInput} placeholder="name contains…" spellcheck="false" />
     {/if}
+    {#if untaggedView && stale.size}<button class="tool refresh" onclick={refresh} title="Take the tagged images out of this view">↻ Refresh · {fmt(stale.size)} done</button>{/if}
     {#if searchable}<button class="tool idx" class:on={showIndex} onclick={() => (showIndex = !showIndex)} title="Show or hide the index">Index</button>{/if}
     {#if addTo}<button class="add" onclick={pickAndAdd}>+ Add images</button>{/if}
   </div>
@@ -620,6 +666,7 @@
               class="cell"
               class:selected={selected.has(item.id)}
               class:ghosted={dragIds?.includes(item.id)}
+              class:stale={stale.has(item.id)}
               class:grab={canReorder}
               href={viewerHref(item.id, query)}
               title={item.filename}
@@ -639,6 +686,7 @@
                   <span class="num" class:big={inList} class:dim={inList && sort !== 'position'}>{pad(item.position ?? 0)}</span>
                 {:else if isGif(item)}<span class="badge">GIF</span>{/if}
                 {#if item.favorited}<span class="star">★</span>{/if}
+                {#if untaggedView && item.isNew && !stale.has(item.id)}<span class="newb">NEW</span>{/if}
                 {#if g && g.group && g.listed > 1}<span class="dup" title="On {g.listed} lists">{g.listed}×</span>{/if}
                 {#if selected.has(item.id)}<div class="ring"></div>{/if}
                 {#if dragIds && over === item.id}
@@ -671,6 +719,10 @@
       <div class="count"><span class="display">{fmt(selected.size)}</span><span>{selected.size === 1 ? word('image') : word('images')}<br />selected</span></div>
       {#if collection}<button class="unlist" onclick={() => bulk('unlist')}>− Remove from collection</button>{/if}
       <button onclick={() => bulk('tags')}># Tags…</button>
+      {#if untaggedView}
+        <button onclick={() => untaggedAction('seen')}>Mark as seen</button>
+        <button onclick={() => untaggedAction('leave')}>Leave untagged</button>
+      {/if}
       <button onclick={() => bulk('collect')}>+ Collection</button>
       <button onclick={() => bulk('star')}>★ Star</button>
       <button onclick={() => bulk('unstar')}>☆ Unstar</button>
@@ -771,6 +823,9 @@
   .cell { position: absolute; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: var(--text2); }
   .cell.grab { cursor: grab; }
   .cell.ghosted { opacity: 0.28; }
+  .cell.stale { opacity: 0.35; }
+  .newb { position: absolute; left: 0; bottom: 0; padding: 2px 6px; background: var(--accent2); color: #111; font: 700 10px/1.2 var(--font-mono); }
+  .refresh { color: var(--accent); font-weight: 700; }
   .cell.ghosted .frame { outline: 1px dashed var(--text2); }
   .frame { position: relative; aspect-ratio: 3 / 2; background: var(--thumb); outline: 1px solid var(--line); }
   .cell:hover .frame { outline-color: var(--accent); }

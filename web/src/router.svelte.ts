@@ -5,7 +5,7 @@
 
 export type RouteName =
   | 'hub' | 'images' | 'folder' | 'album' | 'all' | 'viewer' | 'search' | 'tags' | 'tag-types' | 'tag' | 'wiki' | 'favorites'
-  | 'collections' | 'collection' | 'recycle' | 'settings' | 'not-found';
+  | 'collections' | 'collection' | 'health' | 'health-review' | 'health-untagged' | 'health-grid' | 'recycle' | 'settings' | 'not-found';
 
 const ROUTES: [pattern: string, name: RouteName][] = [
   ['/', 'hub'],
@@ -22,6 +22,10 @@ const ROUTES: [pattern: string, name: RouteName][] = [
   ['/favorites', 'favorites'],
   ['/collections', 'collections'],
   ['/collections/:id', 'collection'],
+  ['/health', 'health'],
+  ['/health/review/:section', 'health-review'],
+  ['/health/untagged', 'health-untagged'],
+  ['/health/untagged/grid', 'health-grid'],
   ['/recycle', 'recycle'],
   ['/settings', 'settings'],
 ];

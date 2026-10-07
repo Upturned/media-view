@@ -10,13 +10,16 @@ export const live = $state({
   folders: 0,
   /** Bumped when the open library changes. */
   library: 0,
+  /** Bumped when Library Health issues change (the badge, the Health page). */
+  health: 0,
 });
 
 const COALESCE_MS = 250;
-const pending = new Set<'files' | 'folders' | 'library'>();
+type Counter = 'files' | 'folders' | 'library' | 'health';
+const pending = new Set<Counter>();
 let timer: ReturnType<typeof setTimeout> | null = null;
 
-function bump(key: 'files' | 'folders' | 'library') {
+function bump(key: Counter) {
   pending.add(key);
   timer ??= setTimeout(() => {
     timer = null;
@@ -36,9 +39,11 @@ export function connectEvents(): void {
   source.addEventListener('files-changed', () => bump('files'));
   source.addEventListener('folders-changed', () => bump('folders'));
   source.addEventListener('library-changed', () => bump('library'));
+  source.addEventListener('health-changed', () => bump('health'));
   // EventSource reconnects by itself; after a reconnect, assume something changed.
   source.addEventListener('open', () => {
     bump('files');
     bump('folders');
+    bump('health');
   });
 }
