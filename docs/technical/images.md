@@ -375,6 +375,15 @@ CREATE INDEX collection_items_file  ON collection_items(file_id);
 
 Positions are rewritten densely (0..n-1) in one transaction on reorder; collections are small enough that this is cheaper than fractional indexing's complexity.
 
+Milestone 6 decisions (`server/src/services/collections.ts`):
+
+- **Unique names**: migration 003 adds `name_norm` with a unique index. Names are compared like tag names (§10.1): case, and space vs. `_`, don't count, because `@name` in a search writes spaces as `_`. Any punctuation is allowed except `"` (searches quote such names, §11.1); up to 100 characters. Descriptions up to **500** characters, like folders.
+- **Positions include recycled images**, so a restore puts the image back in its place. Counts, covers and the numbers shown (`position` in `/api/files` results: 1-based, live images only) skip them.
+- **Cover**: `cover_file_id`, or the first live image when null. Removing the cover from the list sets it back to null (first image).
+- **Adding** appends in the order given; images already on the list are counted (`already`) and reported, not moved.
+- **Deleting** returns a snapshot (name, description, cover, ordered file ids); `POST /api/collections/restore` recreates it — with the same id when it's still free — for the toast's *Undo*.
+- Membership changes emit `files-changed`, since grids, the viewer and the index show them.
+
 ### 6.7 Recycle bin, health, settings
 
 ```sql
@@ -675,18 +684,20 @@ Cached in memory per tag and invalidated when `file_tags` changes for that tag. 
 Implemented once in `shared/search-syntax.ts`, used by the server to build queries and by the client to highlight tokens in the search box.
 
 ```
-query   := term (WS term)*
-term    := ['-' | '~'] ( tagterm | text )   -- '-' exclude, '~' member of the "any of" group
-tagterm := '#' [typekey ':'] name        -- explicit tag
-         | typekey ':' name              -- shorthand, only if typekey is a known tag type
-text    := any other word or "quoted phrase"
+query    := term (WS term)*
+term     := ['-' | '~'] ( tagterm | collterm | text )   -- '-' never, '~' member of the "any of" group
+tagterm  := '#' [typekey ':'] name        -- explicit tag
+          | typekey ':' name              -- shorthand, only if typekey is a known tag type
+collterm := '@' name | '@"' any name '"'  -- images on a collection (milestone 6)
+text     := any other word or "quoted phrase"
 ```
 
 - In a tag term, `name` is a single word: spaces in tag names are written as `_` (`#red_dress`, `character:aerin_valecrest`) and match through `name_norm` (§10.1).
+- A collection term is an **exact** name match through `collections.name_norm` (§6.6): `@chapter_3` finds *Chapter 3*, not *Chapter 3 refs*. Names with punctuation are quoted: `@"Court outfits — final pass"`. Suggestions and the index insert the right form (`collectionToken`), so nobody has to type it.
 
-- Tag terms are resolved through §10.3 (aliases included). Unknown tags produce zero results and a hint, not an error.
-- All `~` terms form a single **"any of" group** (booru style): at least one must match. `~` applies to tag terms only.
-- The tag sidebar's include / exclude / any-of states are just a UI over this syntax: toggling a chip rewrites the query string and vice versa, so the two never disagree.
+- Tag terms are resolved through §10.3 (aliases included). Unknown tags and collections produce zero results and a hint, not an error.
+- All `~` terms form a single **"any of" group** (booru style): at least one must match. `~` applies to tag and collection terms (one group for both: `~#cat ~@wallpapers`).
+- The index's must / never / any-of states are just a UI over this syntax: toggling a tag or a collection rewrites the query string and vice versa, so the two never disagree.
 - Text terms match against `files.rel_path` (so both file names and folder names), case-insensitive.
 
 ### 11.2 Query building
@@ -729,10 +740,13 @@ FROM files f
 LEFT JOIN collection_items ci ON ci.file_id = f.id
 LEFT JOIN collections c       ON c.id = ci.collection_id
 WHERE /* same conditions as 11.2 */
-ORDER BY c.name IS NULL, c.name COLLATE NOCASE, ci.position :dir, f.filename;
+ORDER BY c.id IS NULL, c.name COLLATE NOCASE, c.id,
+         CASE WHEN c.id IN (:rev) THEN -ci.position ELSE ci.position END, /* the page's sort */;
 ```
 
-`:dir` is the in-collection order (ascending by default, reversible). The client renders a section header whenever `collection_id` changes; paging works unchanged because the order is total.
+Each section runs in its list's own order; `rev=` (collection ids) reverses single sections. *Not in a collection* comes last, in the page's sort. The client renders a section header whenever the collection changes; paging works unchanged because the order is total. Headers get their counts from `GET /api/files/collection-counts` (the same call feeds the index's Collections section). An image in two sections is still one image: selecting it in either selects it once.
+
+Offered on every grid of images (album, All images, Favorites, Search, tag galleries) — not on folder-card pages, and not on a collection page. The viewer opened from a grouped grid steps through the plain (ungrouped) list.
 
 ---
 
@@ -835,14 +849,18 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 
 | Method | Path                                  | Purpose                                 |
 |--------|---------------------------------------|-----------------------------------------|
-| GET    | `/api/collections`                    | List with counts and covers; `q` filters by name |
-| POST   | `/api/collections`                    | Create                                  |
-| GET    | `/api/collections/:id`                | Collection info (items via `/api/files?collection=`) |
-| PATCH  | `/api/collections/:id`                | Name, description, cover                |
-| DELETE | `/api/collections/:id`                | Delete (files untouched)                |
-| POST   | `/api/collections/:id/items`          | Add `{ ids, position? }`                |
+| GET    | `/api/collections`                    | Cards with counts and covers (up to 5); `q` filters by name, `sort=name\|count\|changed`, `order`; `tag=` keeps the ones holding images with that tag, with `tagged` counts (the wiki) |
+| POST   | `/api/collections`                    | Create `{ name, description? }` (409 `NAME_TAKEN`) |
+| POST   | `/api/collections/membership`         | `{ ids }` → how many of these images each collection already holds (Add dialog) |
+| POST   | `/api/collections/restore`            | Undo a delete, from the snapshot DELETE returned |
+| GET    | `/api/collections/:id`                | Collection info (items via `/api/files?collection=&sort=position`) |
+| PATCH  | `/api/collections/:id`                | Name, description, cover (`coverFileId: null` = first image) |
+| DELETE | `/api/collections/:id`                | Delete (files untouched) → snapshot     |
+| POST   | `/api/collections/:id/items`          | Append `{ ids }` → `{ added, already }` |
 | DELETE | `/api/collections/:id/items`          | Remove `{ ids }`                        |
-| PUT    | `/api/collections/:id/order`          | Full new order `{ ids }`                |
+| POST   | `/api/collections/:id/move`           | Reorder: `{ ids, before }` moves the images (in their current relative order) before `before`, or to the end with null. Replaces the planned full-order `PUT /order`, which needed every id of a virtualized grid. |
+
+`/api/files` also takes `collection=` (scope), `sort=position` (a collection's own order), and `group=collection` with `rev=` (§11.3); `GET /api/files/collection-counts` counts collections over any list. `GET /api/files/:id` includes the image's `collections`.
 
 ### 12.7 Health, recycle, system
 
@@ -978,7 +996,7 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 3. **File operations** — import (picker and drag and drop), move, copy, rename, covers, recycle bin, watcher. *(Done: see §7.5, §8.3–8.6; design `docs/Design/darkroom-milestone-3-pages/`.)*
 4. **Tags** *(done)* — types, tags, tag input, tag chips and sidebar, search syntax (include / exclude / any of), aliases and main name, implications, merge; the Search page, tag galleries, the Tags directory, the Tag types page (without custom fields) and an **Edit tag** dialog for name, type, aliases, implications, merge and delete. Design: `docs/Design/darkroom-milestone-4-pages/`.
 5. **Wiki** *(done)* — tag pages, descriptions, custom fields, related tags. Editing moves onto the wiki page; the Edit tag dialog stays as a shortcut. Design: `docs/Design/darkroom-milestone-5-pages/`. Decisions: one **Edit page** mode for the whole page (description, fields, cover) with Save / Discard; descriptions up to 20,000 characters; changing a tag's type lists exactly which field values would be lost before confirming; Ctrl + click and middle-click on a tag open its wiki page; **Related tags** shows the top 12.
-6. **Collections** — collection pages, viewer navigation, bulk add, group by collection.
+6. **Collections** *(done)* — collection pages, viewer navigation, bulk add, group by collection. Design: `docs/Design/media-view-project-milestone-6/`. Decisions: Collections in the top bar (between Tags and Favorites) and on the Library page next to ★ Favorites; unique names (§6.6); cover = first image unless chosen; the collection page sorts by own order (default), name or size, and drag-to-reorder works only in own order with no filter on; adding duplicates is reported; deleting offers *Undo*; group by collection on every image grid (§11.3); `@name` in the search syntax (§11.1), with a Collections section at the top of the index that filters like the tag sections (↗ opens the page); index sections collapse; the tag wiki lists the collections holding the tag's images (under Images; *See all* expands in place). Removing an image from the collection the viewer is browsing shows the next one, like Move and Recycle. *Cover of ▸* lists the current collection in the viewer opened from it and on the collection page. Dropping files from Explorer onto a collection page is left for later.
 7. **Library Health** — all issue kinds and fixes, severity indicator, external-move keep/undo, logs section.
 8. **Polish** — favorites, random, settings, per-page help content, performance pass at 50k images.
 
@@ -990,7 +1008,7 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 - **Search and Download** — planned after the Videos and Audio modules: see `docs/search-and-download.md`.
 - **Search tabs** — Folders and Collections tabs use `GET /api/folders?q=` and `GET /api/collections?q=`; no per-tab counts.
 
-- **Keyboard shortcuts** — decided: the MVP set plus `S` (slideshow), `T` (type a tag; `Esc` leaves the field), `/` (search) and `F1` (help); `Esc` keeps the MVP order (fullscreen → slideshow → tags panel → slideshow panel). See user guide §3.4 and §4.5. The Help dialog's *Shortcuts* tab lists them from the keymap registry, so it never drifts.
+- **Keyboard shortcuts** — decided: the MVP set plus `S` (slideshow), `T` (type a tag; `Esc` leaves the field), `/` (search) and `F1` (help); in the viewer `Esc` goes fullscreen → slideshow → back to the previous page (tester feedback, 2026-10-04). See user guide §3.4 and §4.5. The Help dialog's *Shortcuts* tab lists them from the keymap registry, so it never drifts.
 - **Hash algorithm** — decided: SHA-256. Revisit (e.g. xxHash via a bundled WASM build) only if first imports of very large libraries prove slow.
 - **Thumbnail size** — decided: 400 px.
 - **Tag name rules** — decided: names are shown with spaces as typed; `_` and space are equivalent when matching, and search writes them with `_` (§10.1).

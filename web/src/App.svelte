@@ -12,6 +12,8 @@
   import TopBar from './components/TopBar.svelte';
   import { registerKeys } from './keymap.svelte.ts';
   import Album from './pages/Album.svelte';
+  import Collection from './pages/Collection.svelte';
+  import Collections from './pages/Collections.svelte';
   import Favorites from './pages/Favorites.svelte';
   import Folder from './pages/Folder.svelte';
   import Hub from './pages/Hub.svelte';
@@ -98,6 +100,10 @@
     {#key router.route.params.id}<Wiki />{/key}
   {:else if page === 'favorites'}
     <Favorites />
+  {:else if page === 'collections'}
+    <Collections />
+  {:else if page === 'collection'}
+    {#key router.route.params.id}<Collection />{/key}
   {:else if page === 'recycle'}
     <RecycleBin />
   {:else if page === 'settings'}

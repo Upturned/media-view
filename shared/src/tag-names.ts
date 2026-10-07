@@ -31,6 +31,18 @@ export function tagNameProblem(raw: string): string {
   return '';
 }
 
+/**
+ * Collection names (technical doc §6.6) follow the same matching rules as tag names (case, and space
+ * vs. `_`, don't count), but may hold any punctuation: in a search, `@"Court outfits — final pass"`.
+ */
+export function collectionNameProblem(raw: string): string {
+  const name = displayTagName(raw);
+  if (!name) return 'A name is required.';
+  if (name.length > 100) return 'The name is too long.';
+  if (name.includes('"')) return 'Collection names can’t contain "';
+  return '';
+}
+
 /** A tag type's key, used as `key:name` in searches: lowercase, `_` for spaces. */
 export function typeKeyOf(name: string): string {
   return displayTagName(name).toLowerCase().replace(/ /g, '_').replace(/[^\p{L}\p{N}_-]/gu, '') || 'type';

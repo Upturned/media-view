@@ -7,7 +7,7 @@
   import { word } from '../themes/index.ts';
   import SearchBox from './SearchBox.svelte';
 
-  // Collections, Random and the Health badge join as their milestones land.
+  // Random and the Health badge join as their milestones land.
   const scanning = $derived(live.scanning || library.info?.scan.status === 'scanning');
   const hashing = $derived(library.info?.scan.hashing ?? 0);
 </script>
@@ -30,6 +30,7 @@
   <nav>
     <a href={href('/images')} class:active={router.route.path.startsWith('/images')}>Images</a>
     <a href={href('/tags')} class:active={router.route.name === 'tags' || router.route.name === 'tag-types' || router.route.name === 'tag'}>Tags</a>
+    <a href={href('/collections')} class:active={router.route.name === 'collections' || router.route.name === 'collection'}>Collections</a>
     <a href={href('/favorites')} class:active={router.route.name === 'favorites'}>Favorites</a>
     <a href={href('/recycle')} class:active={router.route.name === 'recycle'}>Bin</a>
     <a href={href('/settings')} class:active={router.route.name === 'settings'}>Settings</a>

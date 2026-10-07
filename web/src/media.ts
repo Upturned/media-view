@@ -15,6 +15,8 @@ export interface ListQuery {
   q?: string;
   /** Images with this tag (tag galleries). */
   tag?: number;
+  /** Images on this collection (collection pages); allows the `position` sort. */
+  collection?: number;
   sort: SortKey;
   order: 'asc' | 'desc';
   seed?: number;
@@ -28,6 +30,7 @@ export function toParams(q: ListQuery): Record<string, string> {
   if (q.name?.trim()) p.name = q.name.trim();
   if (q.q?.trim()) p.q = q.q.trim();
   if (q.tag !== undefined) p.tag = String(q.tag);
+  if (q.collection !== undefined) p.collection = String(q.collection);
   if (q.seed !== undefined) p.seed = String(q.seed);
   return p;
 }
@@ -42,7 +45,8 @@ export function fromParams(p: URLSearchParams): ListQuery {
     name: p.get('name') ?? undefined,
     q: p.get('q') ?? undefined,
     tag: num('tag'),
-    sort: sort && ['name', 'modified', 'added', 'size', 'random'].includes(sort) ? sort : 'name',
+    collection: num('collection'),
+    sort: sort && ['name', 'modified', 'added', 'size', 'random', 'position'].includes(sort) ? sort : 'name',
     order: p.get('order') === 'desc' ? 'desc' : 'asc',
     seed: num('seed'),
   };

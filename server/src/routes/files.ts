@@ -2,7 +2,9 @@ import { Readable } from 'node:stream';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { valid } from '../lib/validate.ts';
-import { briefFiles, fileDetail, folderFileNames, listFileIds, listFiles, locateFile, PAGE_SIZE, randomFile, setFavorite, tagCounts } from '../services/files.ts';
+import {
+  briefFiles, collectionCounts, fileDetail, folderFileNames, listFileIds, listFiles, listGrouped, locateFile, PAGE_SIZE, randomFile, setFavorite, tagCounts,
+} from '../services/files.ts';
 import { bulkRename, copyFiles, moveFiles, renameFile, setFileDescription, undoMove } from '../services/file-ops.ts';
 import { importPath, importStream, logImport } from '../services/import.ts';
 import { requireLibrary } from '../services/library.ts';
@@ -19,7 +21,8 @@ const fileQuery = z.object({
   name: z.string().max(200).optional(),
   q: z.string().max(2000).optional(),
   tag: z.coerce.number().int().positive().optional(),
-  sort: z.enum(['name', 'modified', 'added', 'size', 'random']).default('name'),
+  collection: z.coerce.number().int().positive().optional(),
+  sort: z.enum(['name', 'modified', 'added', 'size', 'random', 'position']).default('name'),
   order: z.enum(['asc', 'desc']).default('asc'),
   seed: z.coerce.number().int().optional(),
 });
@@ -36,12 +39,21 @@ export const fileRoutes = new Hono()
     valid('query', fileQuery.extend({
       offset: z.coerce.number().int().min(0).default(0),
       limit: z.coerce.number().int().min(1).max(500).default(PAGE_SIZE),
+      /** "Group by collection"; `rev` lists the collection ids whose section runs in reverse. */
+      group: z.enum(['collection']).optional(),
+      rev: z.string().regex(/^\d+(,\d+)*$/).optional(),
     })),
     (c) => {
-      const { offset, limit, ...q } = c.req.valid('query');
+      const { offset, limit, group, rev, ...q } = c.req.valid('query');
+      if (group === 'collection') return c.json(listGrouped(requireLibrary(), q, rev ? rev.split(',').map(Number) : [], offset, limit));
       return c.json(listFiles(requireLibrary(), q, offset, limit));
     },
   )
+  /** How many of the matching images each collection holds (the index, group headers). */
+  .get('/collection-counts', valid('query', fileQuery.extend({ by: z.enum(['count', 'name']).default('count') })), (c) => {
+    const { by, ...q } = c.req.valid('query');
+    return c.json(collectionCounts(requireLibrary(), q, by));
+  })
   .post('/brief', valid('json', z.object({ ids })), (c) => c.json({ files: briefFiles(requireLibrary(), c.req.valid('json').ids) }))
   /** Tag counts over the matching images (the tag sidebar). */
   .get('/tag-counts', valid('query', fileQuery), (c) => c.json({ tags: tagCounts(requireLibrary(), c.req.valid('query')) }))

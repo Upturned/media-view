@@ -1,8 +1,11 @@
-import { parseQuery, type FileDetail, type FileItem, type SortKey, type TagRef } from '@media-view/shared';
+import {
+  parseQuery, type CollectionCount, type FileDetail, type FileItem, type GroupedFileItem, type SortKey, type TagRef,
+} from '@media-view/shared';
 import { badRequest, notFound } from '../lib/errors.ts';
 import { emit } from '../lib/events.ts';
 import { log } from '../lib/log.ts';
 import { escapeLike, underPrefix } from '../lib/paths.ts';
+import { collectionsOfFile, folderPath, resolveCollection } from './collections.ts';
 import { folderDetail, thumbRef } from './folders.ts';
 import type { OpenLibrary } from './library.ts';
 import { resolveTerm, tagsOfFile } from './tags.ts';
@@ -21,6 +24,8 @@ export interface FileQuery {
   q?: string;
   /** Images carrying this tag (tag galleries). */
   tag?: number;
+  /** Images on this collection (collection pages); enables the `position` sort. */
+  collection?: number;
   sort: SortKey;
   order: 'asc' | 'desc';
   /** Random order seed, stable across pages. */
@@ -96,16 +101,26 @@ function where(lib: OpenLibrary, q: FileQuery): Where {
     parts.push('EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id = ?)');
     params.push(q.tag);
   }
+  if (q.collection !== undefined) {
+    if (!lib.db.prepare('SELECT 1 FROM collections WHERE id = ?').get(q.collection)) throw notFound('COLLECTION_NOT_FOUND', 'This collection no longer exists.');
+    parts.push(`EXISTS (SELECT 1 FROM collection_items WHERE file_id = f.id AND collection_id = ${Number(q.collection)})`);
+  }
   if (q.q?.trim()) searchTerms(lib, q.q, parts, params, unknown);
   return { sql: parts.join(' AND '), params, unknown };
 }
 
 const inList = (ids: number[]) => ids.map(() => '?').join(',');
 
-/** Each term becomes one condition, all ANDed; the "any of" terms form one group (technical doc §11.2). */
+const IN_COLLECTION = (id: number) => `EXISTS (SELECT 1 FROM collection_items WHERE file_id = f.id AND collection_id = ${id})`;
+
+/**
+ * Each term becomes one condition, all ANDed; the "any of" terms — tags and collections together —
+ * form one group (technical doc §11.2).
+ */
 function searchTerms(lib: OpenLibrary, query: string, parts: string[], params: unknown[], unknown: string[]): void {
   const keys = lib.db.prepare('SELECT key FROM tag_types').pluck().all() as string[];
   const anyOf = new Set<number>();
+  const anyCollections = new Set<number>();
   let anyTerms = 0;
   for (const t of parseQuery(query, keys)) {
     if (t.kind === 'text') {
@@ -114,6 +129,16 @@ function searchTerms(lib: OpenLibrary, query: string, parts: string[], params: u
       continue;
     }
     if (!t.name) continue; // still being typed
+    if (t.kind === 'collection') {
+      const cid = resolveCollection(lib.db, t.name);
+      if (cid === null) unknown.push(`@${t.name}`);
+      if (t.op === 'any') {
+        anyTerms++;
+        if (cid !== null) anyCollections.add(cid);
+      } else if (t.op === 'must') parts.push(cid === null ? '0' : IN_COLLECTION(cid));
+      else if (cid !== null) parts.push(`NOT ${IN_COLLECTION(cid)}`);
+      continue;
+    }
     const ids = resolveTerm(lib.db, t.type, t.name);
     if (ids.length === 0) unknown.push(t.type ? `${t.type}:${t.name}` : t.name);
     if (t.op === 'any') {
@@ -131,12 +156,43 @@ function searchTerms(lib: OpenLibrary, query: string, parts: string[], params: u
     }
   }
   if (anyTerms > 0) {
-    if (anyOf.size === 0) parts.push('0');
-    else {
-      parts.push(`EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id IN (${inList([...anyOf])}))`);
-      params.push(...anyOf);
+    const alternatives = [
+      ...(anyOf.size ? [`EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id IN (${inList([...anyOf])}))`] : []),
+      ...(anyCollections.size ? [`EXISTS (SELECT 1 FROM collection_items WHERE file_id = f.id AND collection_id IN (${[...anyCollections].join(',')}))`] : []),
+    ];
+    parts.push(alternatives.length ? `(${alternatives.join(' OR ')})` : '0');
+    params.push(...anyOf);
+  }
+}
+
+/**
+ * How many of the matching images each collection holds (the index's Collections section and the
+ * group headers) — plus the collections the query names, so an excluded one stays switchable — and
+ * how many are on none.
+ */
+export function collectionCounts(lib: OpenLibrary, q: FileQuery, by: 'count' | 'name' = 'count'): { collections: CollectionCount[]; none: number } {
+  const w = where(lib, q);
+  const size = `(SELECT COUNT(*) FROM collection_items a JOIN files f2 ON f2.id = a.file_id
+    WHERE a.collection_id = c.id AND f2.recycled = 0 AND f2.missing_since IS NULL AND f2.media_type = 'image')`;
+  // By name: the same order as the sections of listGrouped.
+  const rows = lib.db.prepare(
+    `SELECT c.id, c.name, COUNT(*) AS count, ${size} AS size FROM collection_items ci JOIN files f ON f.id = ci.file_id JOIN collections c ON c.id = ci.collection_id
+     WHERE ${w.sql} GROUP BY c.id ORDER BY ${by === 'name' ? 'c.name COLLATE NOCASE, c.id' : 'count DESC, c.name COLLATE NOCASE'}`,
+  ).all(...w.params) as CollectionCount[];
+  if (q.q) {
+    const keys = lib.db.prepare('SELECT key FROM tag_types').pluck().all() as string[];
+    for (const t of parseQuery(q.q, keys)) {
+      if (t.kind !== 'collection' || !t.name) continue;
+      const cid = resolveCollection(lib.db, t.name);
+      if (cid === null || rows.some((r) => r.id === cid)) continue;
+      const c = lib.db.prepare(`SELECT id, name, ${size} AS size FROM collections c WHERE id = ?`).get(cid) as { id: number; name: string; size: number };
+      rows.push({ ...c, count: 0 });
     }
   }
+  const none = lib.db.prepare(
+    `SELECT COUNT(*) FROM files f WHERE ${w.sql} AND NOT EXISTS (SELECT 1 FROM collection_items WHERE file_id = f.id)`,
+  ).pluck().get(...w.params) as number;
+  return { collections: rows, none };
 }
 
 /**
@@ -175,17 +231,67 @@ function orderBy(q: FileQuery): string {
       const seed = Math.trunc(q.seed ?? 1) % 2147483647 || 1;
       return `(f.id * ${seed}) % 2147483647, f.id`;
     }
+    case 'position':
+      // A collection's own order; without a collection there's none, so by name.
+      return q.collection !== undefined
+        ? `(SELECT position FROM collection_items WHERE collection_id = ${Number(q.collection)} AND file_id = f.id) ${dir}, f.id ${dir}`
+        : orderBy({ ...q, sort: 'name' });
   }
 }
+
+/** SQL for an image's 1-based place in a collection's own order, counting live images only. */
+const placeIn = (collectionSql: string) => `(SELECT COUNT(*) FROM collection_items a JOIN files f2 ON f2.id = a.file_id
+  WHERE a.collection_id = ${collectionSql} AND f2.recycled = 0 AND f2.missing_since IS NULL AND f2.media_type = 'image'
+    AND a.position <= (SELECT position FROM collection_items WHERE collection_id = ${collectionSql} AND file_id = f.id))`;
 
 export function listFiles(lib: OpenLibrary, q: FileQuery, offset = 0, limit = PAGE_SIZE): { items: FileItem[]; total: number; unknown: string[] } {
   if (limit < 1 || limit > 500) throw badRequest('INVALID_LIMIT', 'limit must be between 1 and 500.');
   const w = where(lib, q);
   const total = lib.db.prepare(`SELECT COUNT(*) FROM files f WHERE ${w.sql}`).pluck().get(...w.params) as number;
+  // In a collection, each image also says where it lives.
+  const extra = q.collection !== undefined
+    ? `, ${placeIn(String(Number(q.collection)))} AS position, (SELECT rel_path FROM folders WHERE id = f.folder_id) AS folder_path`
+    : '';
   const rows = lib.db.prepare(
-    `SELECT ${COLUMNS} FROM files f WHERE ${w.sql} ORDER BY ${orderBy(q)} LIMIT ? OFFSET ?`,
-  ).all(...w.params, limit, Math.max(0, offset)) as FileRow[];
-  return { items: rows.map(toItem), total, unknown: w.unknown };
+    `SELECT ${COLUMNS}${extra} FROM files f WHERE ${w.sql} ORDER BY ${orderBy(q)} LIMIT ? OFFSET ?`,
+  ).all(...w.params, limit, Math.max(0, offset)) as (FileRow & { position?: number; folder_path?: string | null })[];
+  return {
+    items: rows.map((r) => (r.position !== undefined ? { ...toItem(r), position: r.position, where: folderPath(r.folder_path ?? '') } : toItem(r))),
+    total,
+    unknown: w.unknown,
+  };
+}
+
+/**
+ * "Group by collection" (technical doc §11.3): one row per image and collection it's on — so an image
+ * on two lists comes twice — and one row for images on none, last. Sections are in name order, images
+ * in each list's own order (reversed for the ids in `reversed`); the rest keep the page's sort.
+ */
+export function listGrouped(
+  lib: OpenLibrary, q: FileQuery, reversed: number[] = [], offset = 0, limit = PAGE_SIZE,
+): { items: GroupedFileItem[]; total: number; unknown: string[] } {
+  if (limit < 1 || limit > 500) throw badRequest('INVALID_LIMIT', 'limit must be between 1 and 500.');
+  const w = where(lib, q);
+  const from = `files f LEFT JOIN collection_items ci ON ci.file_id = f.id LEFT JOIN collections c ON c.id = ci.collection_id WHERE ${w.sql}`;
+  const total = lib.db.prepare(`SELECT COUNT(*) FROM ${from}`).pluck().get(...w.params) as number;
+  const rev = reversed.map(Number).filter(Number.isInteger).join(',') || 'NULL';
+  const rows = lib.db.prepare(
+    `SELECT ${COLUMNS}, c.id AS group_id, c.name AS group_name, CASE WHEN c.id IS NULL THEN NULL ELSE ${placeIn('c.id')} END AS position,
+            (SELECT COUNT(*) FROM collection_items WHERE file_id = f.id) AS listed
+     FROM ${from}
+     ORDER BY c.id IS NULL, c.name COLLATE NOCASE, c.id, CASE WHEN c.id IN (${rev}) THEN -ci.position ELSE ci.position END, ${orderBy(q)}
+     LIMIT ? OFFSET ?`,
+  ).all(...w.params, limit, Math.max(0, offset)) as (FileRow & { group_id: number | null; group_name: string | null; position: number | null; listed: number })[];
+  return {
+    items: rows.map((r) => ({
+      ...toItem(r),
+      group: r.group_id === null ? null : { id: r.group_id, name: r.group_name! },
+      position: r.position,
+      listed: r.listed,
+    })),
+    total,
+    unknown: w.unknown,
+  };
 }
 
 /** Name, star and folder of each id, in the order given (for actions on a selection that isn't all loaded). */
@@ -240,6 +346,7 @@ export function fileDetail(lib: OpenLibrary, id: number): FileDetail {
     folder: { id: folder.id, kind: folder.kind, name: folder.name },
     ancestors: folder.ancestors,
     tags: tagsOfFile(lib.db, id),
+    collections: collectionsOfFile(lib.db, id),
   };
 }
 

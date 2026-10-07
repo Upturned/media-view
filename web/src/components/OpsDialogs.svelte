@@ -1,5 +1,7 @@
 <script lang="ts">
   import { ops } from '../stores/ops.svelte.ts';
+  import AddToCollectionDialog from './AddToCollectionDialog.svelte';
+  import CollectionDialog from './CollectionDialog.svelte';
   import BulkRenameDialog from './BulkRenameDialog.svelte';
   import BulkTagDialog from './BulkTagDialog.svelte';
   import EditTagDialog from './EditTagDialog.svelte';
@@ -22,6 +24,10 @@
       <EditTagDialog tagId={d.tagId} />
     {:else if d.kind === 'bulk-tag'}
       <BulkTagDialog dialog={d} />
+    {:else if d.kind === 'collection-edit'}
+      <CollectionDialog id={d.id} initialName={d.name} />
+    {:else if d.kind === 'add-to-collection'}
+      <AddToCollectionDialog dialog={d} />
     {/if}
   {/key}
 {/if}
