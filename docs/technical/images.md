@@ -496,13 +496,13 @@ Watcher events caused by the app's own operations are suppressed through a short
 | `missing_file`       | error    | file id                 | Locate… · Forget                                      |
 | `ambiguous_move`     | warning  | path                    | Pick the matching record (it inherits that record's metadata) · Keep as new file |
 | `external_move`      | warning  | folder id, or old→new folder pair for files | Keep (acknowledge) · Undo (move back on disk, if the old location is free) |
-| `loose_files`        | warning  | parent folder           | Move into a new album · Move into an existing album   |
+| `loose_files`        | warning  | parent folder           | Move into a new album (named) · into the Inbox · into an existing album · when the folder holds only images: Make it an album (in place) · Move as album (into a category / sub-category; the only way for a top-level folder) |
 | `nested_in_album`    | warning  | path                    | Move out to the album's parent · Convert album        |
 | `unmarked_folder`    | warning  | path                    | Mark as category / sub-category / album               |
 | `wrong_type`         | warning  | path                    | Recycle · Ignore (→ *Not tracked*). Videos, audio and texts never get here: the scan moves them to their module root by itself (see `moved_file`) |
 | `unsupported`        | warning  | path                    | Ignore (→ *Not tracked*) · Record (→ the hidden Invalid folder) |
 | `moved_file`         | notice   | path                    | OK (dismiss)                                          |
-| `duplicate`          | info     | hash                    | Keep one, recycle the others · Merge into one (see below) |
+| `duplicate`          | info     | hash                    | Keep one, recycle the others · Merge into one (see below) · Keep all copies (remembered in `duplicates_kept`, migration 006: the group stays quiet while it holds only those copies; a new copy raises it again; Undo forgets it) |
 | `orphan_thumbs`      | info     | —                       | Delete                                                |
 
 **Untagged images** (`untagged`, info) are not stored in `health_issues`: a library can hold tens of thousands of them, so the item is computed live — images that are not in the Inbox, not recycled or missing, have no tags, and haven't been set aside with *Leave untagged* — grouped by album on the page. It absorbs the old "New images" idea: images the **scan** found (not imported through the app) carry a **NEW** mark until they're tagged or marked as seen, and a chip filters the item to *New from outside*. Two separate actions, for one image or a selection: **Mark as seen** clears the NEW mark (the image stays on the untagged list); **Leave untagged** hides it from the item (tagging the image clears that, so if its tags are later all removed it shows up again). From the item: **Open as grid** (a pseudo album of exactly these images, with the usual grid, selection bar and bulk *Tags…*), or tag the listed images one by one on the Health page itself (each row has a tag field; a tagged image drops off). Migration 004 adds `files.origin` (`'app'` | `'scan'`), `files.seen` and `files.untagged_ok`.
@@ -888,8 +888,9 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 | POST   | `/api/health/thumbnails/clean`     | Delete orphan thumbnails                        |
 | DELETE | `/api/health/logs`                 | Clear logs                                      |
 | POST   | `/api/health/:id/fix`              | Apply a fix `{ action, … }` (`FixAction` in `shared/types.ts`); dismissing fixes return a `reopen` token |
-| POST   | `/api/health/fix-all`              | `{ kind, action }`: the same fix on every issue of a kind; ones that need a choice are skipped and counted |
-| POST   | `/api/health/reopen`               | Undo a dismissing fix (Keep, Keep as new, Confirm) |
+| POST   | `/api/health/fix-all`              | `{ kind, action, albumName? }`: the same fix on every issue of a kind; ones that need a choice are skipped and counted. Duplicates: `keep-one` (clear groups only), `merge` (into the suggested copy, or the oldest), `keep-all` |
+| POST   | `/api/health/fix-everything`       | Apply to all `{ steps?: { kind, action }[], albumName? }`: the chosen steps (default: red and amber, each kind's default fix); `albumName` names new albums of loose images |
+| POST   | `/api/health/reopen`               | Undo a dismissing fix (Keep, Keep as new, Confirm, Keep all copies) |
 | GET    | `/api/recycle`                     | Recycled items                                  |
 | POST   | `/api/recycle/:id/restore`         | Restore `{ targetFolderId? }`                   |
 | POST   | `/api/recycle/delete`              | Delete permanently `{ ids }`                    |
@@ -987,7 +988,7 @@ The design keeps the door open:
 - Bind to `127.0.0.1`; reject requests whose `Host` isn't `localhost`/`127.0.0.1` (DNS-rebinding protection) and whose `Origin` isn't the app's own.
 - Every path is derived from DB ids and checked to be inside the library root. The only client-supplied paths are library locations and file-picker results, validated before use.
 - Markdown is sanitized; SVGs are sandboxed (§8.5).
-- The `open-with` helper passes the path as an argument, never through string-built shell commands.
+- The `open-with` helper runs `rundll32` directly, never through a shell. `OpenAs_RunDLL` reads the rest of the command line as the path and fails silently on a quoted one, so the path is passed verbatim, unquoted (`windowsVerbatimArguments`; Windows paths can't contain quotes).
 
 ---
 

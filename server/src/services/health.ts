@@ -12,7 +12,7 @@ import { expectChange } from '../lib/expected.ts';
 import { hashFile } from '../lib/hash.ts';
 import { clearLogs, log, logStats } from '../lib/log.ts';
 import { writeMarker } from '../lib/markers.ts';
-import { splitExt, uniqueName } from '../lib/names.ts';
+import { splitExt, uniqueName, validateName } from '../lib/names.ts';
 import { DATA_DIR, toAbsolute, toDbPath } from '../lib/paths.ts';
 import { requestScan, scanStatus } from '../workers/scanner.ts';
 import { folderPath, renumber } from './collections.ts';
@@ -204,9 +204,14 @@ function describe(lib: OpenLibrary, r: IssueRow): IssueDetails | null {
     }
     case 'loose_files': {
       const folderId = r.subject === 'root' ? null : Number(r.subject.slice('folder:'.length));
-      const folder = folderId === null ? null : db.prepare('SELECT rel_path FROM folders WHERE id = ?').pluck().get(folderId) as string | undefined;
+      const folder = folderId === null ? undefined : db.prepare('SELECT rel_path, parent_id FROM folders WHERE id = ?').get(folderId) as { rel_path: string; parent_id: number | null } | undefined;
       if (folderId !== null && folder === undefined) return null;
-      return { kind: 'loose_files', folderId, path: folder ?? '', count: Number(p.count), paths: p.paths as string[] };
+      const subfolders = folderId === null ? 0
+        : db.prepare('SELECT COUNT(*) FROM folders WHERE parent_id = ? AND recycled = 0 AND missing_since IS NULL').pluck().get(folderId) as number;
+      return {
+        kind: 'loose_files', folderId, path: folder?.rel_path ?? '', count: Number(p.count), paths: p.paths as string[],
+        subfolders, topLevel: folder?.parent_id === null,
+      };
     }
     case 'nested_in_album': {
       const album = db.prepare('SELECT id, rel_path FROM folders WHERE id = ?').get(Number(p.albumId)) as { id: number; rel_path: string } | undefined;
@@ -415,6 +420,10 @@ export async function fixIssue(lib: OpenLibrary, issueId: number, fix: FixAction
     case 'loose_files:into-album':
       result = done(placeLoose(lib, r.subject, { albumId: (fix as { albumId: number | null }).albumId }));
       break;
+    case 'loose_files:as-album':
+      if (r.subject === 'root') throw badRequest('INVALID_FIX', 'Images itself can’t become an album.');
+      result = done(makeAlbum(lib, Number(r.subject.slice('folder:'.length)), (fix as { parentId: number | null }).parentId));
+      break;
     case 'nested_in_album:move-out':
       result = done(moveOutOfAlbum(lib, String(p.path), Number(p.albumId)));
       break;
@@ -446,6 +455,9 @@ export async function fixIssue(lib: OpenLibrary, issueId: number, fix: FixAction
     case 'duplicate:merge':
       result = done(resolveDuplicate(lib, r.subject.slice('hash:'.length), (fix as { keepId: number }).keepId, true));
       break;
+    case 'duplicate:keep-all':
+      result = dismiss(keepAllCopies(lib, r.subject.slice('hash:'.length)));
+      break;
     default:
       throw badRequest('INVALID_FIX', `“${fix.action}” isn’t a fix for this item.`);
   }
@@ -461,6 +473,8 @@ export function reopenIssue(lib: OpenLibrary, issue: { kind: IssueKind; subject:
     `INSERT INTO health_issues (kind, severity, subject, payload, detected_at) VALUES (?, ?, ?, ?, ?)
      ON CONFLICT (kind, subject) DO NOTHING`,
   ).run(issue.kind, SEVERITY[issue.kind], issue.subject, issue.payload, Date.now());
+  // Undoing "Keep all copies": the group is a duplicate again.
+  if (issue.kind === 'duplicate') lib.db.prepare('DELETE FROM duplicates_kept WHERE hash = ?').run(issue.subject.slice('hash:'.length));
   emit({ type: 'health-changed' });
 }
 
@@ -474,12 +488,12 @@ const FIX_ALL: Partial<Record<IssueKind, FixAction['action'][]>> = {
   unmarked_folder: ['confirm'],
   wrong_type: ['recycle', 'ignore'],
   unsupported: ['ignore', 'record'],
-  duplicate: ['keep-one'],
+  duplicate: ['keep-one', 'merge', 'keep-all'],
   moved_file: ['ok'],
 };
 
 /** Apply to all across the page (red and amber only): the default fix for each kind that has one. */
-const EVERYTHING: [IssueKind, FixAction['action']][] = [
+export const EVERYTHING: [IssueKind, FixAction['action']][] = [
   ['missing_folder', 'recreate'],
   ['external_move', 'keep'],
   ['nested_in_album', 'move-out'],
@@ -488,10 +502,21 @@ const EVERYTHING: [IssueKind, FixAction['action']][] = [
 ];
 const NEEDS_CHOICE: IssueKind[] = ['missing_file', 'ambiguous_move', 'unsupported', 'wrong_type'];
 
-export async function fixEverything(lib: OpenLibrary): Promise<{ done: number; skipped: number; failed: { id: number; message: string }[] }> {
+/**
+ * Apply to all: by default every red and amber kind's default fix; `steps` picks which (the page's
+ * checklist, by severity — blue ones like duplicates included only when asked).
+ */
+export async function fixEverything(
+  lib: OpenLibrary,
+  opts: FixAllOptions = {},
+  steps: [IssueKind, FixAction['action']][] = EVERYTHING,
+): Promise<{ done: number; skipped: number; failed: { id: number; message: string }[] }> {
+  for (const [kind, action] of steps) {
+    if (!FIX_ALL[kind]?.includes(action)) throw badRequest('INVALID_FIX', 'This fix can’t be applied to all at once.');
+  }
   const out = { done: 0, skipped: 0, failed: [] as { id: number; message: string }[] };
-  for (const [kind, action] of EVERYTHING) {
-    const r = await fixAll(lib, kind, action);
+  for (const [kind, action] of steps) {
+    const r = await fixAll(lib, kind, action, opts);
     out.done += r.done;
     out.skipped += r.skipped;
     out.failed.push(...r.failed);
@@ -502,20 +527,27 @@ export async function fixEverything(lib: OpenLibrary): Promise<{ done: number; s
   return out;
 }
 
+/** Bulk fixes: the name for the albums loose images go into ("Loose images" when not given). */
+export interface FixAllOptions {
+  albumName?: string;
+}
+
 /** A free name for a new album of loose images in a folder: "Loose images", then "Loose images (2)"… */
-function looseAlbumName(lib: OpenLibrary, subject: string): string {
-  if (subject === 'root') return 'Loose images';
+function looseAlbumName(lib: OpenLibrary, subject: string, base = 'Loose images'): string {
+  if (subject === 'root') return base;
   const folder = liveFolder(lib, Number(subject.slice('folder:'.length)));
   const dir = toAbsolute(lib.moduleRoot('images'), folder.rel_path);
   for (let n = 1; ; n++) {
-    const name = n === 1 ? 'Loose images' : `Loose images (${n})`;
+    const name = n === 1 ? base : `${base} (${n})`;
     if (!fs.existsSync(path.join(dir, name))) return name;
   }
 }
 
 /** Apply a fix to every issue of a kind; ones that need a choice (or fail) are skipped and reported. */
-export async function fixAll(lib: OpenLibrary, kind: IssueKind, action: FixAction['action']): Promise<{ done: number; skipped: number; failed: { id: number; message: string }[] }> {
+export async function fixAll(lib: OpenLibrary, kind: IssueKind, action: FixAction['action'], opts: FixAllOptions = {}): Promise<{ done: number; skipped: number; failed: { id: number; message: string }[] }> {
   if (!FIX_ALL[kind]?.includes(action)) throw badRequest('INVALID_FIX', 'This fix can’t be applied to all at once.');
+  // A bad album name is refused once, before anything moves (not once per folder).
+  if (opts.albumName?.trim()) opts = { ...opts, albumName: validateName(opts.albumName) };
   // Items shown inside another one are fixed with it (a missing folder's contents), not on their own.
   const hidden = hiddenIssues(lib.db).ids;
   const rows = (lib.db.prepare('SELECT * FROM health_issues WHERE kind = ? ORDER BY id').all(kind) as IssueRow[]).filter((r) => !hidden.has(r.id));
@@ -523,12 +555,17 @@ export async function fixAll(lib: OpenLibrary, kind: IssueKind, action: FixActio
   for (const r of rows) {
     if (!lib.db.prepare('SELECT 1 FROM health_issues WHERE id = ?').get(r.id)) continue; // fixed along with an earlier one
     let fix: FixAction | null = { action } as FixAction;
-    if (kind === 'duplicate') {
+    if (kind === 'duplicate' && action !== 'keep-all') {
       const d = describeDuplicate(lib.db, r.subject.slice('hash:'.length));
-      const clear = d && d.kind === 'duplicate' && d.keepId !== null && d.reason !== 'different-tags' && d.reason !== 'two-starred';
-      fix = clear ? { action: 'keep-one', keepId: (d as { keepId: number }).keepId } : null;
+      if (!d || d.kind !== 'duplicate') fix = null;
+      // Merge: into the suggested copy, or the oldest — nothing is lost, so every group can be merged.
+      else if (action === 'merge') fix = { action: 'merge', keepId: d.keepId ?? d.copies[0]!.id };
+      else {
+        const clear = d.keepId !== null && d.reason !== 'different-tags' && d.reason !== 'two-starred';
+        fix = clear ? { action: 'keep-one', keepId: d.keepId! } : null;
+      }
     } else if (kind === 'loose_files') {
-      fix = r.subject === 'root' ? null : { action: 'new-album', name: looseAlbumName(lib, r.subject) };
+      fix = r.subject === 'root' ? null : { action: 'new-album', name: looseAlbumName(lib, r.subject, opts.albumName?.trim() || undefined) };
     } else if (kind === 'wrong_type' && r.subject.startsWith('file:') && action !== 'recycle') {
       fix = null;
     }
@@ -780,6 +817,34 @@ function placeLoose(lib: OpenLibrary, subject: string, to: { name: string } | { 
   return `Moved ${r.done} ${r.done === 1 ? 'image' : 'images'} into ${albumName}.`;
 }
 
+/**
+ * A category or sub-category holding only images becomes an album: where it is (`parentId` null),
+ * or moved into a category / sub-category — a top-level folder must move, albums can't sit there.
+ */
+function makeAlbum(lib: OpenLibrary, folderId: number, parentId: number | null): string {
+  const { db } = lib;
+  const f = liveFolder(lib, folderId);
+  if (f.kind !== 'category' && f.kind !== 'subcategory') throw badRequest('INVALID_FIX', `${f.name} isn’t a category or sub-category.`);
+  const inside = db.prepare('SELECT COUNT(*) FROM folders WHERE parent_id = ? AND recycled = 0 AND missing_since IS NULL').pluck().get(f.id) as number;
+  if (inside > 0) throw badRequest('HOLDS_FOLDERS', `${f.name} holds folders, and an album holds images only. Move its images into an album instead.`);
+
+  if (parentId === null || parentId === f.parent_id) {
+    if (f.parent_id === null) throw badRequest('INVALID_PARENT', 'Albums can’t sit at the top level — pick a category or sub-category to move it into.');
+    db.prepare("UPDATE folders SET kind = 'album', updated_at = ? WHERE id = ?").run(Date.now(), f.id);
+    writeMarker(toAbsolute(lib.moduleRoot('images'), f.rel_path), 'album', lib.meta.id, f.uuid);
+    emit({ type: 'folders-changed' });
+    requestScan(lib); // the rules follow the new kind: its images aren't loose any more
+    return `${f.name} is now an album.`;
+  }
+  const parent = liveFolder(lib, parentId);
+  if (parent.id === f.id) throw badRequest('INVALID_PARENT', 'A folder can’t be moved into itself.');
+  if (parent.kind !== 'category' && parent.kind !== 'subcategory') throw badRequest('INVALID_PARENT', 'An album goes into a category or sub-category.');
+  relocate(lib, f, `${parent.rel_path}/${f.name}`, parent.id, 'album');
+  log('info', 'folders', 'folder moved as album', { id: f.id, from: f.rel_path, to: `${parent.rel_path}/${f.name}` });
+  requestScan(lib);
+  return `${f.name} is now an album in ${parent.name}.`;
+}
+
 /** A folder inside an album goes up next to the album; the scan then registers it (to be confirmed). */
 function moveOutOfAlbum(lib: OpenLibrary, relPath: string, albumId: number): string {
   const album = liveFolder(lib, albumId);
@@ -897,6 +962,15 @@ function recycleWrongType(lib: OpenLibrary, subject: string, p: Record<string, u
 }
 
 // ─── Duplicates ──────────────────────────────────────────────────────────────
+
+/** Keep all copies as separate images: remembered, so the scan stops reporting the group until a new copy turns up. */
+function keepAllCopies(lib: OpenLibrary, hash: string): string {
+  const d = describeDuplicate(lib.db, hash);
+  if (!d || d.kind !== 'duplicate') throw notFound('NOT_DUPLICATE', 'These images aren’t duplicates any more.');
+  lib.db.prepare('INSERT OR REPLACE INTO duplicates_kept (hash, file_ids, kept_at) VALUES (?, ?, ?)')
+    .run(hash, d.copies.map((c) => c.id).join(','), Date.now());
+  return `Kept all ${d.copies.length} copies of ${d.copies[0]!.path.split('/').at(-1)}.`;
+}
 
 /**
  * Keep one copy and recycle the others; with `merge`, the kept copy first gets every tag, the star,

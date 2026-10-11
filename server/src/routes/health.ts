@@ -15,6 +15,8 @@ const kind = z.enum([
   'wrong_type', 'unsupported', 'moved_file', 'duplicate', 'orphan_thumbs',
 ]);
 const folderKind = z.enum(['category', 'subcategory', 'album']);
+/** Bulk fixes: the name for the new albums of loose images. */
+const albumName = z.string().max(255).optional();
 
 const fix = z.discriminatedUnion('action', [
   z.object({ action: z.literal('recreate') }),
@@ -35,7 +37,12 @@ const fix = z.discriminatedUnion('action', [
   z.object({ action: z.literal('ok') }),
   z.object({ action: z.literal('keep-one'), keepId: z.number().int().positive() }),
   z.object({ action: z.literal('merge'), keepId: z.number().int().positive() }),
+  z.object({ action: z.literal('as-album'), parentId: z.number().int().positive().nullable() }),
+  z.object({ action: z.literal('keep-all') }),
 ]);
+
+/** The fixes that can run on a whole kind at once (the server checks which kinds take which). */
+const bulkAction = z.enum(['recreate', 'forget', 'keep', 'undo', 'new-album', 'move-out', 'confirm', 'recycle', 'ignore', 'record', 'keep-one', 'merge', 'keep-all', 'ok']);
 
 const ids = z.union([z.literal('all'), z.array(z.number().int().positive()).min(1).max(100000)]);
 
@@ -73,12 +80,15 @@ export const healthRoutes = new Hono()
   .post('/:id/fix', valid('param', id), valid('json', fix), async (c) =>
     c.json(await fixIssue(requireLibrary(), c.req.valid('param').id, c.req.valid('json'))))
   /** The same fix on every issue of a kind (only fixes that need no choice); skipped ones are counted. */
-  .post('/fix-all', valid('json', z.object({ kind, action: z.enum(['recreate', 'forget', 'keep', 'undo', 'new-album', 'move-out', 'confirm', 'recycle', 'ignore', 'record', 'keep-one', 'ok']) })), async (c) => {
-    const { kind: k, action } = c.req.valid('json');
-    return c.json(await fixAll(requireLibrary(), k, action));
+  .post('/fix-all', valid('json', z.object({ kind, action: bulkAction, albumName })), async (c) => {
+    const { kind: k, action, albumName: name } = c.req.valid('json');
+    return c.json(await fixAll(requireLibrary(), k, action, { albumName: name }));
   })
-  /** Apply to all across the page: red and amber, each kind's default fix; ones that need a choice are counted. */
-  .post('/fix-everything', async (c) => c.json(await fixEverything(requireLibrary())))
+  /** Apply to all: the chosen `steps` (default: red and amber, each kind's default fix); ones that need a choice are counted. */
+  .post('/fix-everything', valid('json', z.object({ albumName, steps: z.array(z.object({ kind, action: bulkAction })).max(50).optional() })), async (c) => {
+    const { albumName: name, steps } = c.req.valid('json');
+    return c.json(await fixEverything(requireLibrary(), { albumName: name }, steps?.map((s) => [s.kind, s.action])));
+  })
   /** Undo a dismissing fix (Keep, Keep as new, Confirm): the issue comes back. */
   .post('/reopen', valid('json', z.object({ kind, subject: z.string().min(1).max(4000), payload: z.string().max(1_000_000) })), (c) => {
     reopenIssue(requireLibrary(), c.req.valid('json'));

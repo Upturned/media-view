@@ -246,7 +246,7 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 - favorite / unfavorite them
 - send them to the Recycle Bin
 
-**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album right there. When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move or copy, the message at the bottom offers **Go to** the destination album and, after a move, **Undo**, for a few seconds. When copying, **Copy tags** (on by default) gives the copies the same tags.
+**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album or sub-category right there (and a new category at the top level). When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move or copy, the message at the bottom offers **Go to** the destination album and, after a move, **Undo**, for a few seconds. When copying, **Copy tags** (on by default) gives the copies the same tags.
 
 **Renaming in bulk** — write a pattern: `#` is a number and `*` the original name, so `ref_#` gives *ref_01, ref_02…* and `*_#` keeps the names and numbers them. Choose where numbering starts and how many digits it has. Images are numbered in the grid's current order, extensions are kept, and a live preview shows every new name — names that would clash are flagged before anything changes.
 
@@ -315,7 +315,7 @@ A directory of every tag in your library.
 - Select several tags to **merge** them (see §5.3) or delete them.
 - Click a tag to see its images; **Ctrl + click** opens its wiki page.
 - **Edit tag** (right-click any tag, or the button on its wiki page) changes its name and type, its aliases and main name, what it implies, merges it into another tag or deletes it. Adding or removing an implication that touches more than 30 images asks first.
-- To tag many images at once, select them and choose **Tags…** in the selection bar: it shows how many of them already have each tag, and nothing changes until you press *Apply*.
+- To tag many images at once, select them and choose **Tags…** in the selection bar: it shows how many of them already have each tag, and nothing changes until you press *Apply*. To tag every image of an album (or of any grid) without selecting, use **# Tag all…** in the toolbar — the name and starred-only filters apply.
 
 ### 4.8 Tag wiki page
 
@@ -391,7 +391,7 @@ Images and folders you delete go here first.
 
 ### 4.15 Library Health
 
-A maintenance page that compares your library folder with what the app remembers and lists anything that needs attention, grouped and colored by severity (see §3.3). Each item comes with suggested fixes you can apply one by one, or all at once with **Apply to all** — which always asks first, listing what it will do (e.g. *recreate 3 folders and their markers*). Items that need your choice (like duplicates with different tags) are skipped by Apply to all, and it says how many.
+A maintenance page that compares your library folder with what the app remembers and lists anything that needs attention, grouped and colored by severity (see §3.3). Each item comes with suggested fixes you can apply one by one, or all at once with **Apply to all** — which always asks first, listing what it will do (e.g. *recreate 3 folders and their markers*) by severity, each line with a checkbox: red and amber are ticked, blue ones (like keeping the suggested copy of duplicates) are yours to tick, and a severity’s heading ticks or unticks all of it. Items that need your choice (like duplicates with different tags) are skipped by Apply to all, and it says how many. On the Review page, each group also has its own fixes for the whole group.
 
 **Red — missing**
 - **Missing folders** — folders the app remembers but can't find. *Recreate* them, or *Forget* them.
@@ -401,14 +401,14 @@ A maintenance page that compares your library folder with what the app remembers
 **Amber — needs a decision**
 - **Changed outside the app** — folders or images that were moved or renamed in Windows Explorer. The app is already following them; *Keep* the change, or *Undo* it to put things back where they were. Images moved together are grouped into one item.
 - **Unclear moves** — an image reappeared that matches several identical missing images, each with its own tags. Pick which one it is, or keep it as a new image.
-- **Rule problems** — loose images in a category or sub-category, folders inside an album. *Fix: move the images into a new album; move the folder out.*
+- **Rule problems** — loose images in a category or sub-category, folders inside an album. *Fix: move the images into a new album (you name it — the group fix and Apply to all ask for one name, used in each folder), into the Inbox, or into an existing album (where you can also create the album, or a sub-category, on the spot). When the folder holds only images, it can become an album itself: **Make it an album** where it is, or **Move as album…** into a category or sub-category you pick — the only way for a top-level folder, since albums can’t sit there. For a folder inside an album: move the folder out.*
 - **Unmarked folders** — new folders created outside the app. They show up right away with the kind the app guessed (folders with images → album; folders with folders → sub-category; empty ones → album, marked as a guess), and you confirm or change it here.
 - **Wrong file types** — files among your images that no module takes (a `.zip`, an `.exe`…): *Recycle* or *Ignore*. Videos, audio and texts are moved to their own folders automatically (see the white notices below).
 - **Not supported** — image formats the app can't show yet (PSD, HEIC, RAW…). *Ignore* leaves the file where it is (it's then listed under *Not tracked*); *Record* moves it into the library's hidden Invalid folder, where you can still find it in Explorer. Both are counted, per format, in the table at the bottom of the page.
 
 **Blue — for your information**
 - **Untagged images** — images outside the Inbox that have no tags yet, grouped by album. Ones that arrived from outside the app (copied in with Explorer, a sync tool…) carry a **NEW** mark; a filter shows just those. Tag them right here, one by one — each row has a tag field, and a tagged image leaves the list — or **Open as grid** to see them all in one grid and tag them in bulk. **Mark as seen** clears the NEW mark (the image stays on the list); **Leave untagged** takes an image off the list, for pictures you never mean to tag (screenshots, scans, wallpapers). Both work on one image or a selection.
-- **Duplicates** — identical images stored in more than one place. The app suggests which copy to keep: the only tagged one, else the oldest; a starred copy is always kept. When the copies have different tags, choose: **Keep one** (the dialog shows which tags would be lost) or **Merge into…** one copy, which then gets all the tags, the star, a description and every place in a collection. The other copies go to the Recycle Bin.
+- **Duplicates** — identical images stored in more than one place. The app suggests which copy to keep: the only tagged one, else the oldest; a starred copy is always kept. When the copies have different tags, choose: **Keep one** (the dialog shows which tags would be lost) or **Merge into…** one copy, which then gets all the tags, the star, a description and every place in a collection. The other copies go to the Recycle Bin. Or **Keep all copies**: when the same image belongs in two places, with different tags, every copy stays as its own image and the group stops showing — until another copy turns up (the message offers **Undo**). The Review page can also merge or keep all copies of every group at once.
 - **Thumbnail cleanup** — remove cached thumbnails that no longer belong to any image.
 
 **White — notices**

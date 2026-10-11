@@ -161,6 +161,23 @@ describe('rule problems and wrong types', () => {
     expect(fileByPath(lib, 'Fantasy/Strays/loose.png')).toBeDefined();
   });
 
+  it('names the new albums of a bulk fix, and refuses a bad name before moving anything', async () => {
+    t.file('Fantasy/loose.png', 'loose');
+    await scan();
+    await expect(fixAll(lib, 'loose_files', 'new-album', { albumName: 'bad/name' })).rejects.toThrow();
+    expect(fileByPath(lib, 'Fantasy/loose.png')).toBeDefined();
+    expect(await fixAll(lib, 'loose_files', 'new-album', { albumName: '  Strays ' })).toMatchObject({ done: 1 });
+    expect(fileByPath(lib, 'Fantasy/Strays/loose.png')).toBeDefined();
+  });
+
+  it('sends loose images to the Inbox', async () => {
+    t.file('Fantasy/loose.png', 'loose');
+    await scan();
+    await fixIssue(lib, issue('loose_files')!.id, { action: 'into-album', albumId: null });
+    expect(fileByPath(lib, 'Fantasy/loose.png')).toBeUndefined();
+    expect(issue('loose_files')).toBeUndefined();
+  });
+
   it('moves a folder out of an album, next to it', async () => {
     t.file('Fantasy/Portraits/Sketches/s.png', 's');
     await scan();
@@ -312,5 +329,91 @@ describe('duplicates', () => {
     expect(kept.collections).toMatchObject([{ name: 'Refs', position: 2 }]);
     expect(listBin(lib).map((b) => b.name)).toEqual(['a-copy.png']);
     expect(issue('duplicate')).toBeUndefined();
+  });
+
+  it('keeps all copies: quiet on the next scans, back with a new copy or on Undo', async () => {
+    t.file('Fantasy/Court/a-copy.png', 'a');
+    await scan();
+    refreshDuplicates(lib.db);
+    const i = issue('duplicate')!;
+    const r = await fixIssue(lib, i.id, { action: 'keep-all' });
+    expect(issue('duplicate')).toBeUndefined();
+    refreshDuplicates(lib.db);
+    expect(issue('duplicate')).toBeUndefined();
+    expect(fileByPath(lib, 'Fantasy/Court/a-copy.png')).toBeDefined();
+
+    t.file('Fantasy/Court/a-third.png', 'a');
+    await scan();
+    refreshDuplicates(lib.db);
+    expect((issue('duplicate')!.details as { copies: unknown[] }).copies).toHaveLength(3);
+
+    // Undo of the first Keep all: the kept list is forgotten.
+    await fixIssue(lib, issue('duplicate')!.id, { action: 'keep-all' });
+    reopenIssue(lib, r.reopen!);
+    fs.rmSync(t.abs('Fantasy/Court/a-third.png'));
+    await scan();
+    refreshDuplicates(lib.db);
+    expect(issue('duplicate')).toBeDefined();
+  });
+
+  it('merges every group at once, even ones that need a choice', async () => {
+    t.file('Fantasy/Court/a-copy.png', 'a');
+    t.file('Fantasy/Court/b-copy.png', 'b');
+    await scan();
+    refreshDuplicates(lib.db);
+    const [rain, cape] = [createTag(lib, { name: 'rain' }), createTag(lib, { name: 'cape' })];
+    changeFileTags(lib, [id('Fantasy/Portraits/a.png')], [rain.id], []);
+    changeFileTags(lib, [id('Fantasy/Court/a-copy.png')], [cape.id], []);
+    expect(await fixAll(lib, 'duplicate', 'merge')).toMatchObject({ done: 2, skipped: 0 });
+    expect(issue('duplicate')).toBeUndefined();
+    expect(listBin(lib)).toHaveLength(2);
+  });
+});
+
+describe('folders that become albums', () => {
+  it('makes a sub-category holding only images an album, in place', async () => {
+    t.file('Fantasy/Elves/Old/x.png', 'x'); // Elves: a sub-category (it holds a folder)
+    await scan();
+    fs.rmSync(t.abs('Fantasy/Elves/Old'), { recursive: true });
+    t.file('Fantasy/Elves/y.png', 'y');
+    await scan();
+    const i = issue('loose_files')!;
+    expect(i.details).toMatchObject({ path: 'Fantasy/Elves', subfolders: 0, topLevel: false });
+    await fixIssue(lib, i.id, { action: 'as-album', parentId: null });
+    await settle();
+    expect(folderByPath(lib, 'Fantasy/Elves')!.kind).toBe('album');
+    expect(readMarker(t.abs('Fantasy/Elves'))?.kind).toBe('album');
+    expect(issue('loose_files')).toBeUndefined();
+  });
+
+  it('moves a top-level folder of images into a category as an album', async () => {
+    t.file('Dropped/p.png', 'p');
+    await scan();
+    const i = issue('loose_files')!;
+    expect(i.details).toMatchObject({ path: 'Dropped', subfolders: 0, topLevel: true });
+    await expect(fixIssue(lib, i.id, { action: 'as-album', parentId: null })).rejects.toThrow(/top level/);
+    await fixIssue(lib, i.id, { action: 'as-album', parentId: folderByPath(lib, 'Fantasy')!.id });
+    await settle();
+    expect(folderByPath(lib, 'Fantasy/Dropped')!.kind).toBe('album');
+    expect(fileByPath(lib, 'Fantasy/Dropped/p.png')).toBeDefined();
+    expect(issue('loose_files')).toBeUndefined();
+  });
+
+  it('refuses when the folder holds folders', async () => {
+    t.file('Fantasy/q.png', 'q');
+    await scan();
+    await expect(fixIssue(lib, issue('loose_files')!.id, { action: 'as-album', parentId: null })).rejects.toThrow(/holds folders/);
+  });
+});
+
+describe('apply to all, chosen steps', () => {
+  it('runs only the steps asked for, and refuses ones that can’t run in bulk', async () => {
+    t.file('Fantasy/loose.png', 'loose');
+    t.file('Fantasy/Portraits/Sketches/s.png', 's');
+    await scan();
+    await expect(fixEverything(lib, {}, [['missing_file', 'locate']])).rejects.toThrow();
+    await fixEverything(lib, { albumName: 'Strays' }, [['loose_files', 'new-album']]);
+    expect(fileByPath(lib, 'Fantasy/Strays/loose.png')).toBeDefined();
+    expect(issue('nested_in_album')).toBeDefined();
   });
 });

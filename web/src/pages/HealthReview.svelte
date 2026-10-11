@@ -1,16 +1,18 @@
 <script lang="ts">
   import type { DuplicateCopy, FolderKind, HealthIssue, HealthReport, TagRef } from '@media-view/shared';
   import { ApiError, client, unwrap } from '../api.ts';
-  import AlbumPickDialog from '../components/AlbumPickDialog.svelte';
+  import FolderPickDialog from '../components/FolderPickDialog.svelte';
+  import type { PickerNode } from '../components/FolderPicker.svelte';
   import HealthHeader from '../components/HealthHeader.svelte';
   import KindIcon from '../components/KindIcon.svelte';
+  import NameDialog from '../components/NameDialog.svelte';
   import Thumb from '../components/Thumb.svelte';
   import { groupsOf, SECTIONS, type Group, type Section } from '../health.ts';
   import { fmt, formatDate } from '../media.ts';
   import { href, router } from '../router.svelte.ts';
   import { ask } from '../stores/confirm.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
-  import { applyFix, winPath } from '../stores/health.svelte.ts';
+  import { applyFix, runGroupFix, winPath } from '../stores/health.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
   import { inkFor, typeColor } from '../stores/tags.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
@@ -23,9 +25,11 @@
   const focus = $derived(router.route.query.get('group'));
   let report = $state<HealthReport | null>(null);
   /** Rows being worked on: a name being typed, a convert note, the album picker. */
-  let naming = $state<{ id: number; name: string } | null>(null);
+  let naming = $state<HealthIssue | null>(null);
   let converting = $state<{ id: number; name: string } | null>(null);
   let picking = $state<HealthIssue | null>(null);
+  /** A folder of loose images going somewhere as an album (Move as album…). */
+  let moving = $state<HealthIssue | null>(null);
   let kinds = $state<Record<number, FolderKind>>({});
   let picks = $state<Record<number, number>>({});
   let dupModes = $state<Record<number, 'keep' | 'merge'>>({});
@@ -144,11 +148,24 @@
     }
   }
 
-  async function intoAlbum(albumId: number | null, name: string) {
+  /** The name dialog's Create: an error (a name taken…) keeps it open and shows there. */
+  async function newAlbum(name: string) {
+    const issue = naming;
+    if (!issue) return;
+    const r = await unwrap(client.api.health[':id'].fix.$post({ param: { id: String(issue.id) }, json: { action: 'new-album', name: name.trim() } }));
+    toast(r.message);
+  }
+
+  async function intoAlbum(node: PickerNode) {
     const issue = picking;
     picking = null;
-    if (issue) await fix(issue, { action: 'into-album', albumId });
-    void name;
+    if (issue) await fix(issue, { action: 'into-album', albumId: node.kind === 'inbox' ? null : node.id });
+  }
+
+  async function asAlbum(node: PickerNode) {
+    const issue = moving;
+    moving = null;
+    if (issue) await fix(issue, { action: 'as-album', parentId: node.id });
   }
 
   // ── Duplicates ──
@@ -185,6 +202,7 @@
 
   const plural = (n: number, one: string, many = `${one}s`) => `${fmt(n)} ${n === 1 ? one : many}`;
   const folderLabel = (k: FolderKind) => (k === 'subcategory' ? 'Sub-category' : k === 'category' ? 'Category' : k === 'inbox' ? 'Inbox' : 'Album');
+  const KEEP_ALL_TIP = 'Every copy stays where it is, as its own image with its own tags. The group stops showing here until another copy turns up.';
   const RECORD_TIP = 'Moves the file into the library’s hidden Invalid folder (.mediaview\\Invalid\\…, keeping its path) and counts it in the statistics. Get it back from Explorer if you change your mind.';
 </script>
 
@@ -228,13 +246,23 @@
 
     {#each groups as g (g.key)}
       {@const open = isOpen(g)}
-      <button class="g-head" onclick={() => (closed = { ...closed, [g.key]: open })}>
-        <span class="arrow">{open ? '▾' : '▸'}</span>
-        <span class="g-name">{g.title}</span>
-        <span class="g-count" style:color={section === 'white' ? 'var(--text2)' : SECTIONS[section].color}>{g.count}</span>
-        {#if g.need}<span class="need">needs your choice</span>{/if}
-        <span class="g-hint">{g.hint}</span>
-      </button>
+      {@const fixes = [...(g.fix ? [g.fix] : []), ...(g.more ?? [])]}
+      <div class="g-head">
+        <button class="g-toggle" onclick={() => (closed = { ...closed, [g.key]: open })}>
+          <span class="arrow">{open ? '▾' : '▸'}</span>
+          <span class="g-name">{g.title}</span>
+          <span class="g-count" style:color={section === 'white' ? 'var(--text2)' : SECTIONS[section].color}>{g.count}</span>
+          {#if g.need}<span class="need">needs your choice</span>{/if}
+          <span class="g-hint">{g.hint}</span>
+        </button>
+        {#if fixes.length}
+          <div class="g-acts">
+            {#each fixes as f, k (f.label)}
+              <button class="rbtn sm" class:pri={k === 0} disabled={busy || scanning} title={f.does} onclick={() => run(() => runGroupFix(f, g.title))}>{f.label}</button>
+            {/each}
+          </div>
+        {/if}
+      </div>
 
       {#if open}
         <!-- Not tracked: a list, not issues -->
@@ -351,7 +379,8 @@
                       : lost.length ? `Keeping this copy loses ${lost.map((t) => t.name).join(', ')} — the tags only the other copies have.`
                       : 'Click another copy to keep that one instead.'}
                   </span>
-                  {#if mode}<button class="rbtn" onclick={() => (dupModes = { ...dupModes, [i.id]: undefined as never })}>Back</button>{/if}
+                  {#if mode}<button class="rbtn" onclick={() => (dupModes = { ...dupModes, [i.id]: undefined as never })}>Back</button>
+                  {:else}<button class="rbtn" disabled={busy} title={KEEP_ALL_TIP} onclick={() => fix(i, { action: 'keep-all' })}>Keep all copies</button>{/if}
                   <button class="rbtn pri" disabled={busy || starredOther} onclick={() => fix(i, { action: 'keep-one', keepId: pick })}>Keep copy {d.copies.findIndex((c) => c.id === pick) + 1} · recycle {others.length}</button>
                 {:else if mode === 'merge'}
                   {@const merged = mergedTags(d.copies)}
@@ -359,7 +388,8 @@
                   <button class="rbtn" onclick={() => (dupModes = { ...dupModes, [i.id]: undefined as never })}>Back</button>
                   <button class="rbtn pri" disabled={busy} onclick={() => fix(i, { action: 'merge', keepId: pick })}>Merge into copy {d.copies.findIndex((c) => c.id === pick) + 1}</button>
                 {:else}
-                  <span class:warn={stars >= 2}>{stars >= 2 ? 'Two copies are starred, and starred images can’t be recycled. Unstar one, or merge them into a single copy.' : 'The copies have different tags, so the app won’t pick one for you.'}</span>
+                  <span class:warn={stars >= 2}>{stars >= 2 ? 'Two copies are starred, and starred images can’t be recycled. Unstar one, merge them into a single copy, or keep them all.' : 'The copies have different tags, so the app won’t pick one for you.'}</span>
+                  <button class="rbtn" disabled={busy} title={KEEP_ALL_TIP} onclick={() => fix(i, { action: 'keep-all' })}>Keep all copies</button>
                   <button class="rbtn" disabled={stars >= 2} title={stars >= 2 ? 'Unstar one copy first' : ''} onclick={() => { dupModes = { ...dupModes, [i.id]: 'keep' }; picks = { ...picks, [i.id]: d.keepId ?? d.copies[0]!.id }; }}>Keep one…</button>
                   <button class="rbtn pri" onclick={() => { dupModes = { ...dupModes, [i.id]: 'merge' }; picks = { ...picks, [i.id]: d.keepId ?? d.copies[0]!.id }; }}>Merge into…</button>
                 {/if}
@@ -411,15 +441,7 @@
                 {:else if d.kind === 'loose_files'}
                   <div class="t-row"><span class="title">{plural(d.count, 'loose image')} in {d.path ? d.path.split('/').at(-1) : 'Images'}</span>{@render chip(d.folderId === null ? 'Images' : 'Folder')}{@render chip('Loose images')}</div>
                   {@render plain('IN', winPath(d.path))}
-                  <span class="meta">racks and drawers hold folders, never loose images (§2.3)</span>
-                  {#if naming?.id === i.id}
-                    <div class="inline">
-                      <span>New album in {d.path.split('/').at(-1)}:</span>
-                      <input bind:value={naming.name} spellcheck="false" />
-                      <button class="rbtn pri" disabled={busy || !naming.name.trim()} onclick={() => { const n = naming!.name.trim(); naming = null; void fix(i, { action: 'new-album', name: n }); }}>Create &amp; move {d.count}</button>
-                      <button class="rbtn" onclick={() => (naming = null)}>Cancel</button>
-                    </div>
-                  {/if}
+                  <span class="meta">racks and drawers hold folders, never loose images (§2.3){#if d.folderId !== null && d.subfolders === 0} · it holds only images, so it can become an album itself{/if}</span>
                 {:else if d.kind === 'nested_in_album'}
                   {@const [, n] = diff(d.albumPath, d.path)}
                   <div class="t-row"><span class="title">A folder inside {d.albumPath.split('/').at(-1)}</span>{@render chip('Album')}{@render chip('Folder inside')}</div>
@@ -472,9 +494,13 @@
                 {:else if d.kind === 'external_move'}
                   <button class="rbtn pri" disabled={busy} onclick={() => fix(i, { action: 'keep' })}>Keep</button>
                   <button class="rbtn" disabled={busy} onclick={() => fix(i, { action: 'undo' })}>Undo</button>
-                {:else if d.kind === 'loose_files' && naming?.id !== i.id}
-                  {#if d.folderId !== null}<button class="rbtn pri" onclick={() => (naming = { id: i.id, name: 'Loose images' })}>Move into a new album…</button>{/if}
-                  <button class="rbtn" onclick={() => (picking = i)}>Into an existing album…</button>
+                {:else if d.kind === 'loose_files'}
+                  {@const solo = d.folderId !== null && d.subfolders === 0}
+                  {#if solo && !d.topLevel}<button class="rbtn pri" disabled={busy} title="It stays where it is; its images stop being loose" onclick={() => fix(i, { action: 'as-album', parentId: null })}>Make it an album</button>{/if}
+                  {#if solo}<button class="rbtn" class:pri={d.topLevel} disabled={busy} title="Pick a rack or drawer: the folder moves there and becomes an album" onclick={() => (moving = i)}>Move as album…</button>{/if}
+                  {#if d.folderId !== null}<button class="rbtn" class:pri={!solo} disabled={busy} onclick={() => (naming = i)}>Move into a new album…</button>{/if}
+                  <button class="rbtn" class:pri={d.folderId === null} disabled={busy} onclick={() => fix(i, { action: 'into-album', albumId: null })}>To the Inbox</button>
+                  <button class="rbtn" disabled={busy} onclick={() => (picking = i)}>Into an existing album…</button>
                 {:else if d.kind === 'nested_in_album' && converting?.id !== i.id}
                   <button class="rbtn pri" disabled={busy} onclick={() => fix(i, { action: 'move-out' })}>Move it out</button>
                   <button class="rbtn" onclick={() => (converting = { id: i.id, name: d.albumPath.split('/').at(-1) ?? 'Images' })}>Convert…</button>
@@ -502,8 +528,18 @@
   </div>
 </div>
 
+{#if naming && naming.details.kind === 'loose_files'}
+  {@const d = naming.details}
+  <NameDialog title="Move into a new album" sub="{plural(d.count, 'loose image')} · the album is made in {d.path.split('/').at(-1)}" label="Album name"
+    initial="Loose images" confirm="Create &amp; move {fmt(d.count)}" onsubmit={newAlbum} onclose={() => (naming = null)} />
+{/if}
 {#if picking}
-  <AlbumPickDialog title="Move the loose images" sub="pick an album or the Inbox · the images move on disk" onpick={intoAlbum} onclose={() => (picking = null)} />
+  <FolderPickDialog want="album" title="Move the loose images" sub="pick an album or the Inbox · the images move on disk" onpick={intoAlbum} onclose={() => (picking = null)} />
+{/if}
+{#if moving && moving.details.kind === 'loose_files' && moving.details.folderId !== null}
+  {@const d = moving.details}
+  <FolderPickDialog want="container" title="Move “{d.path.split('/').at(-1)}” as an album" sub="pick a rack or drawer · the folder moves on disk and becomes an album"
+    verb="Move as album" blocked={[d.folderId!]} onpick={asAlbum} onclose={() => (moving = null)} />
 {/if}
 
 <style>
@@ -524,7 +560,10 @@
   .sec-count { font: 700 13px var(--font-mono); }
   .sec-sub { font: 11px var(--font-mono); color: var(--text2); text-transform: uppercase; }
 
-  .g-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 32px 10px 20px; border: none; border-bottom: 1px solid var(--line); background: var(--bg2); color: var(--text); text-align: left; cursor: pointer; }
+  .g-head { display: flex; align-items: center; gap: 12px; padding-right: 32px; border-bottom: 1px solid var(--line); background: var(--bg2); }
+  .g-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 14px 0 10px 20px; border: none; background: none; color: var(--text); text-align: left; cursor: pointer; }
+  .g-acts { display: flex; gap: 6px; flex: none; }
+  .rbtn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
   .arrow { width: 14px; font: 13px var(--font-mono); color: var(--text2); }
   .g-name { font: 700 22px/1 var(--font-display); text-transform: uppercase; }
   .g-count { font: 700 12px var(--font-mono); }

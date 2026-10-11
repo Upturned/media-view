@@ -410,6 +410,18 @@
     return (await unwrap(client.api.files.brief.$post({ json: { ids: chosen } }))).files;
   }
 
+  /** Tags for every image shown (an album's "tag them all"), without selecting them first. */
+  async function tagAll() {
+    try {
+      const list = await ids();
+      if (list.length === 0) return;
+      const files = (await unwrap(client.api.files.brief.$post({ json: { ids: list } }))).files;
+      openOps({ kind: 'bulk-tag', files, where });
+    } catch (err) {
+      toastError(err);
+    }
+  }
+
   async function bulk(action: 'star' | 'unstar' | 'move' | 'copy' | 'rename' | 'recycle' | 'tags' | 'collect' | 'unlist') {
     try {
       const files = await selection();
@@ -628,6 +640,7 @@
       {/if}
       <input class="filter" bind:value={nameInput} placeholder="name contains…" spellcheck="false" />
     {/if}
+    {#if total}<button class="tool" onclick={tagAll} title="Add or remove tags on every image shown here (the filters apply)"># Tag all {fmt(total)}…</button>{/if}
     {#if untaggedView && stale.size}<button class="tool refresh" onclick={refresh} title="Take the tagged images out of this view">↻ Refresh · {fmt(stale.size)} done</button>{/if}
     {#if searchable}<button class="tool idx" class:on={showIndex} onclick={() => (showIndex = !showIndex)} title="Show or hide the index">Index</button>{/if}
     {#if addTo}<button class="add" onclick={pickAndAdd}>+ Add images</button>{/if}

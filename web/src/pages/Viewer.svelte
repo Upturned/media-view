@@ -63,32 +63,68 @@
       });
   });
 
+  /**
+   * The image on screen left the list it was opened from (tagged while browsing Untagged, unstarred
+   * in Favorites…): it keeps its place in the strip, dimmed, so stepping carries on from there
+   * (like the dimmed images in the untagged grid). `index` is its place in the list as shown.
+   */
+  let left = $state<{ id: number; index: number; item: FileItem } | null>(null);
+  /** The last place the image on screen had in the list. */
+  let lastSeen: { id: number; index: number } | null = null;
+
   // Where the file sits in the list, and the film strip around it.
   $effect(() => {
     if (!file) return;
     const q = listQuery;
     const current = file.id;
+    const self: FileItem = file;
     void live.files;
     void (async () => {
       const pos = (await unwrap(client.api.files.locate.$get({ query: { ...toParams(q), id: String(current) } }))).position;
       if (current !== id) return;
-      position = pos;
-      if (!pos) {
+      if (pos) {
+        left = null;
+        lastSeen = { id: current, index: pos.index };
+        const start = Math.max(0, Math.min(pos.index - Math.floor(STRIP / 2), pos.total - STRIP));
+        const r = await unwrap(client.api.files.$get({ query: { ...toParams(q), offset: String(start), limit: String(STRIP) } }));
+        if (current !== id) return;
+        position = pos;
+        stripStart = start;
+        strip = r.items;
+        return;
+      }
+      if (lastSeen?.id !== current) {
+        // Never was in this list: nothing to step through.
+        left = null;
+        position = null;
         strip = [];
         return;
       }
-      const start = Math.max(0, Math.min(pos.index - Math.floor(STRIP / 2), pos.total - STRIP));
-      const r = await unwrap(client.api.files.$get({ query: { ...toParams(q), offset: String(start), limit: String(STRIP) } }));
+      // It left: the list as shown is the list now, with this image back at its old place.
+      const real = (await unwrap(client.api.files.$get({ query: { ...toParams(q), offset: '0', limit: '1' } }))).total;
+      const at = Math.min(lastSeen.index, real);
+      const total = real + 1;
+      const start = Math.max(0, Math.min(at - Math.floor(STRIP / 2), total - STRIP));
+      const r = real > 0 && STRIP > 1
+        ? await unwrap(client.api.files.$get({ query: { ...toParams(q), offset: String(start), limit: String(STRIP - 1) } }))
+        : { items: [] };
       if (current !== id) return;
+      const items = [...r.items];
+      items.splice(at - start, 0, self);
+      left = { id: current, index: at, item: self };
+      position = { index: at, total };
       stripStart = start;
-      strip = r.items;
+      strip = items;
     })().catch((err: Error) => toast(err.message, 'error'));
   });
 
   async function itemAt(index: number): Promise<FileItem | undefined> {
     const local = strip[index - stripStart];
     if (local) return local;
-    return (await unwrap(client.api.files.$get({ query: { ...toParams(listQuery), offset: String(index), limit: '1' } }))).items[0];
+    if (left && index === left.index) return left.item;
+    // Past the image that left, the list is one shorter than the one shown.
+    const real = left && index > left.index ? index - 1 : index;
+    return (await unwrap(client.api.files.$get({ query: { ...toParams(listQuery), offset: String(real), limit: '1' } }))).items[0];
   }
 
   function show(target: FileItem | { id: number }) {
@@ -440,7 +476,7 @@
         {:else if file}
           <div class="position">
             <span class="display pos">{position ? `${position.index + 1} / ${position.total}` : '—'}</span>
-            <span class="ctx">{contextKind}{#if source === 'folder'}<br /><b>{file.folder.name}</b>{:else if source === 'collection' && listName}<br /><b>{listName}</b>{/if}</span>
+            <span class="ctx">{#if left?.id === file.id}<i>no longer {contextKind}</i>{:else}{contextKind}{/if}{#if source === 'folder'}<br /><b>{file.folder.name}</b>{:else if source === 'collection' && listName}<br /><b>{listName}</b>{/if}</span>
           </div>
           <img
             class="photo"
@@ -493,7 +529,8 @@
             <button class="nav" onclick={() => step(-1)} title="Previous (←)" disabled={!position || position.index === 0}>◀</button>
             {#each strip as s, k (s.id)}
               {@const n = stripStart + k + 1}
-              <button class="frame" class:on={s.id === id} onclick={() => show(s)} title={s.filename}>
+              <button class="frame" class:on={s.id === id} class:left={left?.id === s.id} onclick={() => show(s)}
+                title={left?.id === s.id ? `${s.filename} · no longer ${contextKind}` : s.filename}>
                 <Thumb file={s} fit="cover" />
                 <span class="n">{source === 'collection' ? String(n).padStart(2, '0') : s.id === id ? `${n}A` : n}</span>
               </button>
@@ -622,6 +659,7 @@
   .pos { font-size: 56px; line-height: 0.8; color: var(--accent); }
   .ctx { font: 12px var(--font-mono); text-transform: uppercase; color: var(--text2); line-height: 1.4; }
   .ctx b { color: var(--text); font-weight: 400; }
+  .ctx i { font-style: normal; color: var(--amber); }
   .caption { position: absolute; left: 24px; bottom: 14px; z-index: 3; font: 10.5px var(--font-mono); color: #fff; background: rgba(0, 0, 0, 0.45); padding: 3px 6px; pointer-events: none; }
   .full .caption { display: none; }
 
@@ -670,6 +708,8 @@
   .frame.on { height: 60px; opacity: 1; outline: 3px solid var(--accent); }
   .n { position: absolute; bottom: 0; left: 0; padding: 1px 4px; color: #ddd; font: 700 10px var(--font-mono); }
   .frame.on .n { background: var(--accent); color: var(--accent-ink); }
+  .frame.left :global(img) { filter: grayscale(1); opacity: 0.45; }
+  .frame.left .n { text-decoration: line-through; }
 
   .panel-col { width: 420px; flex: none; overflow-y: auto; background: var(--surface); border-left: 1px solid var(--line); }
   .section {

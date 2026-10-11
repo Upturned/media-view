@@ -337,7 +337,8 @@ export type IssueDetails =
     file: { id: number; path: string; thumb: ThumbRef | null };
     candidates: { id: number; path: string; tags: TagRef[]; favorited: boolean; collections: number; description: string | null }[];
   }
-  | { kind: 'loose_files'; folderId: number | null; path: string; count: number; paths: string[] }
+  /** `subfolders`: live folders inside it — with none, the folder itself can become an album. */
+  | { kind: 'loose_files'; folderId: number | null; path: string; count: number; paths: string[]; subfolders: number; topLevel: boolean }
   | { kind: 'nested_in_album'; path: string; albumId: number; albumPath: string; moveOutTo: string }
   | { kind: 'unmarked_folder'; folderId: number; path: string; current: FolderKind; inferred: FolderKind; certain: boolean; images: number; folders: number; topLevel: boolean }
   /** A file no module takes (or an image that can't be read: `unreadable`, with its `fileId`). */
@@ -388,7 +389,11 @@ export type FixAction =
   | { action: 'move-out' } | { action: 'convert'; name: string }
   | { action: 'confirm'; folderKind?: 'category' | 'subcategory' | 'album' }
   | { action: 'recycle' } | { action: 'ignore' } | { action: 'record' } | { action: 'ok' }
-  | { action: 'keep-one'; keepId: number } | { action: 'merge'; keepId: number };
+  /** The folder holding the loose images becomes an album: where it is (`parentId` null) or moved into a category / sub-category. */
+  | { action: 'as-album'; parentId: number | null }
+  | { action: 'keep-one'; keepId: number } | { action: 'merge'; keepId: number }
+  /** Duplicates: every copy stays, as separate images; the group stops showing until a new copy turns up. */
+  | { action: 'keep-all' };
 
 export interface FixResult {
   message: string;

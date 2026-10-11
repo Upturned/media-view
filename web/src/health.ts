@@ -35,6 +35,8 @@ export interface Group {
   count: string;
   sample: string;
   fix: GroupFix | null;
+  /** Other fixes for the whole group (on its Review section; the overview shows the main one). */
+  more?: GroupFix[];
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${fmt(n)} ${n === 1 ? one : many}`;
@@ -86,7 +88,7 @@ export function groupsOf(r: HealthReport): Group[] {
     sample: [looseImages && `${plural(looseImages, 'loose image')} in ${plural(rules.length - nested.length, 'folder')}`, nested.length && `${plural(nested.length, 'folder')} inside an album`].filter(Boolean).join(' · '),
     fix: loose.length + nested.length ? {
       label: `Fix all ${loose.length + nested.length}`,
-      does: [loose.length && `Put loose images into ${plural(loose.length, 'new album')} (“Loose images”)`, nested.length && `move ${plural(nested.length, 'folder')} out of albums`].filter(Boolean).join(' · '),
+      does: [loose.length && `Put loose images into ${plural(loose.length, 'new album')}, one per folder`, nested.length && `move ${plural(nested.length, 'folder')} out of albums`].filter(Boolean).join(' · '),
       steps: [...(loose.length ? [{ kind: 'loose_files' as const, action: 'new-album' as const }] : []), ...(nested.length ? [{ kind: 'nested_in_album' as const, action: 'move-out' as const }] : [])],
     } : null,
   });
@@ -118,10 +120,22 @@ export function groupsOf(r: HealthReport): Group[] {
   const dups = of('duplicate');
   const clear = dups.filter((i) => i.details.kind === 'duplicate' && i.details.keepId !== null && i.details.reason !== 'different-tags' && i.details.reason !== 'two-starred');
   add({
-    key: 'duplicates', section: 'blue', title: 'Duplicates', kinds: ['duplicate'], issues: dups, count: plural(dups.length, 'group'), hint: 'click a copy to keep it · keep one or merge',
+    key: 'duplicates', section: 'blue', title: 'Duplicates', kinds: ['duplicate'], issues: dups, count: plural(dups.length, 'group'), hint: 'click a copy to keep it · keep one, merge, or keep them all',
     need: clear.length === 0,
     sample: [clear.length && `${fmt(clear.length)} with a suggested copy`, dups.length - clear.length && `${fmt(dups.length - clear.length)} need your choice`].filter(Boolean).join(' · '),
     fix: clear.length ? { label: `Keep suggested (${clear.length})`, does: `Keep the suggested copy in ${plural(clear.length, 'group')} and send the other copies to the Recycle Bin`, steps: [{ kind: 'duplicate', action: 'keep-one' }] } : null,
+    more: dups.length ? [
+      {
+        label: `Merge all ${dups.length}`,
+        does: `Merge each of the ${plural(dups.length, 'group')} into its suggested copy (or the oldest): it gets every tag, the star, a description and every place in a collection, and the other copies go to the Recycle Bin`,
+        steps: [{ kind: 'duplicate', action: 'merge' }],
+      },
+      {
+        label: `Keep all copies (${dups.length})`,
+        does: `Keep every copy in ${plural(dups.length, 'group')} as separate images: nothing moves, and they stop showing here until a new copy turns up`,
+        steps: [{ kind: 'duplicate', action: 'keep-all' }],
+      },
+    ] : undefined,
   });
   if (r.thumbnails.count) {
     add({

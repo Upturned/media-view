@@ -7,7 +7,7 @@
   import { href, navigate } from '../router.svelte.ts';
   import { ask } from '../stores/confirm.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
-  import { applyToKind, when } from '../stores/health.svelte.ts';
+  import { runGroupFix, when } from '../stores/health.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
 
@@ -48,12 +48,13 @@
     return gs.length ? gs.map(short).join(' · ') : '✓ all clear';
   };
 
+  /** The group's main fix (or its first other one), asked first. */
+  const mainFix = (g: Group) => g.fix ?? g.more?.[0] ?? null;
+
   async function groupFix(g: Group) {
     if (g.key === 'thumbnails') return cleanThumbs();
-    if (!g.fix) return;
-    const ok = await ask({ tone: 'normal', title: `${g.fix.label}?`, sub: g.title, body: `${g.fix.does}.`, button: g.fix.label, foot: 'Each fix is logged' });
-    if (!ok) return;
-    for (const step of g.fix.steps) await applyToKind(step.kind, step.action);
+    const f = mainFix(g);
+    if (f) await runGroupFix(f, g.title);
   }
 
   async function cleanThumbs() {
@@ -133,8 +134,8 @@
                 <button class="gbtn" onclick={() => navigate('/health/untagged/grid')}>Open as grid</button>
               {:else if g.key === 'thumbnails'}
                 <button class="gbtn pri" disabled={scanning} onclick={cleanThumbs}>Delete</button>
-              {:else if g.fix}
-                <button class="gbtn pri" disabled={scanning} onclick={() => groupFix(g)}>{g.fix.label}</button>
+              {:else if mainFix(g)}
+                <button class="gbtn pri" disabled={scanning} onclick={() => groupFix(g)}>{mainFix(g)!.label}</button>
               {/if}
               {#if g.key !== 'thumbnails'}<a class="gbtn" href={href(reviewHref(g))}>Review ▸</a>{/if}
             </div>

@@ -6,6 +6,7 @@ The images of one album in a grid. The Inbox uses this same page.
 - **Group: Collection** splits the grid into one section per collection the images are on (a→z), each in the list's own order — **⇅ Reverse** flips a section, **Open collection ↗** goes there. An image on two lists shows in both, marked *2×*. Images on no list come last.
 - **Cols** sets how many images per row (2–10); your choice is remembered.
 - **☆ Starred only** and **name contains…** filter the grid.
+- **# Tag all…** opens the Tags window for every image shown (the filters apply) — no need to select them first.
 - **Click** an image to open it. **Ctrl + click** selects it, **Shift + click** selects a range, and the circle under each image selects it too. While images are selected, a click adds to the selection.
 - With images selected, the yellow bar lets you **star / unstar** them or **select all**. `Esc` clears the selection.
 - **Right-click** an image for more.
