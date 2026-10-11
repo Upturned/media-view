@@ -16,6 +16,10 @@
   import Collections from './pages/Collections.svelte';
   import Favorites from './pages/Favorites.svelte';
   import Folder from './pages/Folder.svelte';
+  import Health from './pages/Health.svelte';
+  import HealthGrid from './pages/HealthGrid.svelte';
+  import HealthReview from './pages/HealthReview.svelte';
+  import HealthUntagged from './pages/HealthUntagged.svelte';
   import Hub from './pages/Hub.svelte';
   import Library from './pages/Library.svelte';
   import NotFound from './pages/NotFound.svelte';
@@ -104,6 +108,14 @@
     <Collections />
   {:else if page === 'collection'}
     {#key router.route.params.id}<Collection />{/key}
+  {:else if page === 'health'}
+    <Health />
+  {:else if page === 'health-review'}
+    {#key router.route.params.section}<HealthReview />{/key}
+  {:else if page === 'health-untagged'}
+    <HealthUntagged />
+  {:else if page === 'health-grid'}
+    <HealthGrid />
   {:else if page === 'recycle'}
     <RecycleBin />
   {:else if page === 'settings'}

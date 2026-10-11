@@ -34,6 +34,7 @@ export function requestScan(lib: OpenLibrary): void {
       if (getLibrary() === lib) {
         emit({ type: 'folders-changed' });
         emit({ type: 'files-changed' });
+        emit({ type: 'health-changed' });
         kickHasher();
       }
     }

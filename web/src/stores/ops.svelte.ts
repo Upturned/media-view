@@ -13,7 +13,7 @@ import { toast, toastError, type ToastAction } from './toasts.svelte.ts';
 
 export interface BinEntry {
   id: number;
-  entity: 'file' | 'folder';
+  entity: 'file' | 'folder' | 'other';
   name: string;
   kind: string;
 }

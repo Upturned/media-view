@@ -568,11 +568,14 @@ export function changeFileTags(lib: OpenLibrary, fileIds: number[], add: number[
   const files = fileIds.filter((id) => live.get(id) !== undefined);
   const ins = db.prepare("INSERT INTO file_tags (file_id, tag_id, source) VALUES (?, ?, 'manual') ON CONFLICT (file_id, tag_id) DO UPDATE SET source = 'manual'");
   const del = db.prepare("DELETE FROM file_tags WHERE file_id = ? AND tag_id = ? AND source = 'manual'");
+  // A tagged image is no longer new, and no longer set aside as "leave untagged".
+  const settle = db.prepare('UPDATE files SET seen = 1, untagged_ok = 0 WHERE id = ?');
   let n = 0;
   db.transaction(() => {
     for (const f of files) {
       for (const t of add) n += ins.run(f, t).changes;
       for (const t of remove) n += del.run(f, t).changes;
+      if (add.length) settle.run(f);
     }
     recomputeImplied(db, files);
   })();

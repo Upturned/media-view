@@ -285,7 +285,7 @@ export function addItems(lib: OpenLibrary, id: number, fileIds: number[]): { add
   return result;
 }
 
-function renumber(db: DB, id: number, order?: number[]): void {
+export function renumber(db: DB, id: number, order?: number[]): void {
   const ids = order ?? (db.prepare('SELECT file_id FROM collection_items WHERE collection_id = ? ORDER BY position').pluck().all(id) as number[]);
   const set = db.prepare('UPDATE collection_items SET position = ? WHERE collection_id = ? AND file_id = ?');
   ids.forEach((fid, pos) => set.run(pos, id, fid));

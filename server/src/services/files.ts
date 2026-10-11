@@ -26,6 +26,10 @@ export interface FileQuery {
   tag?: number;
   /** Images on this collection (collection pages); enables the `position` sort. */
   collection?: number;
+  /** Library Health's untagged images: outside the Inbox, no tags, not set aside (milestone 7). */
+  untagged?: boolean;
+  /** With `untagged`: only the NEW ones (found by a scan, not yet seen). */
+  fresh?: boolean;
   sort: SortKey;
   order: 'asc' | 'desc';
   /** Random order seed, stable across pages. */
@@ -48,9 +52,11 @@ interface FileRow {
   rel_path: string;
   folder_id: number;
   description: string | null;
+  origin: 'app' | 'scan';
+  seen: number;
 }
 
-const COLUMNS = 'f.id, f.filename, f.ext, f.size, f.mtime, f.added_at, f.favorited, f.width, f.height, f.hash, f.rel_path, f.folder_id, f.description';
+const COLUMNS = 'f.id, f.filename, f.ext, f.size, f.mtime, f.added_at, f.favorited, f.width, f.height, f.hash, f.rel_path, f.folder_id, f.description, f.origin, f.seen';
 
 function toItem(r: FileRow): FileItem {
   return {
@@ -65,6 +71,7 @@ function toItem(r: FileRow): FileItem {
     width: r.width,
     height: r.height,
     v: thumbRef(r).v,
+    ...(r.origin === 'scan' && !r.seen ? { isNew: true } : {}),
   };
 }
 
@@ -101,6 +108,10 @@ function where(lib: OpenLibrary, q: FileQuery): Where {
     parts.push('EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id = ?)');
     params.push(q.tag);
   }
+  if (q.untagged) {
+    parts.push(`${UNTAGGED} AND f.folder_id NOT IN (SELECT id FROM folders WHERE kind = 'inbox')`);
+    if (q.fresh) parts.push("f.origin = 'scan' AND f.seen = 0");
+  }
   if (q.collection !== undefined) {
     if (!lib.db.prepare('SELECT 1 FROM collections WHERE id = ?').get(q.collection)) throw notFound('COLLECTION_NOT_FOUND', 'This collection no longer exists.');
     parts.push(`EXISTS (SELECT 1 FROM collection_items WHERE file_id = f.id AND collection_id = ${Number(q.collection)})`);
@@ -110,6 +121,9 @@ function where(lib: OpenLibrary, q: FileQuery): Where {
 }
 
 const inList = (ids: number[]) => ids.map(() => '?').join(',');
+
+/** No tags (manual or implied) and not set aside with "Leave untagged". */
+export const UNTAGGED = 'f.untagged_ok = 0 AND NOT EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id)';
 
 const IN_COLLECTION = (id: number) => `EXISTS (SELECT 1 FROM collection_items WHERE file_id = f.id AND collection_id = ${id})`;
 
@@ -292,6 +306,12 @@ export function listGrouped(
     total,
     unknown: w.unknown,
   };
+}
+
+/** Grid items for these ids, in the order given (missing or recycled ones left out). */
+export function fileItems(lib: OpenLibrary, ids: number[]): FileItem[] {
+  const get = lib.db.prepare(`SELECT ${COLUMNS} FROM files f WHERE f.id = ? AND f.recycled = 0`);
+  return ids.map((id) => get.get(id) as FileRow | undefined).filter((r): r is FileRow => !!r).map(toItem);
 }
 
 /** Name, star and folder of each id, in the order given (for actions on a selection that isn't all loaded). */

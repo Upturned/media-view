@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#070707;}
+a{color:#ff4b2b;text-decoration:none;cursor:pointer}
+a:hover{color:#f3f2ec;text-decoration:underline}
+input::placeholder,textarea::placeholder{color:#77766f}
+</style>
+</helmet>
+<section id="m5" style="--bg:#121212;--bg2:#0b0b0b;--surface:#1b1b1a;--surface2:#262625;--line:#363631;--text:#f3f2ec;--text2:#9a9990;--accent:#ff4b2b;--accent-ink:#0b0b0b;--accent2:#f2e34b;--red:#ff3d5a;--amber:#ffb020;--blue:#58a6ff;--thumb:#0e0e0e;--scrim:rgba(7,7,7,.74);padding:72px 80px 96px;display:flex;flex-direction:column;gap:56px;font-family:Bahnschrift,'DIN Alternate','Segoe UI',system-ui,sans-serif;color:var(--text);background:#070707;">
+
+  <header style="display:flex;align-items:flex-end;gap:48px;max-width:1440px;">
+    <div style="display:flex;flex-direction:column;gap:12px;flex:none;white-space:nowrap;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font:700 12px/1 'Cascadia Mono',Consolas,Menlo,monospace;background:var(--accent);color:var(--accent-ink);padding:5px 8px;">M5</span>
+        <span style="font:12px/1 'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);">media-view · tag wiki · Darkroom</span>
+      </div>
+      <h1 style="margin:0;font:700 112px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:-0.01em;text-transform:uppercase;">Milestone 5</h1>
+    </div>
+    <p style="margin:0 0 6px;max-width:620px;font-size:15px;line-height:1.55;color:var(--text2);text-wrap:pretty;">The tag wiki. Boards share one page: edit in 02 and save, and 01 updates. The image picker in 03 fills 02’s Portrait or cover. Fields defined in 04 drive the info box: rename, reorder or change a kind there and both wiki boards follow.</p>
+  </header>
+
+  <div style="display:grid;grid-template-columns:repeat(2,1440px);gap:72px;align-items:start;">
+
+    <!-- ============ 01 WIKI VIEW ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M5 · 01</span><span style="color:var(--text);">Tag wiki · view</span><span>dashed amber links are missing tags · click one to create it</span>
+      </div>
+      <div style="position:relative;width:1440px;height:1000px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:56px;flex:none;display:flex;align-items:stretch;background:var(--bg2);border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 22px;border-right:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.02em;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 18px;font:13px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);"><span style="color:var(--accent);font-weight:700;">&gt;</span>search 40,265 frames, or #tag_</div>
+          <nav style="display:flex;align-items:stretch;font:600 13px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase;">
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text);background:var(--surface);border-left:1px solid var(--line);box-shadow:inset 0 -3px 0 var(--accent);">Tags</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Collections</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Favorites</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Random</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Bin</a>
+          </nav>
+          <button style="width:52px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;">?</button>
+        </div>
+        <div style="flex:1;overflow-y:auto;overflow-x:hidden;">
+          <div style="display:grid;grid-template-columns:8px 210px 1fr;border-bottom:1px solid var(--line);">
+            <div style="background:{{ typeColor }};"></div>
+            <div style="margin:24px 0 24px 28px;aspect-ratio:4/5;background:{{ vCoverFill }};outline:1px solid var(--line);position:relative;"><span style="position:absolute;left:6px;bottom:6px;font:10px 'Cascadia Mono',Consolas,monospace;color:#fff;background:rgba(0,0,0,.45);padding:2px 5px;">COVER</span></div>
+            <div style="display:flex;flex-direction:column;gap:12px;padding:24px 40px 22px 32px;min-width:0;">
+              <div style="display:flex;align-items:center;gap:10px;font:11.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);">
+                <span style="padding:3px 8px;background:{{ typeColor }};color:{{ typeInk }};font:700 13px/1.1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;">Character</span>
+                <a style="color:var(--text2);">Tags</a><span>/</span><span>Character</span><span>/</span><span style="color:var(--text);">Wiki</span>
+              </div>
+              <h2 style="margin:0;font:700 112px/0.82 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:-0.01em;">Aerin Valecrest</h2>
+              <span style="font-size:15px;color:var(--text2);">also known as <span style="color:var(--text);">aerin</span>, <span style="color:var(--text);">the silver heir</span></span>
+              <div style="display:flex;align-items:flex-end;gap:28px;margin-top:auto;">
+                <div style="display:flex;flex-direction:column;gap:2px;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;"><span style="font:700 40px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">4,140</span>images</div>
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;padding-bottom:4px;">page edited {{ vEdited }}</span>
+                <div style="margin-left:auto;display:flex;">
+                  <button onClick="{{ vEditTag }}" style="height:40px;padding:0 16px;border:1px solid var(--line);background:none;color:var(--text);font:700 14px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Edit tag</button>
+                  <button onClick="{{ vEditPage }}" style="height:40px;padding:0 18px;border:none;background:var(--accent);color:var(--accent-ink);font:700 14px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">✎ Edit page</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:48px;padding:28px 40px 56px;">
+            <div style="display:flex;flex-direction:column;gap:36px;min-width:0;">
+              <article style="max-width:760px;display:flex;flex-direction:column;">
+                <sc-for list="{{ vBlocks }}" as="b" hint-placeholder-count="8">
+                  <div style="display:flex;gap:10px;margin:{{ b.margin }};padding-left:{{ b.pl }};border-left:{{ b.bl }};">
+                    <sc-if value="{{ b.isLi }}"><span style="flex:none;width:6px;height:6px;margin-top:10px;background:var(--accent);"></span></sc-if>
+                    <div style="font:{{ b.font }};color:{{ b.color }};text-transform:{{ b.tt }};letter-spacing:{{ b.ls }};text-wrap:pretty;"><sc-for list="{{ b.spans }}" as="s"><sc-if value="{{ s.isText }}"><span>{{ s.t }}</span></sc-if><sc-if value="{{ s.isBold }}"><strong>{{ s.t }}</strong></sc-if><sc-if value="{{ s.isItalic }}"><em>{{ s.t }}</em></sc-if><sc-if value="{{ s.isLink }}"><a onClick="{{ s.onClick }}" style="color:var(--text);border-bottom:2px solid {{ s.color }};" style-hover="background:var(--surface2);text-decoration:none;">{{ s.t }}</a></sc-if><sc-if value="{{ s.isMissing }}"><a onClick="{{ s.onClick }}" title="No such tag yet — click to create it" style="color:var(--amber);border-bottom:1px dashed var(--amber);" style-hover="background:color-mix(in oklab,var(--amber) 14%,transparent);text-decoration:none;">{{ s.t }}<span style="margin-left:3px;font:9.5px 'Cascadia Mono',Consolas,monospace;vertical-align:super;text-transform:uppercase;letter-spacing:0;">missing</span></a></sc-if></sc-for></div>
+                  </div>
+                </sc-for>
+              </article>
+
+              <div style="display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:8px;"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Images</span><span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">newest first</span></div>
+                <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) 120px;gap:8px;">
+                  <sc-for list="{{ strip }}" as="t" hint-placeholder-count="7"><div style="aspect-ratio:3/4;background:{{ t.fill }};outline:1px solid var(--line);cursor:pointer;" style-hover="outline:2px solid var(--accent);"></div></sc-for>
+                  <button onClick="{{ seeAll }}" style="display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:4px;padding:10px;border:1px solid var(--text);background:none;color:var(--text);text-align:left;cursor:pointer;" style-hover="background:var(--surface);"><span style="font:700 22px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">See all →</span><span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">4,140</span></button>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <span style="font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:8px;">Implies <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">added with this tag</span></span>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;"><sc-for list="{{ implies }}" as="t" hint-placeholder-count="2"><a onClick="{{ t.onClick }}" style="padding:3px 9px;background:{{ t.color }};color:{{ t.ink }};font-size:13px;">{{ t.label }}</a></sc-for></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <span style="font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:8px;">Implied by <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">these add it</span></span>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;"><sc-for list="{{ impliedBy }}" as="t" hint-placeholder-count="2"><a onClick="{{ t.onClick }}" style="padding:2px 8px;border:1px solid {{ t.color }};color:var(--text);font-size:13px;">{{ t.label }}</a></sc-for></div>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <span style="font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:8px;">Related tags <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">most often on the same images</span></span>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 28px;">
+                  <sc-for list="{{ related }}" as="r" hint-placeholder-count="8">
+                    <div onClick="{{ r.onClick }}" style="display:grid;grid-template-columns:4px minmax(0,1fr) 120px 44px;align-items:center;gap:10px;height:34px;border-bottom:1px solid var(--line);cursor:pointer;" style-hover="background:var(--surface);">
+                      <span style="align-self:stretch;background:{{ r.color }};"></span>
+                      <span style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.label }}</span>
+                      <div style="height:4px;background:var(--surface2);"><div style="width:{{ r.pct }};height:100%;background:{{ r.color }};"></div></div>
+                      <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-align:right;">{{ r.pct }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <aside style="align-self:start;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-top:3px solid {{ typeColor }};">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Info</span><span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Character fields</span></div>
+              <sc-for list="{{ vInfo }}" as="f" hint-placeholder-count="8">
+                <div style="display:grid;grid-template-columns:118px minmax(0,1fr);gap:12px;padding:9px 16px;border-bottom:1px solid var(--line);">
+                  <span style="font:10.5px/1.5 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;padding-top:1px;">{{ f.name }}</span>
+                  <div style="min-width:0;font-size:14px;line-height:1.45;">
+                    <sc-if value="{{ f.isPlain }}" hint-placeholder-val="{{ true }}"><span>{{ f.text }}</span></sc-if>
+                    <sc-if value="{{ f.isLong }}"><span style="text-wrap:pretty;">{{ f.text }}</span></sc-if>
+                    <sc-if value="{{ f.isLink }}"><a href="{{ f.href }}" target="_blank" style="font:12.5px 'Cascadia Mono',Consolas,monospace;overflow-wrap:anywhere;">{{ f.text }} ↗</a></sc-if>
+                    <sc-if value="{{ f.isChoice }}"><span style="display:inline-block;padding:2px 8px;border:1px solid var(--text);font:700 13px/1.3 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;">{{ f.text }}</span></sc-if>
+                    <sc-if value="{{ f.isImage }}"><div style="display:flex;flex-direction:column;gap:6px;"><div style="width:132px;aspect-ratio:4/5;background:{{ f.fill }};outline:1px solid var(--line);"></div><span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);overflow-wrap:anywhere;">{{ f.text }}</span></div></sc-if>
+                    <sc-if value="{{ f.isRef }}"><div style="display:flex;flex-direction:column;gap:4px;"><sc-for list="{{ f.refs }}" as="r" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px;"><span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);width:14px;">{{ r.n }}</span><a onClick="{{ r.onClick }}" style="padding:2px 8px;background:{{ r.bg }};color:{{ r.ink }};border:{{ r.border }};font-size:13px;">{{ r.label }}</a></div></sc-for></div></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ vHidden }}"><span style="padding:9px 16px;font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ vHidden }}</span></sc-if>
+            </aside>
+          </div>
+        </div>
+
+        <sc-if value="{{ cdV }}">
+          <div style="position:absolute;inset:0;z-index:50;background:var(--scrim);"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:51;width:540px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--text);box-shadow:0 30px 80px rgba(0,0,0,.6);">
+            <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line);"><div style="width:8px;background:{{ cdV.color }};"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:16px 20px 14px;"><span style="font:700 30px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Create tag · {{ cdV.label }}</span><span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">from a link on this page · typed as #{{ cdV.name }}</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px;">
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Type</span>
+              <div style="display:flex;gap:4px;"><sc-for list="{{ cdV.types }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.onClick }}" style="height:30px;padding:0 12px;border:1px solid {{ t.color }};background:{{ t.bg }};color:{{ t.ink }};font:700 13px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">{{ t.label }}</button></sc-for></div>
+              <span style="font-size:13.5px;line-height:1.5;color:var(--text2);">The tag starts with no images and an empty wiki page. Every link to it starts working.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--line);">
+              <button onClick="{{ cdCancel }}" style="margin-left:auto;height:40px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+              <button onClick="{{ cdCreate }}" style="height:40px;padding:0 22px;border:none;background:var(--accent);color:var(--accent-ink);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Create tag</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toastV }}"><div style="position:absolute;left:40px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastV }}</div></sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 02 WIKI EDIT ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M5 · 02</span><span style="color:var(--text);">Tag wiki · edit</span><span>type [[ for tag links · ↑ ↓ enter · save updates 01</span>
+      </div>
+      <div style="position:relative;width:1440px;height:1000px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:56px;flex:none;display:flex;align-items:stretch;background:var(--bg2);border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 22px;border-right:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.02em;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="flex:1;display:flex;align-items:center;gap:12px;padding:0 18px;background:color-mix(in oklab,var(--accent) 14%,var(--bg2));font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+            <span style="color:var(--accent);font-weight:700;">✎ Editing wiki page</span><span style="color:var(--text);">Aerin Valecrest</span><span style="color:{{ eStateColor }};">· {{ eState }}</span>
+          </div>
+          <button onClick="{{ eCancel }}" style="padding:0 18px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Discard</button>
+          <button onClick="{{ eSave }}" style="padding:0 24px;border:none;background:{{ eSaveBg }};color:{{ eSaveColor }};font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Save page</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px;padding:14px 40px;border-bottom:1px solid var(--line);">
+          <div style="position:relative;width:64px;height:80px;flex:none;background:{{ eCoverFill }};outline:1px solid var(--line);"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
+            <span style="font:700 48px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;">Aerin Valecrest</span>
+            <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Name, type, aliases &amp; implications live in <a onClick="{{ vEditTag }}" style="color:var(--text);text-decoration:underline;">Edit tag</a></span>
+          </div>
+          <button onClick="{{ eChangeCover }}" style="margin-left:auto;height:34px;padding:0 14px;border:1px solid var(--line);background:none;color:var(--text);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;" style-hover="border-color:var(--text);">Change cover…</button>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 460px;">
+          <div style="display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--line);">
+            <div style="display:flex;align-items:stretch;height:40px;border-bottom:1px solid var(--line);font:12px 'Cascadia Mono',Consolas,monospace;">
+              <span style="display:flex;align-items:center;padding:0 16px;border-right:1px solid var(--line);font:700 16px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;">Description</span>
+              <sc-for list="{{ tools }}" as="t" hint-placeholder-count="6">
+                <button onClick="{{ t.onClick }}" title="{{ t.tip }}" style="min-width:40px;padding:0 10px;border:none;border-right:1px solid var(--line);background:none;color:var(--text);font:{{ t.font }};cursor:pointer;" style-hover="background:var(--surface2);">{{ t.label }}</button>
+              </sc-for>
+              <div style="margin-left:auto;display:flex;border-left:1px solid var(--line);">
+                <sc-for list="{{ viewModes }}" as="m" hint-placeholder-count="3">
+                  <button onClick="{{ m.onClick }}" style="padding:0 12px;border:none;background:{{ m.bg }};color:{{ m.color }};font:inherit;text-transform:uppercase;cursor:pointer;">{{ m.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="flex:1;min-height:0;display:grid;grid-template-columns:{{ splitCols }};">
+              <sc-if value="{{ showSrc }}" hint-placeholder-val="{{ true }}">
+                <div style="position:relative;display:flex;min-height:0;border-right:1px solid var(--line);">
+                  <textarea ref="{{ taRef }}" value="{{ eDesc }}" onChange="{{ onDesc }}" onKeyDown="{{ onDescKey }}" onKeyUp="{{ onCaret }}" onClick="{{ onCaret }}" spellcheck="false" style="flex:1;resize:none;padding:18px 20px;border:none;background:var(--bg2);color:var(--text);font:13.5px/1.65 'Cascadia Mono',Consolas,monospace;outline:none;"></textarea>
+                  <sc-if value="{{ sugOn }}">
+                    <div style="position:absolute;left:16px;right:16px;bottom:16px;z-index:5;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--text);box-shadow:0 16px 40px rgba(0,0,0,.6);">
+                      <span style="padding:6px 10px;border-bottom:1px solid var(--line);font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Link a tag · [[{{ sugQ }}</span>
+                      <sc-for list="{{ sugList }}" as="s" hint-placeholder-count="5">
+                        <div onClick="{{ s.onPick }}" style="display:flex;align-items:center;gap:8px;height:32px;padding-right:10px;background:{{ s.bg }};font-size:13px;cursor:pointer;">
+                          <span style="width:4px;align-self:stretch;background:{{ s.color }};"></span>
+                          <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><sc-if value="{{ s.hasAlias }}"><span style="color:var(--text2);font-family:'Cascadia Mono',Consolas,monospace;">{{ s.alias }} ⇒ </span></sc-if>{{ s.label }}</span>
+                          <span style="font:10px 'Cascadia Mono',Consolas,monospace;padding:2px 5px;background:{{ s.color }};color:{{ s.ink }};text-transform:uppercase;">{{ s.typeLabel }}</span>
+                        </div>
+                      </sc-for>
+                      <sc-if value="{{ sugNone }}"><span style="padding:8px 10px;font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--amber);">No tag “{{ sugQ }}” — the link will show as missing until it’s created.</span></sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ showPrev }}" hint-placeholder-val="{{ true }}">
+                <div style="overflow-y:auto;padding:16px 24px 32px;min-width:0;">
+                  <span style="display:block;margin-bottom:10px;font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Preview</span>
+                  <sc-for list="{{ eBlocks }}" as="b" hint-placeholder-count="8">
+                    <div style="display:flex;gap:10px;margin:{{ b.margin }};padding-left:{{ b.pl }};border-left:{{ b.bl }};">
+                      <sc-if value="{{ b.isLi }}"><span style="flex:none;width:6px;height:6px;margin-top:10px;background:var(--accent);"></span></sc-if>
+                      <div style="font:{{ b.font }};color:{{ b.color }};text-transform:{{ b.tt }};letter-spacing:{{ b.ls }};text-wrap:pretty;"><sc-for list="{{ b.spans }}" as="s"><sc-if value="{{ s.isText }}"><span>{{ s.t }}</span></sc-if><sc-if value="{{ s.isBold }}"><strong>{{ s.t }}</strong></sc-if><sc-if value="{{ s.isItalic }}"><em>{{ s.t }}</em></sc-if><sc-if value="{{ s.isLink }}"><a onClick="{{ s.onClick }}" style="color:var(--text);border-bottom:2px solid {{ s.color }};">{{ s.t }}</a></sc-if><sc-if value="{{ s.isMissing }}"><a onClick="{{ s.onClick }}" title="No such tag yet — click to create it" style="color:var(--amber);border-bottom:1px dashed var(--amber);">{{ s.t }}<span style="margin-left:3px;font:9.5px 'Cascadia Mono',Consolas,monospace;vertical-align:super;text-transform:uppercase;letter-spacing:0;">missing</span></a></sc-if></sc-for></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;min-height:40px;padding:6px 16px;border-top:1px solid var(--line);font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">
+              <span style="text-transform:uppercase;"><span style="color:var(--text);">{{ eLinkCount }}</span> links</span>
+              <sc-if value="{{ eHasMissing }}"><span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;text-transform:uppercase;"><span style="color:var(--amber);">{{ eMissingCount }} missing:</span><sc-for list="{{ eMissing }}" as="m" hint-placeholder-count="2"><a onClick="{{ m.onClick }}" style="color:var(--amber);text-transform:none;border-bottom:1px dashed var(--amber);">{{ m.label }}</a></sc-for></span></sc-if>
+              <span style="margin-left:auto;">**bold** · *italic* · ## heading · - list · &gt; quote · [[type:name|label]]</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;min-height:0;background:var(--surface);">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--line);"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Info fields</span><span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">empty fields stay hidden on the page</span></div>
+            <div style="flex:1;overflow-y:auto;overflow-x:hidden;">
+              <sc-for list="{{ eds }}" as="f" hint-placeholder-count="8">
+                <div style="display:flex;flex-direction:column;gap:7px;padding:12px 18px 14px;border-bottom:1px solid var(--line);background:{{ f.rowBg }};">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="width:22px;height:18px;flex:none;display:grid;place-items:center;border:1px solid var(--line);font:10px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ f.glyph }}</span>
+                    <span style="font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;">{{ f.name }}</span>
+                    <span style="font:10px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ f.kindLabel }}</span>
+                    <sc-if value="{{ f.isEmpty }}"><span style="font:10px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;padding:1px 5px;border:1px dashed var(--line);">hidden · empty</span></sc-if>
+                    <sc-if value="{{ f.canClear }}"><button onClick="{{ f.onClear }}" style="margin-left:auto;border:none;background:none;padding:0;color:var(--text2);font:10.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">Clear</button></sc-if>
+                  </div>
+
+                  <sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}"><input value="{{ f.val }}" onChange="{{ f.onInput }}" style="height:34px;padding:0 10px;border:1px solid var(--line);background:var(--bg2);color:var(--text);font:14px Bahnschrift,'DIN Alternate','Segoe UI',sans-serif;outline:none;"></sc-if>
+                  <sc-if value="{{ f.isLong }}"><textarea value="{{ f.val }}" onChange="{{ f.onInput }}" rows="3" style="resize:vertical;padding:8px 10px;border:1px solid var(--line);background:var(--bg2);color:var(--text);font:14px/1.5 Bahnschrift,'DIN Alternate','Segoe UI',sans-serif;outline:none;"></textarea></sc-if>
+                  <sc-if value="{{ f.isNum }}">
+                    <div style="display:flex;align-items:stretch;height:34px;border:1px solid {{ f.border }};background:var(--bg2);font:13px 'Cascadia Mono',Consolas,monospace;">
+                      <button onClick="{{ f.dec }}" style="width:34px;border:none;border-right:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">−</button>
+                      <input value="{{ f.val }}" onChange="{{ f.onInput }}" inputmode="decimal" style="flex:1;min-width:0;padding:0 10px;border:none;background:none;color:var(--text);font:inherit;outline:none;">
+                      <span style="display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--line);color:var(--text2);">{{ f.unit }}</span>
+                      <button onClick="{{ f.inc }}" style="width:34px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">+</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.isDate }}">
+                    <div style="display:flex;align-items:stretch;height:34px;border:1px solid {{ f.border }};background:var(--bg2);font:13px 'Cascadia Mono',Consolas,monospace;">
+                      <input value="{{ f.val }}" onChange="{{ f.onInput }}" placeholder="YYYY-MM-DD" style="width:130px;padding:0 10px;border:none;background:none;color:var(--text);font:inherit;outline:none;">
+                      <span style="flex:1;display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--line);color:var(--text2);">{{ f.pretty }}</span>
+                      <button onClick="{{ f.today }}" style="padding:0 10px;border:none;border-left:1px solid var(--line);background:none;color:var(--text2);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">Today</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.isLink }}">
+                    <div style="display:flex;align-items:stretch;height:34px;border:1px solid {{ f.border }};background:var(--bg2);font:12.5px 'Cascadia Mono',Consolas,monospace;">
+                      <input value="{{ f.val }}" onChange="{{ f.onInput }}" placeholder="https://" style="flex:1;min-width:0;padding:0 10px;border:none;background:none;color:var(--text);font:inherit;outline:none;">
+                      <sc-if value="{{ f.linkOk }}"><a href="{{ f.val }}" target="_blank" style="display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--line);color:var(--text2);">{{ f.domain }} ↗</a></sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.isChoice }}">
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                      <sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.onClick }}" style="height:30px;padding:0 12px;border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.color }};font:700 13px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">{{ o.label }}</button></sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.isImage }}">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                      <sc-if value="{{ f.hasImg }}"><div style="width:64px;height:80px;flex:none;background:{{ f.imgFill }};outline:1px solid var(--line);"></div></sc-if>
+                      <sc-if value="{{ f.noImg }}"><div style="width:64px;height:80px;flex:none;border:1px dashed var(--text2);display:grid;place-items:center;font:10px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">NONE</div></sc-if>
+                      <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
+                        <span style="font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);overflow-wrap:anywhere;">{{ f.imgName }}</span>
+                        <button onClick="{{ f.onChoose }}" style="align-self:flex-start;height:30px;padding:0 12px;border:1px solid var(--text);background:none;color:var(--text);font:11.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">Choose image…</button>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.isRef }}">
+                    <div style="display:flex;flex-direction:column;border:1px solid var(--line);background:var(--bg2);">
+                      <sc-for list="{{ f.refs }}" as="r" hint-placeholder-count="3">
+                        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 6px 0 10px;border-bottom:1px solid var(--line);">
+                          <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--accent);font-weight:700;width:16px;">{{ r.n }}</span>
+                          <span style="padding:2px 8px;background:{{ r.color }};color:{{ r.ink }};font-size:13px;">{{ r.label }}</span>
+                          <div style="margin-left:auto;display:flex;">
+                            <button onClick="{{ r.up }}" style="width:24px;height:24px;border:1px solid var(--line);background:none;color:{{ r.upColor }};font:9px sans-serif;cursor:pointer;">▲</button>
+                            <button onClick="{{ r.down }}" style="width:24px;height:24px;border:1px solid var(--line);border-left:none;background:none;color:{{ r.downColor }};font:9px sans-serif;cursor:pointer;">▼</button>
+                            <button onClick="{{ r.remove }}" style="width:24px;height:24px;border:none;background:none;color:var(--text2);cursor:pointer;">✕</button>
+                          </div>
+                        </div>
+                      </sc-for>
+                      <div style="position:relative;display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;">
+                        <span style="color:var(--accent);font:700 13px 'Cascadia Mono',Consolas,monospace;">+</span>
+                        <input value="{{ f.refQ }}" onChange="{{ f.onRefQ }}" onKeyDown="{{ f.onRefKey }}" placeholder="{{ f.refPh }}" style="flex:1;border:none;background:none;color:var(--text);font:12.5px 'Cascadia Mono',Consolas,monospace;outline:none;">
+                      </div>
+                      <sc-if value="{{ f.refSugg }}">
+                        <div style="display:flex;flex-direction:column;border-top:1px solid var(--line);">
+                          <sc-for list="{{ f.refSugg }}" as="s" hint-placeholder-count="3"><div onClick="{{ s.onPick }}" style="display:flex;align-items:center;gap:8px;height:28px;padding-right:10px;font-size:12.5px;cursor:pointer;" style-hover="background:var(--surface2);"><span style="width:4px;align-self:stretch;background:{{ s.color }};"></span><span style="flex:1;">{{ s.label }}</span></div></sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.hasMsg }}"><span style="font:11px 'Cascadia Mono',Consolas,monospace;color:{{ f.msgColor }};">{{ f.msg }}</span></sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <sc-if value="{{ cdE }}">
+          <div style="position:absolute;inset:0;z-index:50;background:var(--scrim);"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:51;width:540px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--text);box-shadow:0 30px 80px rgba(0,0,0,.6);">
+            <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line);"><div style="width:8px;background:{{ cdE.color }};"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:16px 20px 14px;"><span style="font:700 30px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Create tag · {{ cdE.label }}</span><span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">from a link on this page · typed as #{{ cdE.name }}</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px;">
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Type</span>
+              <div style="display:flex;gap:4px;"><sc-for list="{{ cdE.types }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.onClick }}" style="height:30px;padding:0 12px;border:1px solid {{ t.color }};background:{{ t.bg }};color:{{ t.ink }};font:700 13px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">{{ t.label }}</button></sc-for></div>
+              <span style="font-size:13.5px;line-height:1.5;color:var(--text2);">The tag starts with no images and an empty wiki page. Every link to it starts working.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--line);">
+              <button onClick="{{ cdCancel }}" style="margin-left:auto;height:40px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+              <button onClick="{{ cdCreate }}" style="height:40px;padding:0 22px;border:none;background:var(--accent);color:var(--accent-ink);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Create tag</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toastE }}"><div style="position:absolute;left:40px;bottom:56px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastE }}</div></sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 03 IMAGE PICKER ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M5 · 03</span><span style="color:var(--text);">Image picker</span><span>tag’s own images first · type to search everywhere · fills board 02</span>
+      </div>
+      <div style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);outline:1px solid var(--line);">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+          <div style="height:56px;flex:none;display:flex;align-items:center;gap:8px;padding:0 22px;background:color-mix(in oklab,var(--accent) 14%,var(--bg2));border-bottom:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="padding:20px 40px;font:700 48px/0.9 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;border-bottom:1px solid var(--line);">Aerin Valecrest</div>
+          <div style="flex:1;display:grid;grid-template-columns:1fr 460px;">
+            <div style="background:var(--bg2);"></div><div style="background:var(--surface);border-left:1px solid var(--line);"></div>
+          </div>
+        </div>
+        <div style="position:absolute;inset:0;background:var(--scrim);"></div>
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1120px;height:780px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--text);box-shadow:0 30px 80px rgba(0,0,0,.6);">
+          <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line);">
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:16px 20px 14px;">
+              <span style="font:700 30px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Choose image · {{ pkTargetLabel }}</span>
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">for aerin valecrest · the original file stays where it is</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:0 16px;border-left:1px solid var(--line);">
+              <div style="display:flex;border:1px solid var(--line);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                <sc-for list="{{ pkTargets }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.onClick }}" style="padding:7px 12px;border:none;background:{{ t.bg }};color:{{ t.color }};font:inherit;font-weight:700;cursor:pointer;">{{ t.label }}</button></sc-for>
+              </div>
+            </div>
+            <button style="width:56px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:16px sans-serif;cursor:pointer;">✕</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;height:44px;padding:0 20px;border-bottom:1px solid var(--line);">
+            <span style="color:var(--accent);font:700 13px 'Cascadia Mono',Consolas,monospace;">&gt;</span>
+            <input value="{{ pkQ }}" onChange="{{ onPkQ }}" placeholder="filter by file name, or search the whole library…" style="flex:1;height:100%;border:none;background:none;color:var(--text);font:13px 'Cascadia Mono',Consolas,monospace;outline:none;">
+            <sc-if value="{{ pkHasQ }}"><button onClick="{{ pkClearQ }}" style="border:none;background:none;color:var(--text2);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">✕ clear</button></sc-if>
+          </div>
+          <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 320px;">
+            <div style="overflow-y:auto;background:var(--bg2);padding:0 0 20px;">
+              <div style="position:sticky;top:0;z-index:2;display:flex;align-items:baseline;gap:10px;padding:12px 20px 8px;background:var(--bg2);">
+                <span style="width:10px;height:10px;background:{{ typeColor }};"></span>
+                <span style="font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Tagged aerin valecrest</span>
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ pkOwnCount }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;padding:0 20px;">
+                <sc-for list="{{ pkOwn }}" as="t" hint-placeholder-count="18">
+                  <div onClick="{{ t.onClick }}" onDoubleClick="{{ t.onUse }}" title="{{ t.name }}" style="position:relative;aspect-ratio:1;background:var(--thumb);outline:{{ t.outline }};cursor:pointer;display:grid;place-items:center;" style-hover="outline:2px solid var(--text);">
+                    <div style="width:{{ t.w }};height:{{ t.h }};background:{{ t.fill }};"></div>
+                    <sc-if value="{{ t.isCurrent }}"><span style="position:absolute;top:0;left:0;padding:2px 5px;background:var(--text);color:var(--bg);font:700 9.5px 'Cascadia Mono',Consolas,monospace;">CURRENT</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ pkOwnNone }}"><span style="display:block;padding:4px 20px 0;font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">None of the tag’s images match “{{ pkQ }}”.</span></sc-if>
+
+              <div style="display:flex;align-items:baseline;gap:10px;padding:22px 20px 8px;margin-top:10px;border-top:1px solid var(--line);">
+                <span style="width:10px;height:10px;border:1px solid var(--text2);"></span>
+                <span style="font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Everywhere</span>
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ pkEveryCount }}</span>
+              </div>
+              <sc-if value="{{ pkPrompt }}" hint-placeholder-val="{{ true }}">
+                <div style="margin:0 20px;padding:22px;border:1px dashed var(--line);font:12px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;line-height:1.6;">Type above to search all 40,265 images — by file name, or #tag.<br>Try “ref”, “court”, “lisbon”.</div>
+              </sc-if>
+              <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;padding:0 20px;">
+                <sc-for list="{{ pkEvery }}" as="t" hint-placeholder-count="0">
+                  <div onClick="{{ t.onClick }}" onDoubleClick="{{ t.onUse }}" title="{{ t.name }}" style="position:relative;aspect-ratio:1;background:var(--thumb);outline:{{ t.outline }};cursor:pointer;display:grid;place-items:center;" style-hover="outline:2px solid var(--text);">
+                    <div style="width:{{ t.w }};height:{{ t.h }};background:{{ t.fill }};"></div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ pkEveryNone }}"><span style="display:block;padding:0 20px;font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Nothing else in the library matches.</span></sc-if>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;padding:18px;border-left:1px solid var(--line);min-width:0;">
+              <sc-if value="{{ pkHasSel }}" hint-placeholder-val="{{ true }}">
+                <div style="aspect-ratio:4/5;background:var(--thumb);outline:1px solid var(--line);display:grid;place-items:center;"><div style="width:{{ pkSel.w }};height:{{ pkSel.h }};background:{{ pkSel.fill }};"></div></div>
+                <span style="font:700 18px/1.05 'Bahnschrift Condensed','DIN Condensed',sans-serif;overflow-wrap:anywhere;">{{ pkSel.name }}</span>
+                <div style="display:grid;grid-template-columns:84px 1fr;font:11.5px 'Cascadia Mono',Consolas,monospace;border-top:1px solid var(--line);">
+                  <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">IN</span><span style="padding:5px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere;">{{ pkSel.path }}</span>
+                  <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">SIZE</span><span style="padding:5px 0;border-bottom:1px solid var(--line);">{{ pkSel.dims }}</span>
+                  <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">TAGGED</span><span style="padding:5px 0;border-bottom:1px solid var(--line);color:{{ pkSel.taggedColor }};">{{ pkSel.tagged }}</span>
+                </div>
+                <sc-if value="{{ pkSel.foreign }}"><span style="font-size:13px;line-height:1.45;color:var(--text2);text-wrap:pretty;">Not tagged aerin valecrest. It can still be used; the image is only referenced, not moved or tagged.</span></sc-if>
+              </sc-if>
+              <sc-if value="{{ pkNoSel }}"><div style="flex:1;display:grid;place-items:center;border:1px dashed var(--line);font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;text-align:center;padding:20px;">Pick an image.<br>Double-click uses it right away.</div></sc-if>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--line);">
+            <sc-if value="{{ pkCanRemove }}"><button onClick="{{ pkRemove }}" style="height:40px;padding:0 16px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">{{ pkRemoveLabel }}</button></sc-if>
+            <button style="margin-left:auto;height:40px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+            <button onClick="{{ pkUse }}" style="height:40px;padding:0 22px;border:none;background:{{ pkUseBg }};color:{{ pkUseColor }};font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Use as {{ pkTargetLabel }}</button>
+          </div>
+        </div>
+        <sc-if value="{{ toastP }}"><div style="position:absolute;left:32px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastP }}</div></sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 04 TAG TYPES · CUSTOM FIELDS ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M5 · 04</span><span style="color:var(--text);">Tag types · custom fields</span><span>the kind menu shows what each change would cost</span>
+        <button onClick="{{ ttReset }}" style="margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Reset board</button>
+      </div>
+      <div onClick="{{ closeKind }}" style="position:relative;width:1440px;height:1000px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:56px;flex:none;display:flex;align-items:center;gap:8px;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+        <div style="padding:22px 40px 18px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;"><a style="color:var(--text2);">Tags</a><span>/</span><span style="color:var(--accent);">Tag types</span></div>
+          <div style="display:flex;align-items:flex-end;gap:28px;">
+            <h2 style="margin:0;font:700 96px/0.8 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;">Tag types</h2>
+            <div style="display:flex;border:1px solid var(--line);margin-bottom:4px;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+              <span style="padding:7px 14px;color:var(--text2);">Name · color · order</span>
+              <span style="padding:7px 14px;background:var(--text);color:var(--bg);font-weight:700;">Custom fields</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:300px minmax(0,1fr);">
+          <div style="display:flex;flex-direction:column;border-right:1px solid var(--line);background:var(--surface);">
+            <sc-for list="{{ ttList }}" as="t" hint-placeholder-count="4">
+              <div onClick="{{ t.onClick }}" style="display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;border-bottom:1px solid var(--line);border-left:4px solid {{ t.bar }};background:{{ t.bg }};cursor:pointer;" style-hover="background:var(--surface2);">
+                <span style="width:14px;height:14px;background:{{ t.color }};"></span>
+                <span style="flex:1;font:700 20px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.04em;text-transform:uppercase;">{{ t.label }}</span>
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ t.n }} fields</span>
+              </div>
+            </sc-for>
+            <span style="padding:14px 20px;font:11px/1.5 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;text-wrap:pretty;">Each type has its own fields. Every tag of that type gets them on its wiki page.</span>
+          </div>
+          <div style="display:flex;flex-direction:column;min-width:0;min-height:0;">
+            <div style="display:flex;align-items:center;gap:16px;padding:16px 28px;border-bottom:1px solid var(--line);">
+              <span style="width:8px;align-self:stretch;background:{{ ttColor }};"></span>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <span style="font:700 34px/0.9 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ ttLabel }} fields</span>
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ ttSub }}</span>
+              </div>
+              <button onClick="{{ addField }}" style="margin-left:auto;height:40px;padding:0 18px;border:none;background:var(--accent);color:var(--accent-ink);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">+ Add field</button>
+            </div>
+            <div style="display:grid;grid-template-columns:70px minmax(0,1fr) 200px 150px 200px;align-items:center;height:32px;padding:0 28px;border-bottom:1px solid var(--line);font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">
+              <span>Order</span><span>Field name</span><span>Kind</span><span>Filled on</span><span></span>
+            </div>
+            <div style="flex:1;overflow-y:auto;overflow-x:hidden;background:var(--bg2);padding-bottom:40px;">
+              <sc-for list="{{ ttFields }}" as="f" hint-placeholder-count="8">
+                <div style="display:flex;flex-direction:column;border-bottom:1px solid var(--line);background:{{ f.bg }};">
+                  <div style="display:grid;grid-template-columns:70px minmax(0,1fr) 200px 150px 200px;align-items:center;min-height:52px;padding:0 28px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                      <span style="font:700 20px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text2);width:22px;">{{ f.n }}</span>
+                      <div style="display:flex;flex-direction:column;">
+                        <button onClick="{{ f.up }}" style="width:24px;height:18px;border:1px solid var(--line);background:none;color:{{ f.upColor }};font:9px sans-serif;cursor:pointer;">▲</button>
+                        <button onClick="{{ f.down }}" style="width:24px;height:18px;border:1px solid var(--line);border-top:none;background:none;color:{{ f.downColor }};font:9px sans-serif;cursor:pointer;">▼</button>
+                      </div>
+                    </div>
+                    <div style="padding-right:20px;"><input value="{{ f.name }}" onChange="{{ f.onName }}" style="width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:700 17px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.04em;text-transform:uppercase;outline:none;"></div>
+                    <div style="position:relative;">
+                      <button onClick="{{ f.onKind }}" style="display:flex;align-items:center;gap:8px;width:180px;height:34px;padding:0 10px;border:1px solid {{ f.kindBorder }};background:var(--bg);color:var(--text);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;"><span style="width:22px;color:var(--text2);">{{ f.glyph }}</span><span style="flex:1;text-align:left;">{{ f.kindLabel }}</span><span style="color:var(--text2);">▾</span></button>
+                      <sc-if value="{{ f.menuOpen }}">
+                        <div onClick="{{ stop }}" style="position:absolute;left:0;top:38px;z-index:20;width:300px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--text);box-shadow:0 16px 40px rgba(0,0,0,.6);">
+                          <span style="padding:6px 10px;border-bottom:1px solid var(--line);font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Change kind · {{ f.filled }} values exist</span>
+                          <sc-for list="{{ f.kinds }}" as="k" hint-placeholder-count="8">
+                            <button onClick="{{ k.onClick }}" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:none;border-bottom:1px solid var(--line);background:{{ k.bg }};color:var(--text);font:12px 'Cascadia Mono',Consolas,monospace;text-align:left;cursor:pointer;" style-hover="background:var(--surface2);">
+                              <span style="width:22px;color:var(--text2);">{{ k.glyph }}</span><span style="flex:1;text-transform:uppercase;">{{ k.label }}</span><span style="font-size:10.5px;color:{{ k.noteColor }};">{{ k.note }}</span>
+                            </button>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;font:11.5px 'Cascadia Mono',Consolas,monospace;">
+                      <div style="width:60px;height:4px;background:var(--surface2);"><div style="width:{{ f.fillPct }};height:100%;background:{{ ttColor }};"></div></div>
+                      <span style="color:var(--text2);">{{ f.filled }} / {{ ttTotal }}</span>
+                    </div>
+                    <div style="display:flex;justify-content:flex-end;font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                      <button onClick="{{ f.onSettings }}" style="height:30px;padding:0 10px;border:1px solid var(--line);background:{{ f.setBg }};color:var(--text);font:inherit;cursor:pointer;">Settings {{ f.setArrow }}</button>
+                      <button onClick="{{ f.onDelete }}" style="height:30px;padding:0 10px;border:1px solid var(--line);border-left:none;background:none;color:var(--red);font:inherit;cursor:pointer;" style-hover="border-color:var(--red);">Delete</button>
+                    </div>
+                  </div>
+
+                  <sc-if value="{{ f.pend }}">
+                    <div style="display:flex;align-items:center;gap:12px;margin:0 28px 12px 98px;padding:10px 12px;border:1px solid var(--amber);background:color-mix(in oklab,var(--amber) 8%,var(--bg));font-size:14px;line-height:1.45;">
+                      <span style="font:700 11px 'Cascadia Mono',Consolas,monospace;color:var(--amber);text-transform:uppercase;">Can’t convert</span>
+                      <span style="flex:1;text-wrap:pretty;">{{ f.pendText }}</span>
+                      <button onClick="{{ f.pendCancel }}" style="height:30px;padding:0 12px;border:1px solid var(--line);background:none;color:var(--text);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">Keep {{ f.kindLabel }}</button>
+                      <button onClick="{{ f.pendGo }}" style="height:30px;padding:0 12px;border:none;background:var(--amber);color:#111;font:700 11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">{{ f.pendBtn }}</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.del }}">
+                    <div style="display:flex;align-items:center;gap:12px;margin:0 28px 12px 98px;padding:10px 12px;border:1px solid var(--red);background:color-mix(in oklab,var(--red) 10%,var(--bg));font-size:14px;">
+                      <span style="flex:1;">{{ f.delText }}</span>
+                      <button onClick="{{ f.delCancel }}" style="height:30px;padding:0 12px;border:1px solid var(--line);background:none;color:var(--text);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">Keep it</button>
+                      <button onClick="{{ f.delGo }}" style="height:30px;padding:0 12px;border:none;background:var(--red);color:#fff;font:700 11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">Delete field</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.open }}">
+                    <div style="display:flex;flex-direction:column;gap:10px;margin:0 28px 14px 98px;padding:12px 14px;border:1px solid var(--line);background:var(--bg);">
+                      <sc-if value="{{ f.sNum }}">
+                        <div style="display:flex;align-items:center;gap:10px;font:11.5px 'Cascadia Mono',Consolas,monospace;"><span style="width:90px;color:var(--text2);text-transform:uppercase;">Unit</span><input value="{{ f.unit }}" onChange="{{ f.onUnit }}" placeholder="e.g. cm" style="width:140px;height:30px;padding:0 8px;border:1px solid var(--line);background:var(--bg2);color:var(--text);font:inherit;outline:none;"><span style="color:var(--text2);">shown after the value</span></div>
+                      </sc-if>
+                      <sc-if value="{{ f.sChoice }}">
+                        <div style="display:flex;align-items:flex-start;gap:10px;font:11.5px 'Cascadia Mono',Consolas,monospace;">
+                          <span style="width:90px;flex:none;color:var(--text2);text-transform:uppercase;padding-top:7px;">Options</span>
+                          <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+                            <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="4"><span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 4px 0 10px;border:1px solid var(--text);font:700 13px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;">{{ o.label }}<button onClick="{{ o.onRemove }}" style="border:none;background:none;color:var(--text2);font-size:11px;cursor:pointer;">✕</button></span></sc-for>
+                            <input value="{{ f.optIn }}" onChange="{{ f.onOptIn }}" onKeyDown="{{ f.onOptKey }}" placeholder="+ option, enter" style="width:140px;height:28px;padding:0 8px;border:1px dashed var(--line);background:none;color:var(--text);font:inherit;outline:none;">
+                          </div>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ f.sRef }}">
+                        <div style="display:flex;align-items:center;gap:10px;font:11.5px 'Cascadia Mono',Consolas,monospace;">
+                          <span style="width:90px;color:var(--text2);text-transform:uppercase;">Allows</span>
+                          <sc-for list="{{ f.refTypes }}" as="r" hint-placeholder-count="4"><button onClick="{{ r.onClick }}" style="height:28px;padding:0 10px;border:1px solid {{ r.color }};background:{{ r.bg }};color:{{ r.ink }};font:700 12.5px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">{{ r.label }}</button></sc-for>
+                        </div>
+                        <div onClick="{{ f.onMulti }}" style="display:flex;align-items:center;gap:10px;font:11.5px 'Cascadia Mono',Consolas,monospace;cursor:pointer;"><span style="width:90px;color:var(--text2);text-transform:uppercase;">Count</span><span style="width:14px;height:14px;border:1px solid var(--text);background:{{ f.multiBg }};color:#111;font:700 10px/14px sans-serif;text-align:center;">{{ f.multiMark }}</span><span>Multiple, in a chosen order</span></div>
+                      </sc-if>
+                      <sc-if value="{{ f.sNone }}"><span style="font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ f.noneText }}</span></sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ ttEmpty }}">
+                <div style="margin:40px 28px;padding:32px;border:1px dashed var(--line);display:flex;flex-direction:column;gap:8px;">
+                  <span style="font:700 36px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">No custom fields</span>
+                  <span style="font:12px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ ttLabel }} tags show only their description. Add a field to give them an info box.</span>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ toastT }}"><div style="position:absolute;left:40px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastT }}</div></sc-if>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static D = (() => {
+    const RAW = {
+      character: 'aerin_valecrest lathir maelis_of_the_thornwood_court ysolde corin_ashgrove the_pale_archivist fennick saoirse_dunmore odrin vael nimue_(winter_form) tamsin_reed kaelen silas_wren aerin_(child)',
+      source: 'the_ilvenmar_cycle chapter_3_the_long_road_south original_character the_lord_of_the_rings ashes_of_varn_(webcomic) thornwood_tales commissions_2025 lotr_fanart',
+      artist: 'felipe mirelle_k ohno_tatsu gr4yhound lumen_studio petra_vasquez jun_ah silverpoint_sam unknown_artist',
+      general: 'silver_hair long_hair pointy_ears full_body turnaround expression_sheet portrait armor cape circlet red_dress silk_embroidered_robe sketch lineart flat_colors painterly blue_eyes smiling serious hands_reference holding_staff night forest_background white_background jewelry braid freckles silver_court_regalia wip color_palette multiple_views',
+    };
+    const TAG = {}; Object.entries(RAW).forEach(([t, s]) => s.split(' ').forEach(n => TAG[n] = t));
+    const TYPES = [{ id: 'character', label: 'Character', color: '#2E9E5B', total: 15 }, { id: 'source', label: 'Source', color: '#B0487A', total: 8 }, { id: 'artist', label: 'Artist', color: '#D08A1E', total: 9 }, { id: 'general', label: 'General', color: '#6B7A99', total: 32 }];
+    const TY = Object.fromEntries(TYPES.map(t => [t.id, t]));
+    const AKA = { aerin_valecrest: ['aerin', 'the_silver_heir'], the_lord_of_the_rings: ['lotr'], silver_hair: ['white_hair'], odrin: ['silvermane'], the_ilvenmar_cycle: ['ilvenmar'], mirelle_k: ['mirelle'] };
+    const ALIAS = {}; Object.entries(AKA).forEach(([n, l]) => l.forEach(a => ALIAS[a] = n));
+    const ink = hex => { const n = parseInt(hex.slice(1), 16); const L = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }; return (0.2126 * L((n >> 16) & 255) + 0.7152 * L((n >> 8) & 255) + 0.0722 * L(n & 255)) > 0.179 ? '#000000' : '#FFFFFF'; };
+    const fill = (h, l = 0.44) => `repeating-linear-gradient(135deg, oklch(${l} 0.07 ${h}) 0 7px, oklch(${l - 0.04} 0.07 ${h}) 7px 14px)`;
+    const hueOf = i => (i * 47 + 20) % 360;
+    const KINDS = [['text', 'Text', 'Aa'], ['longtext', 'Long text', '¶'], ['number', 'Number', '12'], ['date', 'Date', '▦'], ['link', 'Link', '↗'], ['choice', 'Choice', '◉'], ['image', 'Image', '▣'], ['tagref', 'Tag reference', '⌗']];
+    const ARS = [4/5, 2/3, 3/4, 1, 4/3, 16/9, 3/2, 9/16];
+    const OWN = ['aerin_valecrest__court_regalia_turnaround_FINAL_v3.png', 'aerin_expressions_sheet_A.png', 'commission_mirelle_k_aerin_and_lathir.png', 'aerin_court_dress_lineup.png', 'blink_loop_aerin.gif', 'aerin_cape_flow_test.gif', 'aerin_and_odrin_sparring.png', 'aerin_silhouette_tests.png', 'aerin_throne_final.png', 'aerin_valecrest_bust_v4.png', 'aerin_winter_court.png', 'aerin_hands_ref.png', 'aerin_side_view.png', 'aerin_portrait_oil_study.jpg', 'aerin_back_view.png', 'coronation_sketch_colored.png', 'regalia_detail_brooch.png', 'aerin_circlet_closeup.png']
+      .map((name, i) => ({ id: 'o' + i, name, fill: fill(hueOf(i + 3), 0.46), ar: ARS[i % 8], path: ['Fantasy\\Elves\\High Court of Ilvenmar\\Portraits & Expression Sheets', 'Fantasy\\Elves\\High Court of Ilvenmar\\Court Regalia', 'Character Design Sheets\\Turnarounds'][i % 3], own: true }));
+    const EVERY = [['throne_room_establishing_shot_4k.jpg', 'Fantasy\\Elves\\Landscapes'], ['ref_dramatic_rimlight_moodboard.jpg', 'Anatomy & Pose Reference\\Lighting'], ['odrin_old_master_portrait_oil_ref.jpg', 'Fantasy\\Elves\\High Court of Ilvenmar\\Portraits & Expression Sheets'], ['court_dress_historical_ref_1540.jpg', 'Character Design Sheets\\Costume refs'], ['circlet_reference_museum_photo.jpg', 'Photography\\2024\\Museum'], ['silver_hair_study_by_mirelle.png', 'Inbox'], ['lisbon_tram_28.jpg', 'Photography\\2025\\Lisbon'], ['lisbon_rooftops_dusk.jpg', 'Photography\\2025\\Lisbon'], ['court_procession_wide.jpg', 'Fantasy\\Battle Scenes'], ['elf_ear_anatomy_chart.png', 'Fantasy\\Elves\\Ear & Hair Studies'], ['beach_trip_0042.jpg', 'Photography\\2025\\Beach Trip'], ['pose_ref_kneeling_with_staff.jpg', 'Anatomy & Pose Reference\\Kneeling'], ['map_detail_court_district.jpg', 'Fantasy\\Maps'], ['banner_ref_silver_court.png', 'Fantasy\\Heraldry & Crests']]
+      .map(([name, path], i) => ({ id: 'e' + i, name, path, fill: fill(hueOf(i * 3 + 11), 0.46), ar: ARS[(i + 3) % 8], own: false }));
+    const IMGS = Object.fromEntries([...OWN, ...EVERY].map(x => [x.id, x]));
+    const FIELDS = {
+      character: [
+        { id: 'portrait', name: 'Portrait', kind: 'image', filled: 11 },
+        { id: 'full', name: 'Full name', kind: 'text', filled: 13 },
+        { id: 'title', name: 'Title', kind: 'text', filled: 9 },
+        { id: 'summary', name: 'Summary', kind: 'longtext', filled: 11 },
+        { id: 'age', name: 'Age', kind: 'number', unit: 'years', filled: 12 },
+        { id: 'height', name: 'Height', kind: 'number', unit: 'cm', filled: 4 },
+        { id: 'first', name: 'First appearance', kind: 'date', filled: 10 },
+        { id: 'allegiance', name: 'Allegiance', kind: 'choice', options: ['Silver Court', 'Thornwood', 'Varn', 'Unaligned'], filled: 14 },
+        { id: 'family', name: 'Family', kind: 'tagref', refTypes: ['character'], multiple: true, filled: 8 },
+        { id: 'sheet', name: 'Reference sheet', kind: 'link', filled: 7 },
+        { id: 'voice', name: 'Voice reference', kind: 'link', filled: 2 },
+      ],
+      source: [{ id: 'medium', name: 'Medium', kind: 'choice', options: ['Novel', 'Webcomic', 'Film', 'Game', 'Campaign'], filled: 6 }, { id: 'started', name: 'Started', kind: 'date', filled: 5 }, { id: 'site', name: 'Official site', kind: 'link', filled: 3 }],
+      artist: [{ id: 'web', name: 'Website', kind: 'link', filled: 7 }, { id: 'comm', name: 'Commissions', kind: 'choice', options: ['Open', 'Closed', 'Waitlist'], filled: 5 }],
+      general: [],
+    };
+    const DESC = `**Aerin Valecrest** is the heir to the silver court in [[source:the_ilvenmar_cycle]], and the reluctant centre of most of its trouble.
+
+## Appearance
+Silver hair worn long, braided for court. The [[general:circlet]] never comes off in canon; fan art disagrees. The scar over her left eye dates from [[the_siege_of_varn]].
+
+## Relationships
+- Sworn blade: [[character:lathir]]
+- Mentor: [[character:odrin]]
+- Cousin and rival: [[character:maelis_of_the_thornwood_court]]
+- Childhood friend: [[character:sera_moonwhistle]]
+
+## Drawing notes
+*Never smiles in canon.* Check the hands on any [[general:holding_staff]] pose — she is left-handed in chapter 3 only.
+> Approved palette: [[artist:mirelle_k|Mirelle's sheet]], pinned in the court album.`;
+    const VALS = { portrait: 'o13', full: 'Aerin Isolde Valecrest', title: 'Heir to the Silver Court', summary: 'Raised in the Thornwood until the Siege of Varn; recalled to court at sixteen.', age: '19', height: '', first: '2022-04-17', allegiance: 'Silver Court', family: ['odrin', 'maelis_of_the_thornwood_court', 'nimue_(winter_form)'], sheet: 'https://felipe.art/ilvenmar/aerin-sheet', voice: '' };
+    const RELATED = [['silver_hair', 88], ['circlet', 74], ['felipe', 63], ['cape', 51], ['lathir', 41], ['chapter_3_the_long_road_south', 35], ['odrin', 22], ['mirelle_k', 12]];
+    return { TAG, TYPES, TY, AKA, ALIAS, ink, fill, hueOf, KINDS, OWN, EVERY, IMGS, FIELDS, DESC, VALS, RELATED };
+  })();
+
+  taRef = React.createRef();
+  initWiki() { const D = Component.D; return { desc: D.DESC, cover: 'o0', vals: JSON.parse(JSON.stringify(D.VALS)) }; }
+  state = (() => { const w = this.initWiki(); return {
+    toast: null, wiki: w, draft: JSON.parse(JSON.stringify(w)), edited: '2 days ago', created: {}, cd: null,
+    caret: 0, sugOff: -1, sugHi: 0, mode: 'split', refQ: {},
+    pkTarget: 'portrait', pkSel: 'o13', pkQ: '',
+    fields: JSON.parse(JSON.stringify(Component.D.FIELDS)), tt: 'character', kindMenu: null, pend: null, delF: null, openF: 'allegiance', optIn: '',
+  }; })();
+
+  componentDidUpdate() { if (this._sel && this.taRef.current) { const t = this.taRef.current; t.focus(); t.setSelectionRange(this._sel[0], this._sel[1]); this._sel = null; } }
+  toast(b, text) { this.setState({ toast: { b, text } }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 3200); }
+
+  renderVals() {
+    const D = Component.D, st = this.state, set = p => this.setState(p), toast = (b, t) => this.toast(b, t);
+    const tst = b => st.toast && st.toast.b === b ? st.toast.text : '';
+    const disp = s => String(s).replace(/_/g, ' ');
+    const col = t => (D.TY[t] || { color: '#6B7A99' }).color;
+    const all = { ...D.TAG, ...st.created };
+    const KIND = Object.fromEntries(D.KINDS.map(([k, l, g]) => [k, { label: l, glyph: g }]));
+    const seg = (cur, v) => ({ bg: cur === v ? 'var(--text)' : 'transparent', color: cur === v ? 'var(--bg)' : 'var(--text2)' });
+    const fit = ar => ar >= 1 ? { w: '86%', h: `${Math.round(86 / ar)}%` } : { w: `${Math.round(86 * ar)}%`, h: '86%' };
+    const draft = st.draft, setDraft = patch => set({ draft: { ...draft, ...patch } });
+    const setVal = (id, v) => set({ draft: { ...draft, vals: { ...draft.vals, [id]: v } } });
+    const defs = st.fields.character;
+
+    const findTags = (q, typ, limit, excl = []) => {
+      q = q.toLowerCase().replace(/\s+/g, '_'); const out = [];
+      Object.entries(D.ALIAS).forEach(([a, n]) => { if (q && a.includes(q) && (!typ || all[n] === typ) && !excl.includes(n)) out.push({ n, alias: a }); });
+      Object.keys(all).forEach(n => { if ((!q || n.includes(q)) && (!typ || all[n] === typ) && !excl.includes(n) && !out.find(o => o.n === n)) out.push({ n, alias: '' }); });
+      out.sort((a, b) => (b.n.startsWith(q) || b.alias.startsWith(q)) - (a.n.startsWith(q) || a.alias.startsWith(q)));
+      return out.slice(0, limit);
+    };
+    const resolve = inner => {
+      const [ref, label] = inner.split('|'); const m = ref.match(/^([a-z_]+):(.+)$/i);
+      const typ = m && D.TY[m[1].toLowerCase()] ? m[1].toLowerCase() : null;
+      const raw = (typ ? m[2] : ref).trim().toLowerCase().replace(/\s+/g, '_');
+      const name = all[raw] ? raw : D.ALIAS[raw] || raw; const real = all[name];
+      const ok = !!real && (!typ || real === typ);
+      return { ok, name, type: ok ? real : typ, text: (label || disp(raw)).trim() };
+    };
+    const md = (src, board) => {
+      const links = [];
+      const inl = str => { const re = /\[\[([^\]\n]+)\]\]|\*\*([^*]+)\*\*|\*([^*]+)\*/g; let last = 0, m, k = 0; const out = [];
+        while ((m = re.exec(str))) { if (m.index > last) out.push({ key: k++, t: str.slice(last, m.index), isText: true });
+          if (m[1]) { const r = resolve(m[1]); links.push(r);
+            out.push(r.ok ? { key: k++, t: r.text, isLink: true, color: col(r.type), onClick: () => toast(board, `Opening wiki · ${disp(r.name)}`) }
+              : { key: k++, t: r.text, isMissing: true, onClick: () => set({ cd: { board, name: r.name, type: r.type || 'general' } }) }); }
+          else if (m[2]) out.push({ key: k++, t: m[2], isBold: true }); else out.push({ key: k++, t: m[3], isItalic: true });
+          last = re.lastIndex; }
+        if (last < str.length) out.push({ key: k++, t: str.slice(last), isText: true }); return out; };
+      const P = "16px/1.6 Bahnschrift,'DIN Alternate','Segoe UI',system-ui,sans-serif", C = "'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif";
+      const S = { h1: [`700 40px/1 ${C}`, '20px 0 8px', 'uppercase'], h2: [`700 28px/1 ${C}`, '22px 0 8px', 'uppercase'], h3: [`700 20px/1.1 ${C}`, '16px 0 6px', 'uppercase'], p: [P, '0 0 12px', 'none'], li: [P, '0 0 4px', 'none'], quote: [P, '6px 0 12px', 'none'] };
+      const blocks = []; let para = [];
+      const push = (kind, text) => { const s = S[kind]; blocks.push({ key: blocks.length, kind, isLi: kind === 'li', spans: inl(text), font: s[0], margin: s[1], tt: s[2], ls: kind.startsWith('h') ? '.02em' : 'normal', color: kind === 'quote' ? 'var(--text2)' : 'var(--text)', pl: kind === 'quote' ? '14px' : '0', bl: kind === 'quote' ? '3px solid var(--line)' : 'none' }); };
+      const flush = () => { if (para.length) { push('p', para.join(' ')); para = []; } };
+      src.split('\n').forEach(l => { const t = l.trim(); let m;
+        if (!t) return flush();
+        if ((m = t.match(/^(#{1,3})\s+(.*)$/))) { flush(); return push('h' + m[1].length, m[2]); }
+        if ((m = t.match(/^[-*]\s+(.*)$/))) { flush(); return push('li', m[1]); }
+        if ((m = t.match(/^>\s?(.*)$/))) { flush(); return push('quote', m[1]); }
+        para.push(t); });
+      flush(); return { blocks, links };
+    };
+
+    const dateFmt = v => { const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; const p = String(v).split('-');
+      return p.length === 3 ? `${+p[2]} ${M[+p[1] - 1]} ${p[0]}` : p.length === 2 ? `${M[+p[1] - 1]} ${p[0]}` : p[0]; };
+    const dateOk = v => /^\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?)?$/.test(v);
+    const urlOk = v => /^https?:\/\/[^\s/]+\.[^\s]+$/.test(v);
+    const isEmpty = v => v == null || v === '' || (Array.isArray(v) && !v.length);
+    const chip = n => { const t = all[n]; return t ? { label: disp(n), bg: col(t), ink: D.ink(col(t)), border: 'none', color: col(t) } : { label: disp(n), bg: 'transparent', ink: 'var(--amber)', border: '1px dashed var(--amber)', color: 'var(--amber)' }; };
+
+    // ---- 01 view
+    const V = md(st.wiki.desc, 'v');
+    let hidden = 0;
+    const vInfo = defs.map(f => { const v = st.wiki.vals[f.id]; if (isEmpty(v)) { hidden++; return null; }
+      const k = f.kind, base = { key: f.id, name: f.name, isPlain: false, isLong: false, isLink: false, isChoice: false, isImage: false, isRef: false };
+      if (k === 'text') return { ...base, isPlain: true, text: Array.isArray(v) ? v.map(disp).join(', ') : v };
+      if (k === 'number') return { ...base, isPlain: true, text: `${v}${f.unit ? ' ' + f.unit : ''}` };
+      if (k === 'date') return { ...base, isPlain: true, text: dateOk(v) ? dateFmt(v) : v };
+      if (k === 'longtext') return { ...base, isLong: true, text: v };
+      if (k === 'link') return { ...base, isLink: true, href: v, text: v.replace(/^https?:\/\//, '').replace(/\/$/, '') };
+      if (k === 'choice') return { ...base, isChoice: true, text: v };
+      if (k === 'image') { const im = D.IMGS[v]; return im ? { ...base, isImage: true, fill: im.fill, text: im.name } : null; }
+      if (k === 'tagref') return { ...base, isRef: true, refs: (Array.isArray(v) ? v : [v]).map((n, i) => ({ key: n, n: i + 1, ...chip(n), onClick: () => toast('v', all[n] ? `Opening wiki · ${disp(n)}` : `“${disp(n)}” doesn't exist yet`) })) };
+      return null; }).filter(Boolean);
+    const tagLink = (n, b) => ({ key: n, label: disp(n), color: col(all[n]), ink: D.ink(col(all[n])), onClick: () => toast(b, `Opening wiki · ${disp(n)}`) });
+
+    // ---- create dialog
+    const cdFor = b => { const c = st.cd; if (!c || c.board !== b) return null;
+      return { name: c.name, label: disp(c.name), color: col(c.type), types: D.TYPES.map(t => ({ key: t.id, label: t.label, color: t.color, bg: c.type === t.id ? t.color : 'transparent', ink: c.type === t.id ? D.ink(t.color) : 'var(--text)', onClick: () => set({ cd: { ...c, type: t.id } }) })) }; };
+
+    // ---- 02 edit
+    const E = md(draft.desc, 'e');
+    const missing = []; E.links.forEach(l => { if (!l.ok && !missing.find(m => m.name === l.name)) missing.push(l); });
+    const caret = st.caret, before = draft.desc.slice(0, caret), sm = before.match(/\[\[([^\]\n|]*)$/);
+    const sugActive = !!sm && st.sugOff !== caret;
+    let sugList = [], sugQ = '';
+    if (sugActive) { sugQ = sm[1]; const tm = sugQ.match(/^([a-z_]+):(.*)$/i); const typ = tm && D.TY[tm[1].toLowerCase()] ? tm[1].toLowerCase() : null;
+      const found = findTags(typ ? tm[2] : sugQ, typ, 6); const hiS = Math.min(st.sugHi, Math.max(0, found.length - 1));
+      sugList = found.map((o, i) => ({ key: o.n + o.alias, label: disp(o.n), alias: o.alias, hasAlias: !!o.alias, color: col(all[o.n]), ink: D.ink(col(all[o.n])), typeLabel: D.TY[all[o.n]].label, bg: i === hiS ? 'var(--surface2)' : 'transparent',
+        onPick: () => { const start = caret - sugQ.length - 2; const ins = `[[${all[o.n]}:${o.n}]]`; const desc = draft.desc.slice(0, start) + ins + draft.desc.slice(caret).replace(/^[^\]\n]*\]\]/, ''); this._sel = [start + ins.length, start + ins.length]; set({ draft: { ...draft, desc }, caret: start + ins.length, sugHi: 0 }); } })); }
+    const wrap = (a, b) => { const t = this.taRef.current; if (!t) return; const s = t.selectionStart, e = t.selectionEnd, x = draft.desc;
+      this._sel = [s + a.length, e + a.length]; set({ draft: { ...draft, desc: x.slice(0, s) + a + x.slice(s, e) + b + x.slice(e) }, caret: e + a.length }); };
+    const prefix = p => { const t = this.taRef.current; if (!t) return; const s = t.selectionStart, x = draft.desc, ls = x.lastIndexOf('\n', s - 1) + 1;
+      this._sel = [s + p.length, s + p.length]; set({ draft: { ...draft, desc: x.slice(0, ls) + p + x.slice(ls) } }); };
+    const C = "700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif";
+    const tools = [['B', 'Bold', `700 15px/1 Bahnschrift,sans-serif`, () => wrap('**', '**')], ['I', 'Italic', `italic 15px/1 Georgia,serif`, () => wrap('*', '*')], ['H', 'Heading', C, () => prefix('## ')], ['•', 'List', '15px/1 sans-serif', () => prefix('- ')], ['❝', 'Quote', '15px/1 sans-serif', () => prefix('> ')], ['[[ ]] Tag link', 'Link a tag — or just type [[', "12px 'Cascadia Mono',Consolas,monospace", () => { wrap('[[', ''); set({ sugOff: -1 }); }]]
+      .map(([label, tip, font, onClick]) => ({ key: tip, label, tip, font, onClick }));
+
+    let errs = 0;
+    const eds = defs.map((f, fi) => { const v = draft.vals[f.id], k = f.kind, sv = v == null ? '' : v;
+      const base = { key: f.id, name: f.name, glyph: KIND[k].glyph, kindLabel: KIND[k].label, isEmpty: isEmpty(v), canClear: !isEmpty(v), onClear: () => setVal(f.id, k === 'tagref' ? [] : ''),
+        isText: k === 'text', isLong: k === 'longtext', isNum: k === 'number', isDate: k === 'date', isLink: k === 'link', isChoice: k === 'choice', isImage: k === 'image', isRef: k === 'tagref',
+        val: Array.isArray(sv) ? sv.map(disp).join(', ') : sv, onInput: e => setVal(f.id, e.target.value), rowBg: 'transparent', hasMsg: false, msg: '', msgColor: 'var(--text2)', border: 'var(--line)' };
+      const err = m => { errs++; return { hasMsg: true, msg: m, msgColor: 'var(--red)', border: 'var(--red)', rowBg: 'color-mix(in oklab,var(--red) 6%,transparent)' }; };
+      if (k === 'number') { const bad = sv !== '' && isNaN(+sv); const n = +sv || 0;
+        return { ...base, unit: f.unit || '—', dec: () => setVal(f.id, String(n - 1)), inc: () => setVal(f.id, String(n + 1)), ...(bad ? err('Not a number.') : {}) }; }
+      if (k === 'date') { const bad = sv !== '' && !dateOk(sv); return { ...base, pretty: sv && !bad ? dateFmt(sv) : 'year, year-month or full date', today: () => setVal(f.id, '2026-10-03'), ...(bad ? err('Use YYYY, YYYY-MM or YYYY-MM-DD.') : {}) }; }
+      if (k === 'link') { const bad = sv !== '' && !urlOk(sv); return { ...base, linkOk: sv !== '' && !bad, domain: bad || !sv ? '' : sv.replace(/^https?:\/\//, '').split('/')[0], ...(bad ? err('Must start with http:// or https://') : {}) }; }
+      if (k === 'choice') return { ...base, opts: (f.options || []).map(o => ({ key: o, label: o, border: sv === o ? 'var(--text)' : 'var(--line)', bg: sv === o ? 'var(--text)' : 'transparent', color: sv === o ? 'var(--bg)' : 'var(--text)', onClick: () => setVal(f.id, sv === o ? '' : o) })),
+        ...(sv && !(f.options || []).includes(sv) ? { hasMsg: true, msg: `“${sv}” is no longer an option.`, msgColor: 'var(--amber)' } : {}) };
+      if (k === 'image') { const im = D.IMGS[sv]; return { ...base, hasImg: !!im, noImg: !im, imgFill: im ? im.fill : '', imgName: im ? im.name : 'No image chosen', onChoose: () => { set({ pkTarget: f.id, pkSel: sv || null }); toast('e', 'Image picker opened → board 03'); } }; }
+      if (k === 'tagref') { const arr = Array.isArray(sv) ? sv : (sv ? [sv] : []); const q = st.refQ[f.id] || ''; const allowed = f.refTypes && f.refTypes.length ? f.refTypes : null;
+        const mv = (i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; const a = arr.slice(); [a[i], a[j]] = [a[j], a[i]]; setVal(f.id, a); };
+        const add = n => { set({ draft: { ...draft, vals: { ...draft.vals, [f.id]: f.multiple ? [...arr, n] : [n] } }, refQ: { ...st.refQ, [f.id]: '' } }); };
+        const sugg = q ? findTags(q, null, 8, [...arr, 'aerin_valecrest']).filter(o => !allowed || allowed.includes(all[o.n])).slice(0, 4).map(o => ({ key: o.n, label: disp(o.n), color: col(all[o.n]), onPick: () => add(o.n) })) : [];
+        return { ...base, refs: arr.map((n, i) => ({ key: n, n: i + 1, ...chip(n), up: () => mv(i, -1), down: () => mv(i, 1), upColor: i ? 'var(--text)' : 'var(--line)', downColor: i < arr.length - 1 ? 'var(--text)' : 'var(--line)', remove: () => setVal(f.id, arr.filter(x => x !== n)) })),
+          refQ: q, onRefQ: e => set({ refQ: { ...st.refQ, [f.id]: e.target.value } }), onRefKey: e => { if (e.key === 'Enter' && sugg[0]) sugg[0].onPick(); },
+          refSugg: sugg.length ? sugg : null, refPh: `add ${allowed ? allowed.map(t => D.TY[t].label.toLowerCase()).join(' / ') : ''} tag${f.multiple ? ' · ordered' : ''}`,
+          hasMsg: !f.multiple && arr.length > 1, msg: 'Single value — only the first is kept.', msgColor: 'var(--amber)' }; }
+      return base;
+    });
+    const dirty = JSON.stringify(draft) !== JSON.stringify(st.wiki);
+    const canSave = dirty && !errs;
+
+    // ---- 03 picker
+    const pkQ = st.pkQ.trim().toLowerCase(), tgtDef = defs.find(f => f.id === st.pkTarget);
+    const pkTargetLabel = st.pkTarget === 'cover' ? 'Page cover' : (tgtDef ? tgtDef.name : 'Image');
+    const curVal = st.pkTarget === 'cover' ? draft.cover : draft.vals[st.pkTarget];
+    const thumb = im => ({ key: im.id, name: im.name, fill: im.fill, ...fit(im.ar), isCurrent: im.id === curVal, outline: im.id === st.pkSel ? '3px solid var(--accent)' : '1px solid var(--line)',
+      onClick: () => set({ pkSel: im.id }), onUse: () => use(im.id) });
+    const use = id => { const im = D.IMGS[id]; if (!im) return; if (st.pkTarget === 'cover') setDraft({ cover: id }); else setVal(st.pkTarget, id); set({ pkSel: id }); toast('p', `${pkTargetLabel} set to ${im.name} — unsaved in board 02`); };
+    const own = D.OWN.filter(x => !pkQ || x.name.toLowerCase().includes(pkQ)), every = pkQ ? D.EVERY.filter(x => x.name.toLowerCase().includes(pkQ) || x.path.toLowerCase().includes(pkQ)) : [];
+    const sel = D.IMGS[st.pkSel];
+    const imgTargets = [...defs.filter(f => f.kind === 'image').map(f => [f.id, f.name]), ['cover', 'Page cover']];
+
+    // ---- 04 types/fields
+    const tt = st.tt, tdefs = st.fields[tt], tType = D.TY[tt];
+    const setDefs = list => set({ fields: { ...st.fields, [tt]: list } });
+    const canConv = (v, to) => { if (isEmpty(v)) return true; if (to === 'text' || to === 'longtext') return true; if (Array.isArray(v)) return to === 'tagref';
+      if (to === 'number') return !isNaN(+v); if (to === 'date') return dateOk(v); if (to === 'link') return urlOk(v); if (to === 'choice') return true; if (to === 'tagref') return !!all[String(v).toLowerCase().replace(/\s+/g, '_')]; return false; };
+    const loss = (f, to) => { const from = f.kind, n = f.filled; if (from === to) return 0;
+      if (to === 'text' || to === 'longtext') return from === 'image' ? n : 0;
+      if (to === 'choice') return from === 'image' || from === 'tagref' || from === 'longtext' ? n : 0;
+      if (from === 'text' && to === 'tagref') return Math.max(0, n - 2);
+      if (from === 'text' || from === 'longtext') return n;
+      if (from === 'choice' && to === 'tagref') return n;
+      if (from === 'number' && to === 'date') return Math.round(n * 0.75);
+      return n; };
+    const note = (f, to) => { if (f.kind === to) return 'current'; const l = loss(f, to); if (l) return `clears ${l}`;
+      if (to === 'choice') return 'values → options'; if (f.kind === 'tagref') return 'tags → names'; if (f.kind === 'longtext' && to === 'text') return 'joins lines'; return 'converts all'; };
+    const applyKind = (f, to) => {
+      const list = tdefs.map(x => { if (x.id !== f.id) return x; const nx = { ...x, kind: to, filled: x.filled - loss(x, to) };
+        if (to === 'choice' && !nx.options) nx.options = []; if (to === 'tagref') { nx.refTypes = nx.refTypes || ['character']; nx.multiple = true; } return nx; });
+      let opts = null;
+      const conv = vals => { const v = vals[f.id]; if (isEmpty(v)) return vals; let nv = v;
+        if (!canConv(v, to)) nv = to === 'tagref' ? [] : '';
+        else if ((to === 'text' || to === 'longtext') && Array.isArray(v)) nv = v.map(disp).join(', ');
+        else if (to === 'longtext' || to === 'text') nv = String(v).replace(/\n/g, to === 'text' ? ' ' : '\n');
+        else if (to === 'tagref') nv = [String(v).toLowerCase().replace(/\s+/g, '_')];
+        else if (to === 'choice') { nv = String(v); opts = nv; }
+        return { ...vals, [f.id]: nv }; };
+      if (opts === null && to === 'choice') { const v = st.wiki.vals[f.id]; if (!isEmpty(v) && !Array.isArray(v)) opts = String(v); }
+      const fin = opts ? list.map(x => x.id === f.id ? { ...x, options: Array.from(new Set([...(x.options || []), opts])) } : x) : list;
+      const patch = { fields: { ...st.fields, [tt]: fin }, kindMenu: null, pend: null };
+      if (tt === 'character') { patch.wiki = { ...st.wiki, vals: conv(st.wiki.vals) }; patch.draft = { ...draft, vals: conv(draft.vals) }; }
+      set(patch); toast('t', `${f.name} is now ${KIND[to].label}.${loss(f, to) ? ` ${loss(f, to)} values cleared.` : ' All values converted.'}`); };
+    const ttFields = tdefs.map((f, i) => { const k = f.kind, open = st.openF === f.id;
+      const pend = st.pend && st.pend.id === f.id ? st.pend : null;
+      const mv = d => { const j = i + d; if (j < 0 || j >= tdefs.length) return; const a = tdefs.slice(); [a[i], a[j]] = [a[j], a[i]]; setDefs(a); };
+      const upd = p => setDefs(tdefs.map(x => x.id === f.id ? { ...x, ...p } : x));
+      return { key: f.id, n: i + 1, name: f.name, onName: e => upd({ name: e.target.value }), glyph: KIND[k].glyph, kindLabel: KIND[k].label, filled: f.filled, fillPct: Math.round(f.filled / tType.total * 100) + '%',
+        bg: pend ? 'color-mix(in oklab,var(--amber) 5%,var(--bg2))' : open ? 'var(--surface)' : 'transparent', kindBorder: st.kindMenu === f.id ? 'var(--text)' : 'var(--line)',
+        up: () => mv(-1), down: () => mv(1), upColor: i ? 'var(--text)' : 'var(--line)', downColor: i < tdefs.length - 1 ? 'var(--text)' : 'var(--line)',
+        onKind: e => { e.stopPropagation(); set({ kindMenu: st.kindMenu === f.id ? null : f.id }); }, menuOpen: st.kindMenu === f.id,
+        kinds: D.KINDS.map(([kk, l, g]) => { const ls = loss(f, kk); return { key: kk, glyph: g, label: l, note: note(f, kk), noteColor: kk === k ? 'var(--text2)' : ls ? 'var(--amber)' : 'var(--text2)', bg: kk === k ? 'var(--surface2)' : 'transparent',
+          onClick: () => { if (kk === k) return set({ kindMenu: null }); if (ls) set({ pend: { id: f.id, to: kk, loss: ls }, kindMenu: null }); else applyKind(f, kk); } }; }),
+        pend: !!pend, pendText: pend ? `Changing “${f.name}” from ${KIND[k].label} to ${KIND[pend.to].label}: ${pend.loss} of ${f.filled} values can’t be read as ${KIND[pend.to].label.toLowerCase()} and will be cleared.` : '',
+        pendBtn: pend ? `Change & clear ${pend.loss}` : '', pendCancel: () => set({ pend: null }), pendGo: () => applyKind(f, pend.to),
+        del: st.delF === f.id, delText: `Delete “${f.name}”? Its values on ${f.filled} tag${f.filled === 1 ? '' : 's'} are lost.`, onDelete: () => set({ delF: f.id }), delCancel: () => set({ delF: null }),
+        delGo: () => { setDefs(tdefs.filter(x => x.id !== f.id)); set({ delF: null }); toast('t', `Deleted field ${f.name}.`); },
+        onSettings: () => set({ openF: open ? null : f.id }), open, setArrow: open ? '▴' : '▾', setBg: open ? 'var(--surface2)' : 'transparent',
+        sNum: k === 'number', unit: f.unit || '', onUnit: e => upd({ unit: e.target.value }),
+        sChoice: k === 'choice', options: (f.options || []).map(o => ({ key: o, label: o, onRemove: () => upd({ options: f.options.filter(x => x !== o) }) })),
+        optIn: st.optIn, onOptIn: e => set({ optIn: e.target.value }), onOptKey: e => { if (e.key === 'Enter' && st.optIn.trim()) { upd({ options: Array.from(new Set([...(f.options || []), st.optIn.trim()])) }); set({ optIn: '' }); } },
+        sRef: k === 'tagref', refTypes: D.TYPES.map(t => { const on = (f.refTypes || []).includes(t.id); return { key: t.id, label: t.label, color: t.color, bg: on ? t.color : 'transparent', ink: on ? D.ink(t.color) : 'var(--text)', onClick: () => upd({ refTypes: on ? f.refTypes.filter(x => x !== t.id) : [...(f.refTypes || []), t.id] }) }; }),
+        multiBg: f.multiple ? 'var(--accent2)' : 'transparent', multiMark: f.multiple ? '✓' : '', onMulti: () => upd({ multiple: !f.multiple }),
+        sNone: ['text', 'longtext', 'date', 'link', 'image'].includes(k), noneText: { text: 'One line of text. No settings.', longtext: 'Several lines; shown as a paragraph. No settings.', date: 'Accepts a year, year-month or full date.', link: 'Must start with http:// or https://. Opens in the browser.', image: 'Picks any image in the library; the tag’s own images are offered first.' }[k] || '' }; });
+
+    return {
+      typeColor: col('character'), typeInk: D.ink(col('character')), stop: e => e.stopPropagation(),
+      // 01
+      vCoverFill: (D.IMGS[st.wiki.cover] || D.OWN[0]).fill, vEdited: st.edited, vBlocks: V.blocks, vInfo, vHidden: hidden ? `${hidden} empty field${hidden > 1 ? 's' : ''} hidden` : '',
+      vEditTag: () => toast(st.toast && st.toast.b === 'e' ? 'e' : 'v', 'Edit tag dialog — see M4 · 05'), vEditPage: () => toast('v', 'Edit mode → board 02'), seeAll: () => toast('v', 'Opening the tag gallery · 4,140 images'),
+      strip: D.OWN.slice(0, 7).map(x => ({ key: x.id, fill: x.fill })),
+      implies: ['the_ilvenmar_cycle', 'original_character'].map(n => tagLink(n, 'v')), impliedBy: ['aerin_(child)', 'silver_court_regalia'].map(n => tagLink(n, 'v')),
+      related: D.RELATED.map(([n, p]) => ({ key: n, label: disp(n), color: col(all[n]), pct: p + '%', onClick: () => toast('v', `Opening wiki · ${disp(n)}`) })),
+      cdV: cdFor('v'), cdE: cdFor('e'), cdCancel: () => set({ cd: null }),
+      cdCreate: () => { const c = st.cd; set({ created: { ...st.created, [c.name]: c.type }, cd: null }); toast(c.board, `Created ${D.TY[c.type].label.toLowerCase()} tag “${disp(c.name)}”. Its links now resolve.`); },
+      toastV: tst('v'),
+      // 02
+      eState: errs ? `${errs} field${errs > 1 ? 's' : ''} to fix` : dirty ? 'unsaved changes' : 'no changes', eStateColor: errs ? 'var(--red)' : dirty ? 'var(--accent2)' : 'var(--text2)',
+      eSaveBg: canSave ? 'var(--accent)' : 'var(--surface2)', eSaveColor: canSave ? 'var(--accent-ink)' : 'var(--text2)',
+      eSave: () => { if (errs) return toast('e', 'Fix the highlighted fields first.'); if (!dirty) return; set({ wiki: JSON.parse(JSON.stringify(draft)), edited: 'just now' }); toast('e', 'Page saved — board 01 updated.'); },
+      eCancel: () => { set({ draft: JSON.parse(JSON.stringify(st.wiki)) }); toast('e', 'Changes discarded.'); },
+      eCoverFill: (D.IMGS[draft.cover] || D.OWN[0]).fill, eChangeCover: () => { set({ pkTarget: 'cover', pkSel: draft.cover }); toast('e', 'Image picker opened for the cover → board 03'); },
+      tools, viewModes: [['src', 'Write'], ['split', 'Split'], ['prev', 'Preview']].map(([k, l]) => ({ key: k, label: l, ...seg(st.mode, k), onClick: () => set({ mode: k }) })),
+      splitCols: st.mode === 'split' ? 'minmax(0,1fr) minmax(0,1fr)' : 'minmax(0,1fr)', showSrc: st.mode !== 'prev', showPrev: st.mode !== 'src',
+      taRef: this.taRef, eDesc: draft.desc, onDesc: e => set({ draft: { ...draft, desc: e.target.value }, caret: e.target.selectionStart, sugHi: 0 }),
+      onCaret: e => { const c = e.target.selectionStart; if (c !== st.caret) set({ caret: c }); },
+      onDescKey: e => { if (!sugActive || !sugList.length) return; const hiS = Math.min(st.sugHi, sugList.length - 1);
+        if (e.key === 'ArrowDown') { e.preventDefault(); set({ sugHi: Math.min(sugList.length - 1, hiS + 1) }); } else if (e.key === 'ArrowUp') { e.preventDefault(); set({ sugHi: Math.max(0, hiS - 1) }); }
+        else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); sugList[hiS].onPick(); } else if (e.key === 'Escape') { e.preventDefault(); set({ sugOff: caret }); } },
+      sugOn: sugActive, sugQ, sugList, sugNone: sugActive && !sugList.length && !!sugQ,
+      eBlocks: E.blocks, eLinkCount: E.links.length, eHasMissing: missing.length > 0, eMissingCount: missing.length,
+      eMissing: missing.map(m => ({ key: m.name, label: disp(m.name), onClick: () => set({ cd: { board: 'e', name: m.name, type: m.type || 'general' } }) })),
+      eds, toastE: tst('e'),
+      // 03
+      pkTargetLabel, pkTargets: imgTargets.map(([id, l]) => ({ key: id, label: l, ...seg(st.pkTarget, id), onClick: () => set({ pkTarget: id, pkSel: id === 'cover' ? draft.cover : draft.vals[id] || null }) })),
+      pkQ: st.pkQ, onPkQ: e => set({ pkQ: e.target.value }), pkHasQ: !!pkQ, pkClearQ: () => set({ pkQ: '' }),
+      pkOwn: own.map(thumb), pkOwnCount: pkQ ? `${own.length} of 4,140 match` : '4,140 · newest first', pkOwnNone: !own.length,
+      pkEvery: every.map(thumb), pkEveryCount: pkQ ? `${every.length} more` : '', pkPrompt: !pkQ, pkEveryNone: !!pkQ && !every.length,
+      pkHasSel: !!sel, pkNoSel: !sel,
+      pkSel: sel ? { name: sel.name, fill: sel.fill, ...fit(sel.ar), path: sel.path, dims: `${sel.ar >= 1 ? 3840 : Math.round(3840 * sel.ar)} × ${sel.ar >= 1 ? Math.round(3840 / sel.ar) : 3840}`, tagged: sel.own ? 'aerin valecrest' : 'no', taggedColor: sel.own ? col('character') : 'var(--text2)', foreign: !sel.own } : {},
+      pkUseBg: sel ? 'var(--accent)' : 'var(--surface2)', pkUseColor: sel ? 'var(--accent-ink)' : 'var(--text2)', pkUse: () => sel && use(sel.id),
+      pkCanRemove: st.pkTarget !== 'cover' && !isEmpty(curVal), pkRemoveLabel: `Remove ${pkTargetLabel.toLowerCase()}`,
+      pkRemove: () => { setVal(st.pkTarget, ''); set({ pkSel: null }); toast('p', `${pkTargetLabel} cleared — unsaved in board 02`); }, toastP: tst('p'),
+      // 04
+      ttList: D.TYPES.map(t => ({ key: t.id, label: t.label, color: t.color, n: st.fields[t.id].length, bg: tt === t.id ? 'var(--bg)' : 'transparent', bar: tt === t.id ? t.color : 'transparent', onClick: () => set({ tt: t.id, kindMenu: null, pend: null, delF: null, openF: null }) })),
+      ttColor: tType.color, ttLabel: tType.label, ttTotal: tType.total, ttSub: `${tdefs.length} fields · ${tType.total} ${tType.label.toLowerCase()} tags · shown in this order in the info box`,
+      ttFields, ttEmpty: !tdefs.length, closeKind: () => st.kindMenu && set({ kindMenu: null }),
+      addField: () => { const id = 'f' + Date.now(); setDefs([...tdefs, { id, name: 'New field', kind: 'text', filled: 0 }]); set({ openF: id }); },
+      ttReset: () => set({ fields: JSON.parse(JSON.stringify(D.FIELDS)), kindMenu: null, pend: null, delF: null, openF: 'allegiance' }), toastT: tst('t'),
+    };
+  }
+}
+</script>
+</body>
+</html>

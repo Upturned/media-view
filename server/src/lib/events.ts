@@ -5,7 +5,9 @@ export type AppEvent =
   | { type: 'scan'; status: 'scanning' | 'idle' }
   | { type: 'files-changed' }
   | { type: 'folders-changed' }
-  | { type: 'library-changed' };
+  | { type: 'library-changed' }
+  /** Library Health issues changed (the top-bar badge reloads). */
+  | { type: 'health-changed' };
 
 const bus = new EventEmitter();
 bus.setMaxListeners(50);

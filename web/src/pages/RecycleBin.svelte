@@ -15,7 +15,8 @@
 
   interface Item {
     id: number;
-    entity: 'file' | 'folder';
+    /** 'other': a file the app doesn't show (a wrong type sent here from Library Health). */
+    entity: 'file' | 'folder' | 'other';
     name: string;
     kind: string;
     inner: string | null;
@@ -44,12 +45,12 @@
       .finally(() => (loaded = true));
   });
 
-  const shown = $derived(items.filter((i) => tab === 'all' || (tab === 'images' ? i.entity === 'file' : i.entity === 'folder')));
+  const shown = $derived(items.filter((i) => tab === 'all' || (tab === 'images' ? i.entity !== 'folder' : i.entity === 'folder')));
   const chosen = $derived(items.filter((i) => selected.has(i.id)));
   const totalSize = $derived(items.reduce((s, i) => s + i.size, 0));
   const totalImages = $derived(items.reduce((s, i) => s + i.images, 0));
   const kindLabel = (k: string) =>
-    k === 'image' ? 'Image' : k === 'album' ? 'Album' : k === 'category' ? word('category') : word('subcategory');
+    k === 'image' ? 'Image' : k === 'other' ? 'File' : k === 'album' ? 'Album' : k === 'category' ? word('category') : word('subcategory');
 
   function toggleAll() {
     if (shown.length > 0 && shown.every((i) => selected.has(i.id))) selected.clear();
@@ -72,7 +73,7 @@
       title: list.length === 1 ? 'Delete permanently?' : `Delete ${list.length} items permanently?`,
       sub: `${fmt(images)} ${images === 1 ? 'image' : 'images'} · ${formatSize(size)}`,
       body: 'These files will be removed from disk. Their stars and descriptions go with them.',
-      items: list.map((i) => ({ name: i.name, note: i.entity === 'file' ? formatSize(i.size) : `${kindLabel(i.kind).toLowerCase()} · ${i.images}` })),
+      items: list.map((i) => ({ name: i.name, note: i.entity !== 'folder' ? formatSize(i.size) : `${kindLabel(i.kind).toLowerCase()} · ${i.images}` })),
       button: 'Delete permanently',
     });
     if (!ok) return;
@@ -138,7 +139,7 @@
       <div class="row" class:sel={selected.has(item.id)}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <span class="box" class:on={selected.has(item.id)} onclick={() => (selected.has(item.id) ? selected.delete(item.id) : selected.add(item.id))}>{selected.has(item.id) ? '✓' : ''}</span>
-        {#if item.entity === 'file'}
+        {#if item.entity !== 'folder'}
           <div class="thumb"><Thumb file={item.thumb ?? undefined} fit="cover" /></div>
         {:else}
           <div class="thumb stack"><div class="back"></div><div class="front"><Thumb file={item.thumb ?? undefined} fit="cover" /></div></div>
@@ -148,7 +149,7 @@
           {#if item.inner}<span class="inner">{item.inner}</span>{/if}
         </div>
         <span class="kind">
-          {#if item.entity === 'file'}<span class="sq"></span>{:else}<KindIcon kind={item.kind as 'album'} size={12} />{/if}
+          {#if item.entity !== 'folder'}<span class="sq"></span>{:else}<KindIcon kind={item.kind as 'album'} size={12} />{/if}
           {kindLabel(item.kind)}
         </span>
         <div class="loc">
@@ -159,7 +160,7 @@
         <span class="size">{formatSize(item.size)}</span>
         <div class="acts">
           <button disabled={item.locationGone} onclick={() => restore([item])} title={item.locationGone ? 'The original location is gone — use Restore to…' : 'Put it back where it was'}>Restore</button>
-          <button class:hint={item.locationGone} onclick={() => restoreTo([item])}>Restore to…</button>
+          {#if item.entity !== 'other'}<button class:hint={item.locationGone} onclick={() => restoreTo([item])}>Restore to…</button>{/if}
           <button class="del" onclick={() => remove([item])} title="Delete permanently">Delete</button>
         </div>
       </div>

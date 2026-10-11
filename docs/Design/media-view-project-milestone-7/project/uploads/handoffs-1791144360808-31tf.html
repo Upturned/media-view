@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#070707;}
+a{color:#ff4b2b;text-decoration:none;cursor:pointer}
+a:hover{color:#f3f2ec;text-decoration:underline}
+input::placeholder,textarea::placeholder{color:#77766f}
+</style>
+</helmet>
+<section id="m3" style="--bg:#121212;--bg2:#0b0b0b;--surface:#1b1b1a;--surface2:#262625;--line:#363631;--text:#f3f2ec;--text2:#9a9990;--accent:#ff4b2b;--accent-ink:#0b0b0b;--accent2:#f2e34b;--red:#ff3d5a;--amber:#ffb020;--blue:#58a6ff;--thumb:#0e0e0e;--scrim:rgba(7,7,7,.74);padding:72px 80px 96px;display:flex;flex-direction:column;gap:56px;font-family:Bahnschrift,'DIN Alternate','Segoe UI',system-ui,sans-serif;color:var(--text);background:#070707;">
+
+  <header style="display:flex;align-items:flex-end;gap:48px;max-width:1440px;">
+    <div style="display:flex;flex-direction:column;gap:12px;flex:none;white-space:nowrap;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font:700 12px/1 'Cascadia Mono',Consolas,Menlo,monospace;background:var(--accent);color:var(--accent-ink);padding:5px 8px;">M3</span>
+        <span style="font:12px/1 'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);">media-view · file operations · Darkroom</span>
+      </div>
+      <h1 style="margin:0;font:700 112px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:-0.01em;text-transform:uppercase;">Milestone 3</h1>
+    </div>
+    <p style="margin:0 0 6px;max-width:620px;font-size:15px;line-height:1.55;color:var(--text2);text-wrap:pretty;">Moving, renaming, recycling and importing. Dialogs share one frame: condensed title bar, mono context line, outline secondary, filled primary. Red is reserved for actions that can’t be undone. Every board is live.</p>
+  </header>
+
+  <div style="display:grid;grid-template-columns:repeat(2,1440px);gap:72px;align-items:start;">
+
+    <!-- ============ 01 MOVE / COPY ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M3 · 01</span><span style="color:var(--text);">Move / Copy</span><span>only albums accept images · filter the tree · pick a rack to create an album in it</span>
+      </div>
+      <div style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);outline:1px solid var(--line);">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+          <div style="height:56px;flex:none;display:flex;align-items:center;gap:8px;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="padding:24px 32px 18px;font:700 64px/0.9 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;border-bottom:1px solid var(--line);">Portraits &amp; Expression Sheets</div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 14px;padding:24px 32px;background:var(--bg2);align-content:start;">
+            <sc-for list="{{ backdrop }}" as="b" hint-placeholder-count="18"><div style="aspect-ratio:3/2;background:{{ b.fill }};outline:{{ b.outline }};"></div></sc-for>
+          </div>
+        </div>
+        <div style="position:absolute;inset:0;background:var(--scrim);"></div>
+
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:760px;height:720px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--text);box-shadow:0 30px 80px rgba(0,0,0,.6);">
+          <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line);">
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:16px 20px 14px;">
+              <span style="font:700 30px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ mvTitle }}</span>
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">from Portraits &amp; Expression Sheets · 38.2 MB</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:0 16px;border-left:1px solid var(--line);">
+              <div style="display:flex;border:1px solid var(--line);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                <sc-for list="{{ mvModes }}" as="m" hint-placeholder-count="2">
+                  <button onClick="{{ m.onClick }}" style="padding:7px 14px;border:none;background:{{ m.bg }};color:{{ m.color }};font:inherit;font-weight:700;cursor:pointer;">{{ m.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <button style="width:56px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:16px sans-serif;cursor:pointer;" style-hover="background:var(--surface2);">✕</button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--line);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);">
+            <span>Recent</span>
+            <sc-for list="{{ mvRecent }}" as="r" hint-placeholder-count="3">
+              <button onClick="{{ r.onClick }}" style="display:flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid var(--line);background:{{ r.bg }};color:var(--text);font:inherit;text-transform:none;cursor:pointer;" style-hover="border-color:var(--text);"><svg width="11" height="11" viewBox="0 0 16 16"><rect x="4.5" y="1.5" width="10" height="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect><rect x="1.5" y="4" width="10" height="11" fill="currentColor"></rect></svg>{{ r.name }}</button>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;padding:0 20px;height:42px;border-bottom:1px solid var(--line);">
+            <span style="color:var(--accent);font:700 13px 'Cascadia Mono',Consolas,monospace;">&gt;</span>
+            <input value="{{ mvQuery }}" onChange="{{ onMvQuery }}" placeholder="filter folders…" style="flex:1;height:100%;border:none;background:none;color:var(--text);font:13px 'Cascadia Mono',Consolas,monospace;outline:none;">
+            <span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ mvAlbumCount }} albums</span>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:6px 0;background:var(--bg2);">
+            <sc-for list="{{ mvRows }}" as="r" hint-placeholder-count="16">
+              <div onClick="{{ r.onClick }}" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 20px 0 {{ r.pad }};background:{{ r.bg }};color:{{ r.color }};cursor:pointer;border-left:3px solid {{ r.bar }};" style-hover="background:var(--surface);">
+                <span onClick="{{ r.onToggle }}" style="width:16px;flex:none;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-align:center;">{{ r.caret }}</span>
+                <sc-if value="{{ r.isRack }}"><svg width="13" height="13" viewBox="0 0 16 16" style="flex:none;"><rect x="2" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="12.4" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="2" y="4" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="9.5" width="12" height="1.6" fill="currentColor"></rect></svg></sc-if>
+                <sc-if value="{{ r.isDrawer }}"><svg width="13" height="13" viewBox="0 0 16 16" style="flex:none;"><rect x="1.8" y="3.8" width="12.4" height="9.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="6" y="7.6" width="4" height="1.8" fill="currentColor"></rect></svg></sc-if>
+                <sc-if value="{{ r.isAlbum }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 16 16" style="flex:none;"><rect x="4.5" y="1.5" width="10" height="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect><rect x="1.5" y="4" width="10" height="11" fill="currentColor"></rect></svg></sc-if>
+                <sc-if value="{{ r.isInbox }}"><svg width="13" height="13" viewBox="0 0 16 16" style="flex:none;"><path d="M1.5 9 L4 3.5 H12 L14.5 9 V13 H1.5 Z" fill="none" stroke="currentColor" stroke-width="1.5"></path><rect x="5.5" y="8.3" width="5" height="1.5" fill="currentColor"></rect></svg></sc-if>
+                <sc-if value="{{ r.isRoot }}"><span style="width:13px;height:13px;flex:none;background:var(--accent);"></span></sc-if>
+                <span style="flex:1;min-width:0;font-size:14px;font-weight:{{ r.weight }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</span>
+                <sc-if value="{{ r.isCurrent }}"><span style="font:10px 'Cascadia Mono',Consolas,monospace;padding:2px 6px;border:1px solid var(--text2);color:var(--text2);text-transform:uppercase;">current</span></sc-if>
+                <sc-if value="{{ r.isNew }}"><span style="font:10px 'Cascadia Mono',Consolas,monospace;padding:2px 6px;background:var(--accent2);color:#111;text-transform:uppercase;">new</span></sc-if>
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);min-width:60px;text-align:right;">{{ r.meta }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;padding:14px 20px;border-top:1px solid var(--line);">
+            <sc-if value="{{ mvValid }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:4px;font:11.5px 'Cascadia Mono',Consolas,monospace;">
+                <span style="color:var(--text2);text-transform:uppercase;">Destination</span>
+                <span style="color:var(--text);overflow-wrap:anywhere;">{{ mvPath }}</span>
+              </div>
+              <sc-if value="{{ mvConflict }}">
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--amber);font:11.5px 'Cascadia Mono',Consolas,monospace;">
+                  <span style="color:var(--amber);font-weight:700;">1 NAME CLASH</span>
+                  <span style="flex:1;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">lathir_bust_wip.jpg already exists there</span>
+                  <div style="display:flex;border:1px solid var(--line);">
+                    <sc-for list="{{ mvPolicies }}" as="p" hint-placeholder-count="3">
+                      <button onClick="{{ p.onClick }}" style="padding:4px 9px;border:none;background:{{ p.bg }};color:{{ p.color }};font:inherit;text-transform:uppercase;cursor:pointer;">{{ p.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ mvInvalid }}">
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px dashed var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">
+                <span style="flex:1;line-height:1.45;text-wrap:pretty;">{{ mvHint }}</span>
+                <sc-if value="{{ mvCanCreate }}"><button onClick="{{ mvCreate }}" style="flex:none;height:30px;padding:0 12px;border:1px solid var(--text);background:none;color:var(--text);font:inherit;text-transform:uppercase;cursor:pointer;">+ New album in {{ mvSelName }}</button></sc-if>
+              </div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Tags, stars &amp; collections travel with the images</span>
+              <button style="margin-left:auto;height:40px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+              <button onClick="{{ mvGo }}" style="height:40px;padding:0 22px;border:none;background:{{ mvBtnBg }};color:{{ mvBtnColor }};font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:{{ mvBtnCursor }};">{{ mvBtnLabel }}</button>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ toast1 }}"><div style="position:absolute;left:32px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toast1 }}</div></sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 02 RENAME ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M3 · 02</span><span style="color:var(--text);">Rename</span><span>extension is locked · try a slash, or “lathir_bust_wip”</span>
+      </div>
+      <div style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);outline:1px solid var(--line);">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+          <div style="height:56px;flex:none;display:flex;align-items:center;gap:8px;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="padding:24px 32px 18px;font:700 64px/0.9 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;border-bottom:1px solid var(--line);">Portraits &amp; Expression Sheets</div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 14px;padding:24px 32px;background:var(--bg2);align-content:start;">
+            <sc-for list="{{ backdrop }}" as="b" hint-placeholder-count="18"><div style="aspect-ratio:3/2;background:{{ b.fill }};"></div></sc-for>
+          </div>
+        </div>
+        <div style="position:absolute;inset:0;background:var(--scrim);"></div>
+
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:640px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--text);box-shadow:0 30px 80px rgba(0,0,0,.6);">
+          <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line);">
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:16px 20px 14px;">
+              <span style="font:700 30px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Rename image</span>
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">in Portraits &amp; Expression Sheets</span>
+            </div>
+            <button style="width:56px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:16px sans-serif;cursor:pointer;">✕</button>
+          </div>
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:20px;padding:20px;">
+            <div style="aspect-ratio:3/2;background:var(--thumb);outline:1px solid var(--line);display:grid;place-items:center;"><div style="width:86%;height:74%;background:repeating-linear-gradient(135deg, oklch(0.44 0.07 67) 0 7px, oklch(0.40 0.07 67) 7px 14px);"></div></div>
+            <div style="display:flex;flex-direction:column;gap:8px;min-width:0;">
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">File name</span>
+              <div style="display:flex;align-items:stretch;height:40px;border:1px solid {{ rnBorder }};background:var(--bg2);">
+                <input value="{{ rnName }}" onChange="{{ onRnName }}" onKeyDown="{{ onRnKey }}" style="flex:1;min-width:0;padding:0 10px;border:none;background:none;color:var(--text);font:13px 'Cascadia Mono',Consolas,monospace;outline:none;">
+                <span style="display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--line);color:var(--text2);font:13px 'Cascadia Mono',Consolas,monospace;">.png</span>
+              </div>
+              <span style="min-height:16px;font:11.5px 'Cascadia Mono',Consolas,monospace;color:{{ rnMsgColor }};">{{ rnMsg }}</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--line);">
+            <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Enter renames · Esc cancels</span>
+            <button style="margin-left:auto;height:40px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+            <button onClick="{{ rnGo }}" style="height:40px;padding:0 22px;border:none;background:{{ rnBtnBg }};color:{{ rnBtnColor }};font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Rename</button>
+          </div>
+        </div>
+        <sc-if value="{{ toast2 }}"><div style="position:absolute;left:32px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toast2 }}</div></sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 03 BULK RENAME ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M3 · 03</span><span style="color:var(--text);">Bulk rename</span><span># = number · * = original name · drop the # to see clashes</span>
+      </div>
+      <div style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);outline:1px solid var(--line);">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+          <div style="height:56px;flex:none;display:flex;align-items:center;gap:8px;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="padding:24px 32px 18px;font:700 64px/0.9 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;border-bottom:1px solid var(--line);">Portraits &amp; Expression Sheets</div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 14px;padding:24px 32px;background:var(--bg2);align-content:start;">
+            <sc-for list="{{ backdrop }}" as="b" hint-placeholder-count="18"><div style="aspect-ratio:3/2;background:{{ b.fill }};"></div></sc-for>
+          </div>
+        </div>
+        <div style="position:absolute;inset:0;background:var(--scrim);"></div>
+
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:1080px;height:700px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--text);box-shadow:0 30px 80px rgba(0,0,0,.6);">
+          <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line);">
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:16px 20px 14px;">
+              <span style="font:700 30px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Rename 8 images</span>
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">in Portraits &amp; Expression Sheets · numbered in current sort order (name ↑)</span>
+            </div>
+            <button style="width:56px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:16px sans-serif;cursor:pointer;">✕</button>
+          </div>
+          <div style="flex:1;display:grid;grid-template-columns:340px 1fr;min-height:0;">
+            <div style="display:flex;flex-direction:column;gap:18px;padding:20px;border-right:1px solid var(--line);">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Pattern</span>
+                <input value="{{ bPat }}" onChange="{{ onBPat }}" style="height:40px;padding:0 10px;border:1px solid {{ bPatBorder }};background:var(--bg2);color:var(--text);font:14px 'Cascadia Mono',Consolas,monospace;outline:none;">
+                <div style="display:flex;gap:6px;">
+                  <button onClick="{{ insNum }}" style="height:28px;padding:0 10px;border:1px solid var(--line);background:none;color:var(--text);font:12px 'Cascadia Mono',Consolas,monospace;cursor:pointer;" style-hover="border-color:var(--text);"><span style="color:var(--accent);font-weight:700;">#</span> number</button>
+                  <button onClick="{{ insOrig }}" style="height:28px;padding:0 10px;border:1px solid var(--line);background:none;color:var(--text);font:12px 'Cascadia Mono',Consolas,monospace;cursor:pointer;" style-hover="border-color:var(--text);"><span style="color:var(--accent);font-weight:700;">*</span> original name</button>
+                </div>
+                <span style="min-height:16px;font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--red);">{{ bPatErr }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Start at</span>
+                  <div style="display:flex;align-items:stretch;height:36px;border:1px solid var(--line);font:13px 'Cascadia Mono',Consolas,monospace;">
+                    <button onClick="{{ bStartDown }}" style="width:34px;border:none;background:none;color:var(--text);font:inherit;cursor:pointer;">−</button>
+                    <span style="flex:1;display:grid;place-items:center;border-left:1px solid var(--line);border-right:1px solid var(--line);">{{ bStart }}</span>
+                    <button onClick="{{ bStartUp }}" style="width:34px;border:none;background:none;color:var(--text);font:inherit;cursor:pointer;">+</button>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Digits</span>
+                  <div style="display:flex;height:36px;border:1px solid var(--line);font:13px 'Cascadia Mono',Consolas,monospace;">
+                    <sc-for list="{{ bPads }}" as="p" hint-placeholder-count="4">
+                      <button onClick="{{ p.onClick }}" style="flex:1;border:none;background:{{ p.bg }};color:{{ p.color }};font:inherit;font-weight:700;cursor:pointer;">{{ p.n }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Presets</span>
+                <div style="display:flex;flex-direction:column;border:1px solid var(--line);">
+                  <sc-for list="{{ bPresets }}" as="p" hint-placeholder-count="4">
+                    <button onClick="{{ p.onClick }}" style="display:flex;align-items:center;gap:10px;height:32px;padding:0 10px;border:none;border-bottom:1px solid var(--line);background:none;color:var(--text);font:12.5px 'Cascadia Mono',Consolas,monospace;text-align:left;cursor:pointer;" style-hover="background:var(--surface2);"><span style="flex:1;">{{ p.pat }}</span><span style="color:var(--text2);font-size:11px;">{{ p.eg }}</span></button>
+                  </sc-for>
+                </div>
+              </div>
+              <span style="margin-top:auto;font:11px/1.5 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;text-wrap:pretty;">Extensions are kept. Tags, stars and collections follow each file.</span>
+            </div>
+
+            <div style="display:flex;flex-direction:column;min-width:0;min-height:0;">
+              <div style="display:grid;grid-template-columns:44px minmax(0,1fr) 28px minmax(0,1fr) 84px;align-items:center;height:34px;padding:0 20px;border-bottom:1px solid var(--line);font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">
+                <span>#</span><span>Before</span><span></span><span>After</span><span style="text-align:right;">Status</span>
+              </div>
+              <div style="flex:1;overflow-y:auto;background:var(--bg2);">
+                <sc-for list="{{ bRows }}" as="r" hint-placeholder-count="8">
+                  <div style="display:grid;grid-template-columns:44px minmax(0,1fr) 28px minmax(0,1fr) 84px;align-items:center;min-height:44px;padding:0 20px;border-bottom:1px solid var(--line);font:12.5px 'Cascadia Mono',Consolas,monospace;background:{{ r.bg }};">
+                    <span style="color:var(--accent);font-weight:700;">{{ r.n }}</span>
+                    <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.before }}</span>
+                    <span style="color:var(--text2);">→</span>
+                    <span style="color:{{ r.afterColor }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.after }}<span style="color:var(--text2);">{{ r.ext }}</span></span>
+                    <span style="justify-self:end;padding:2px 6px;font-size:10px;text-transform:uppercase;background:{{ r.stBg }};color:{{ r.stColor }};border:{{ r.stBorder }};">{{ r.status }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--line);">
+            <span style="font:11.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:{{ bSumColor }};">{{ bSummary }}</span>
+            <button style="margin-left:auto;height:40px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+            <button onClick="{{ bGo }}" style="height:40px;padding:0 22px;border:none;background:{{ bBtnBg }};color:{{ bBtnColor }};font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Rename 8 images</button>
+          </div>
+        </div>
+        <sc-if value="{{ toast3 }}"><div style="position:absolute;left:32px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toast3 }}</div></sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 04 RECYCLE BIN ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M3 · 04</span><span style="color:var(--text);">Recycle Bin</span><span>restore puts things back · delete asks first</span>
+        <button onClick="{{ binReset }}" style="margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Reset board</button>
+      </div>
+      <div style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:56px;flex:none;display:flex;align-items:stretch;background:var(--bg2);border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 22px;border-right:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.02em;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 18px;font:13px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);"><span style="color:var(--accent);font-weight:700;">&gt;</span>search 40,265 frames, or #tag_</div>
+          <nav style="display:flex;align-items:stretch;font:600 13px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase;">
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Tags</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Collections</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Favorites</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Random</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text);background:var(--surface);border-left:1px solid var(--line);box-shadow:inset 0 -3px 0 var(--accent);">Bin</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Settings</a>
+          </nav>
+          <button style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:var(--red);color:#fff;font:700 13px/1 'Cascadia Mono',Consolas,monospace;"><span style="font-size:10px;letter-spacing:.1em;">HEALTH</span>37</button>
+          <button style="width:52px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;">?</button>
+        </div>
+
+        <div style="padding:24px 32px 18px;display:flex;align-items:flex-end;gap:32px;border-bottom:1px solid var(--line);">
+          <h2 style="margin:0;font:700 96px/0.8 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:-0.01em;">Recycle Bin</h2>
+          <div style="display:flex;gap:28px;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;padding-bottom:2px;">
+            <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">{{ binCount }}</span>items</div>
+            <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">{{ binSize }}</span>total size</div>
+            <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">{{ binImgCount }}</span>images inside</div>
+          </div>
+          <span style="margin-left:auto;max-width:300px;font:11px/1.5 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;text-align:right;text-wrap:pretty;">Stored in .mediaview\recycle-bin\ · restored items keep their tags and collections</span>
+          <button onClick="{{ askEmpty }}" style="height:42px;padding:0 18px;border:1px solid var(--red);background:none;color:var(--red);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:{{ emptyCursor }};opacity:{{ emptyOp }};">Empty the bin</button>
+        </div>
+
+        <div style="display:flex;align-items:stretch;height:44px;border-bottom:1px solid var(--line);font:12px 'Cascadia Mono',Consolas,Menlo,monospace;text-transform:uppercase;">
+          <sc-for list="{{ binTabs }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.onClick }}" style="padding:0 18px;border:none;border-right:1px solid var(--line);background:{{ t.bg }};color:{{ t.color }};font:inherit;font-weight:700;cursor:pointer;">{{ t.label }} <span style="opacity:.7;">{{ t.n }}</span></button>
+          </sc-for>
+          <span style="display:flex;align-items:center;padding:0 16px;color:var(--text2);">Sort: date recycled ↓</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:48px 72px minmax(0,1.4fr) 130px minmax(0,1.6fr) 150px 90px 290px;align-items:center;height:32px;padding:0 32px 0 20px;border-bottom:1px solid var(--line);font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">
+          <span onClick="{{ binSelAll }}" style="width:14px;height:14px;border:1px solid var(--text2);cursor:pointer;background:{{ binAllBg }};"></span><span></span><span>Name</span><span>Kind</span><span>Original location</span><span>Recycled</span><span style="text-align:right;">Size</span><span></span>
+        </div>
+        <div style="flex:1;overflow-y:auto;overflow-x:hidden;background:var(--bg2);position:relative;">
+          <sc-for list="{{ binRows }}" as="r" hint-placeholder-count="9">
+            <div style="display:grid;grid-template-columns:48px 72px minmax(0,1.4fr) 130px minmax(0,1.6fr) 150px 90px 290px;align-items:center;min-height:62px;padding:0 32px 0 20px;border-bottom:1px solid var(--line);background:{{ r.bg }};" style-hover="background:var(--surface);">
+              <span onClick="{{ r.onSel }}" style="width:14px;height:14px;border:1px solid {{ r.boxBorder }};background:{{ r.boxBg }};color:#111;font:700 10px/14px sans-serif;text-align:center;cursor:pointer;">{{ r.check }}</span>
+              <sc-if value="{{ r.isImage }}" hint-placeholder-val="{{ true }}"><div style="width:58px;height:40px;background:{{ r.fill }};outline:1px solid var(--line);"></div></sc-if>
+              <sc-if value="{{ r.isFolder }}"><div style="position:relative;width:58px;height:40px;"><div style="position:absolute;inset:0;transform:translate(5px,-5px);background:var(--surface2);outline:1px solid var(--line);"></div><div style="position:absolute;inset:0;background:{{ r.fill }};outline:1px solid var(--line);"></div></div></sc-if>
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0;padding-right:16px;">
+                <span style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.name }}</span>
+                <sc-if value="{{ r.hasInner }}"><span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ r.inner }}</span></sc-if>
+              </div>
+              <span style="display:flex;align-items:center;gap:6px;font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);">
+                <sc-if value="{{ r.kImage }}"><span style="width:9px;height:9px;background:var(--text2);"></span></sc-if>
+                <sc-if value="{{ r.kAlbum }}"><svg width="12" height="12" viewBox="0 0 16 16"><rect x="4.5" y="1.5" width="10" height="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect><rect x="1.5" y="4" width="10" height="11" fill="currentColor"></rect></svg></sc-if>
+                <sc-if value="{{ r.kDrawer }}"><svg width="12" height="12" viewBox="0 0 16 16"><rect x="1.8" y="3.8" width="12.4" height="9.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="6" y="7.6" width="4" height="1.8" fill="currentColor"></rect></svg></sc-if>
+                {{ r.kind }}
+              </span>
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0;padding-right:16px;font:11.5px 'Cascadia Mono',Consolas,monospace;">
+                <span style="color:{{ r.locColor }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:{{ r.locDeco }};" title="{{ r.loc }}">{{ r.loc }}</span>
+                <sc-if value="{{ r.missing }}"><span style="color:var(--amber);font-size:10.5px;text-transform:uppercase;">Location no longer exists</span></sc-if>
+              </div>
+              <span style="font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ r.date }}</span>
+              <span style="font:11.5px 'Cascadia Mono',Consolas,monospace;text-align:right;">{{ r.size }}</span>
+              <div style="display:flex;justify-content:flex-end;font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                <button onClick="{{ r.onRestore }}" style="height:30px;padding:0 10px;border:1px solid var(--line);background:none;color:{{ r.restoreColor }};font:inherit;cursor:{{ r.restoreCursor }};" style-hover="border-color:var(--text);">Restore</button>
+                <button onClick="{{ r.onRestoreTo }}" style="height:30px;padding:0 10px;border:1px solid var(--line);border-left:none;background:{{ r.toBg }};color:var(--text);font:inherit;cursor:pointer;" style-hover="border-color:var(--text);">Restore to…</button>
+                <button onClick="{{ r.onDelete }}" title="Delete permanently" style="height:30px;padding:0 10px;border:1px solid var(--line);border-left:none;background:none;color:var(--red);font:inherit;cursor:pointer;" style-hover="border-color:var(--red);">Delete</button>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ binEmpty }}">
+            <div style="padding:90px 32px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+              <span style="font:700 56px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">The bin is empty</span>
+              <span style="font:12px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Recycled images and folders wait here until you restore or delete them.</span>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ binHasSel }}">
+          <div style="position:absolute;left:0;right:0;bottom:0;height:56px;display:flex;align-items:stretch;background:var(--text);color:var(--bg);z-index:10;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+            <div style="display:flex;align-items:center;gap:10px;padding:0 24px;border-right:1px solid rgba(0,0,0,.25);"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;">{{ binSelCount }}</span>selected · {{ binSelSize }}</div>
+            <button onClick="{{ binRestoreSel }}" style="padding:0 18px;border:none;border-right:1px solid rgba(0,0,0,.25);background:none;color:var(--bg);font:inherit;font-weight:700;cursor:pointer;">Restore</button>
+            <button onClick="{{ binRestoreToSel }}" style="padding:0 18px;border:none;border-right:1px solid rgba(0,0,0,.25);background:none;color:var(--bg);font:inherit;font-weight:700;cursor:pointer;">Restore to…</button>
+            <button onClick="{{ binDeleteSel }}" style="padding:0 18px;border:none;background:var(--red);color:#fff;font:inherit;font-weight:700;cursor:pointer;">Delete permanently</button>
+            <button onClick="{{ binClearSel }}" style="margin-left:auto;width:56px;border:none;border-left:1px solid rgba(0,0,0,.25);background:none;color:var(--bg);font:700 16px sans-serif;cursor:pointer;">✕</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ bc }}">
+          <div style="position:absolute;inset:0;z-index:50;background:var(--scrim);"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:51;width:560px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--red);box-shadow:0 30px 80px rgba(0,0,0,.6);">
+            <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line);">
+              <div style="width:8px;background:var(--red);"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:16px 20px 14px;">
+                <span style="font:700 30px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ bc.title }}</span>
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ bc.sub }}</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;padding:18px 20px;">
+              <span style="font-size:15px;line-height:1.5;text-wrap:pretty;">{{ bc.body }}</span>
+              <div style="display:flex;flex-direction:column;border:1px solid var(--line);max-height:150px;overflow-y:auto;font:12px 'Cascadia Mono',Consolas,monospace;">
+                <sc-for list="{{ bc.items }}" as="i" hint-placeholder-count="3">
+                  <div style="display:flex;gap:10px;padding:6px 10px;border-bottom:1px solid var(--line);"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ i.name }}</span><span style="color:var(--text2);">{{ i.size }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--line);">
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--red);text-transform:uppercase;">This can’t be undone</span>
+              <button onClick="{{ bcCancel }}" style="margin-left:auto;height:40px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+              <button onClick="{{ bcGo }}" style="height:40px;padding:0 22px;border:none;background:var(--red);color:#fff;font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">{{ bc.btn }}</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toast4 }}"><div style="position:absolute;left:32px;bottom:72px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;outline:1px solid var(--bg);">{{ toast4 }}</div></sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 05 CONFIRM ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M3 · 05</span><span style="color:var(--text);">Confirmation</span><span>one frame, three weights</span>
+        <div style="margin-left:auto;display:flex;border:1px solid var(--line);">
+          <sc-for list="{{ cfTabs }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.onClick }}" style="padding:6px 12px;border:none;background:{{ t.bg }};color:{{ t.color }};font:inherit;cursor:pointer;">{{ t.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);outline:1px solid var(--line);">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+          <div style="height:56px;flex:none;display:flex;align-items:center;gap:8px;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="padding:24px 32px 18px;font:700 64px/0.9 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;border-bottom:1px solid var(--line);">{{ cfBackTitle }}</div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 14px;padding:24px 32px;background:var(--bg2);align-content:start;">
+            <sc-for list="{{ backdrop }}" as="b" hint-placeholder-count="18"><div style="aspect-ratio:3/2;background:{{ b.fill }};"></div></sc-for>
+          </div>
+        </div>
+        <div style="position:absolute;inset:0;background:var(--scrim);"></div>
+
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:580px;display:flex;flex-direction:column;background:var(--bg);border:1px solid {{ cfEdge }};box-shadow:0 30px 80px rgba(0,0,0,.6);">
+          <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line);">
+            <div style="width:8px;background:{{ cfEdge }};"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding:16px 20px 14px;">
+              <span style="font:700 30px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ cfTitle }}</span>
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ cfSub }}</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px;padding:18px 20px;">
+            <span style="font-size:15px;line-height:1.5;text-wrap:pretty;">{{ cfBody }}</span>
+            <sc-if value="{{ cfHasList }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;border:1px solid var(--line);font:12px 'Cascadia Mono',Consolas,monospace;">
+                <sc-for list="{{ cfItems }}" as="i" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);">
+                    <span style="width:10px;height:10px;flex:none;background:{{ i.dot }};"></span>
+                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:{{ i.color }};">{{ i.name }}</span>
+                    <span style="color:var(--text2);text-transform:uppercase;font-size:11px;">{{ i.note }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ cfTyped }}">
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Type <span style="color:var(--text);">EMPTY</span> to confirm</span>
+                <input value="{{ cfText }}" onChange="{{ onCfText }}" placeholder="EMPTY" style="height:40px;padding:0 10px;border:1px solid {{ cfInputBorder }};background:var(--bg2);color:var(--text);font:14px 'Cascadia Mono',Consolas,monospace;letter-spacing:.1em;outline:none;">
+              </div>
+            </sc-if>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--line);">
+            <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:{{ cfFootColor }};text-transform:uppercase;">{{ cfFoot }}</span>
+            <button style="margin-left:auto;height:40px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+            <button onClick="{{ cfGo }}" style="height:40px;padding:0 22px;border:none;background:{{ cfBtnBg }};color:{{ cfBtnColor }};font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:{{ cfBtnCursor }};">{{ cfBtn }}</button>
+          </div>
+        </div>
+        <sc-if value="{{ toast5 }}"><div style="position:absolute;left:32px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toast5 }}</div></sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 06 IMPORT ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M3 · 06</span><span style="color:var(--text);">Import progress</span><span>docked, non-blocking · per-file report when done</span>
+        <button onClick="{{ impReplay }}" style="margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Replay import</button>
+      </div>
+      <div style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);outline:1px solid var(--line);">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+          <div style="height:56px;flex:none;display:flex;align-items:center;gap:8px;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+          <div style="padding:24px 32px 18px;font:700 64px/0.9 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;border-bottom:1px solid var(--line);">Portraits &amp; Expression Sheets</div>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 14px;padding:24px 32px;background:var(--bg2);align-content:start;">
+            <sc-for list="{{ impBackdrop }}" as="b" hint-placeholder-count="18"><div style="aspect-ratio:3/2;background:{{ b.fill }};outline:{{ b.outline }};"></div></sc-for>
+          </div>
+        </div>
+
+        <div style="position:absolute;right:24px;bottom:24px;width:520px;max-height:760px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--text);box-shadow:0 20px 60px rgba(0,0,0,.6);">
+          <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line);">
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px;padding:14px 16px 12px;min-width:0;">
+              <span style="font:700 24px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ impTitle }}</span>
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">→ Portraits &amp; Expression Sheets</span>
+            </div>
+            <button onClick="{{ impToggleMin }}" style="width:48px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:14px 'Cascadia Mono',Consolas,monospace;cursor:pointer;">{{ impMinIcon }}</button>
+            <button style="width:48px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:16px sans-serif;cursor:pointer;">✕</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);">
+            <div style="height:6px;background:var(--surface2);position:relative;"><div style="position:absolute;left:0;top:0;bottom:0;width:{{ impPct }};background:{{ impBarColor }};"></div></div>
+            <div style="display:flex;align-items:baseline;gap:10px;font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">
+              <span style="font:700 26px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">{{ impDone }} / 48</span>
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ impCurrent }}</span>
+              <span>{{ impMB }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);font:10.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+              <div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">{{ impCopied }}</span><span style="color:var(--text2);">copied</span></div>
+              <div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-left:1px solid var(--line);"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--blue);">{{ impRenamed }}</span><span style="color:var(--text2);">renamed</span></div>
+              <div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-left:1px solid var(--line);"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--amber);">{{ impRejected }}</span><span style="color:var(--text2);">rejected</span></div>
+            </div>
+          </div>
+          <sc-if value="{{ impExpanded }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:stretch;height:36px;border-bottom:1px solid var(--line);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+              <sc-for list="{{ impTabs }}" as="t" hint-placeholder-count="3">
+                <button onClick="{{ t.onClick }}" style="padding:0 14px;border:none;border-right:1px solid var(--line);background:{{ t.bg }};color:{{ t.color }};font:inherit;font-weight:700;cursor:pointer;">{{ t.label }} {{ t.n }}</button>
+              </sc-for>
+            </div>
+            <div style="flex:1;min-height:0;max-height:380px;overflow-y:auto;background:var(--bg2);">
+              <sc-for list="{{ impRows }}" as="r" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:14px minmax(0,1fr);gap:10px;padding:9px 16px;border-bottom:1px solid var(--line);">
+                  <span style="width:10px;height:10px;margin-top:4px;background:{{ r.dot }};"></span>
+                  <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+                    <span style="font:12.5px 'Cascadia Mono',Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ r.name }}">{{ r.name }}</span>
+                    <span style="font-size:12.5px;color:var(--text2);line-height:1.4;text-wrap:pretty;">{{ r.reason }}</span>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ impNoRows }}">
+                <div style="padding:20px 16px;font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">Nothing here yet.</div>
+              </sc-if>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding:12px 16px;border-top:1px solid var(--line);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+              <sc-if value="{{ impRunning }}" hint-placeholder-val="{{ true }}">
+                <span style="color:var(--text2);">Keep working — this runs in the background</span>
+                <button onClick="{{ impCancel }}" style="margin-left:auto;height:32px;padding:0 14px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Cancel import</button>
+              </sc-if>
+              <sc-if value="{{ impFinished }}">
+                <button onClick="{{ impCopyReport }}" style="height:32px;padding:0 12px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Copy report</button>
+                <button onClick="{{ impOpenLog }}" style="height:32px;padding:0 12px;border:1px solid var(--line);border-left:none;background:none;color:var(--text);font:inherit;cursor:pointer;">Open log</button>
+                <button onClick="{{ impRetry }}" style="height:32px;padding:0 12px;border:1px solid var(--line);border-left:none;background:none;color:var(--text);font:inherit;cursor:pointer;">Retry unreadable</button>
+                <button style="margin-left:auto;height:32px;padding:0 16px;border:none;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer;">Done</button>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ toast6 }}"><div style="position:absolute;left:32px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toast6 }}</div></sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 07 DESCRIPTION ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">M3 · 07</span><span style="color:var(--text);">Folder description · inline edit</span><span>click the text or ✎ · ctrl+enter saves · esc cancels</span>
+      </div>
+      <div style="position:relative;width:1440px;height:560px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:56px;flex:none;display:flex;align-items:center;gap:8px;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:12px;height:12px;background:var(--accent);"></span>MEDIA/VIEW</div>
+        <div style="flex:1;padding:22px 40px;display:flex;flex-direction:column;gap:22px;">
+          <div style="display:flex;align-items:center;gap:8px;font:11.5px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+            <a style="color:var(--text2);">Images</a><span>/</span>
+            <span style="display:flex;align-items:center;gap:5px;color:var(--accent);"><svg width="12" height="12" viewBox="0 0 16 16"><rect x="2" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="12.4" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="2" y="4" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="9.5" width="12" height="1.6" fill="currentColor"></rect></svg>Fantasy</span>
+          </div>
+          <div style="display:grid;grid-template-columns:440px 1fr;gap:36px;">
+            <div style="position:relative;aspect-ratio:3/2;background:repeating-linear-gradient(135deg, oklch(0.46 0.07 67) 0 7px, oklch(0.42 0.07 67) 7px 14px);outline:1px solid var(--line);outline-offset:8px;">
+              <span style="position:absolute;left:10px;bottom:10px;font:10.5px 'Cascadia Mono',Consolas,monospace;color:#fff;background:rgba(0,0,0,.45);padding:3px 6px;">COVER</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
+              <span style="font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--accent);">Category · rack 01</span>
+              <h2 style="margin:0;font:700 120px/0.8 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:-0.01em;">Fantasy</h2>
+              <sc-if value="{{ dView }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ dStart }}" style="display:flex;flex-direction:column;gap:8px;max-width:680px;margin:-8px -10px 0;padding:8px 10px;border:1px dashed transparent;cursor:text;" style-hover="border-color:var(--line);background:var(--surface);">
+                  <p style="margin:0;font-size:15px;line-height:1.55;white-space:pre-wrap;text-wrap:pretty;color:{{ dTextColor }};">{{ dShown }}</p>
+                  <span style="font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);">✎ Edit description</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ dEdit }}">
+                <div style="display:flex;flex-direction:column;max-width:680px;margin:-8px -10px 0;border:1px solid var(--accent);background:var(--bg2);">
+                  <textarea ref="{{ dRef }}" value="{{ dDraft }}" onChange="{{ onDDraft }}" onKeyDown="{{ onDKey }}" rows="5" placeholder="What lives in this rack?" style="resize:none;padding:10px;border:none;background:none;color:var(--text);font:15px/1.55 Bahnschrift,'DIN Alternate','Segoe UI',system-ui,sans-serif;outline:none;"></textarea>
+                  <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                    <span style="color:{{ dCountColor }};">{{ dCount }} / 600</span>
+                    <span style="color:var(--text2);">· ctrl+enter saves · esc cancels</span>
+                    <button onClick="{{ dCancel }}" style="margin-left:auto;height:30px;padding:0 12px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Cancel</button>
+                    <button onClick="{{ dSave }}" style="height:30px;padding:0 14px;border:none;background:{{ dSaveBg }};color:{{ dSaveColor }};font:inherit;font-weight:700;cursor:pointer;">Save</button>
+                  </div>
+                </div>
+              </sc-if>
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">8,412 images · 4 drawers · 6 albums</span>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ toast7 }}"><div style="position:absolute;left:40px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toast7 }}</div></sc-if>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static D = (() => {
+    const fill = (h, l = 0.44) => `repeating-linear-gradient(135deg, oklch(${l} 0.07 ${h}) 0 7px, oklch(${l - 0.04} 0.07 ${h}) 7px 14px)`;
+    const hueOf = i => (i * 47 + 20) % 360;
+    const A = (id, name, count, extra) => ({ id, name, kind: 'album', count, ...(extra || {}) });
+    const TREE = { id: 'root', name: 'Images', kind: 'root', children: [
+      A('inbox', 'Inbox', 214, { kind: 'inbox' }),
+      { id: 'fantasy', name: 'Fantasy', kind: 'rack', children: [
+        { id: 'elves', name: 'Elves', kind: 'drawer', children: [
+          { id: 'court', name: 'High Court of Ilvenmar', kind: 'drawer', children: [A('portraits', 'Portraits & Expression Sheets', 1248, { current: true }), A('regalia', 'Court Regalia', 186)] },
+          A('landscapes', 'Landscapes', 402), A('ears', 'Ear & Hair Studies', 77)] },
+        { id: 'dragons', name: 'Dragons & Wyrms', kind: 'drawer', children: [A('wyrm', 'Wyrm Anatomy', 341), A('hoards', 'Hoards', 120)] },
+        { id: 'fae', name: 'Fae Courts', kind: 'drawer', children: [] },
+        A('maps', 'Maps', 412), A('heraldry', 'Heraldry & Crests', 96), A('battle', 'Battle Scenes', 1160)] },
+      { id: 'photo', name: 'Photography', kind: 'rack', children: [
+        { id: 'p2025', name: '2025', kind: 'drawer', children: [A('beach', 'Beach Trip', 318), A('lisbon', 'Lisbon', 644)] },
+        { id: 'p2024', name: '2024', kind: 'drawer', children: [A('winter', 'Winter Walks', 210), A('studio', 'Studio Tests', 88)] }] },
+      { id: 'sheets', name: 'Character Design Sheets', kind: 'rack', children: [A('turn', 'Turnarounds', 230), A('palettes', 'Palettes', 64)] },
+      { id: 'untitled', name: 'Untitled rack', kind: 'rack', children: [] },
+    ] };
+    const BIN = [
+      { id: 'b1', name: 'lathir_bust_wip.jpg', kind: 'Image', loc: 'Fantasy\\Elves\\High Court of Ilvenmar\\Portraits & Expression Sheets', date: '2026-10-02 14:22', mb: 2.1 },
+      { id: 'b2', name: 'Fae Courts (draft)', kind: 'Sub-category', inner: '2 albums · 58 images', loc: 'Fantasy', date: '2026-10-01 09:10', mb: 96.4, imgs: 58 },
+      { id: 'b3', name: 'scan_0041.jpg', kind: 'Image', loc: 'Comics — Ashes of Varn pages\\Issue 0', date: '2026-09-30 22:47', mb: 4.8, missing: true },
+      { id: 'b4', name: 'Old Thumbnails', kind: 'Album', inner: '214 images', loc: 'Photography\\2023', date: '2026-09-28 18:05', mb: 412.6, imgs: 214 },
+      { id: 'b5', name: 'Screenshot 2025-11-02 031407.png', kind: 'Image', loc: 'Inbox', date: '2026-09-27 11:31', mb: 0.9 },
+      { id: 'b6', name: 'untitled-1-final-final.png', kind: 'Image', loc: 'Fantasy\\Elves\\High Court of Ilvenmar\\Portraits & Expression Sheets', date: '2026-09-25 16:02', mb: 6.3 },
+      { id: 'b7', name: 'Duplicates — Beach Trip', kind: 'Album', inner: '31 images', loc: 'Photography\\2025', date: '2026-09-21 08:44', mb: 188.0, imgs: 31 },
+      { id: 'b8', name: 'pose_ref_kneeling_old.jpg', kind: 'Image', loc: 'Anatomy & Pose Reference\\Kneeling', date: '2026-09-18 20:13', mb: 3.4 },
+      { id: 'b9', name: 'blink_loop_test_v0.gif', kind: 'Image', loc: 'Fantasy\\Elves\\High Court of Ilvenmar\\Portraits & Expression Sheets', date: '2026-09-12 13:58', mb: 11.2 },
+    ];
+    const BULK = ['aerin_expressions_sheet_A_happy-sad-furious-smug.png', 'circlet_design_variants_x12.png', 'hands_reference_sheet__holding_bow_and_quill.png', 'IMG_20250614_183302_ref_lighting.jpg', 'lathir_bust_wip.jpg', 'pose_ref_kneeling_with_staff (from sketchbook p.43).jpg', 'scan_0042.jpg', 'ysolde_full_body_lineart_clean.png'];
+    const EXISTING = ['aerin_valecrest__court_regalia_turnaround_FINAL_v3 (1)', 'lathir_bust_wip', 'blink_loop_aerin', 'scan_0042', 'ch3_ref_09', 'untitled-1-final-final'];
+    const IMPORT = Array.from({ length: 48 }, (_, i) => ({ name: `incoming_${String(i + 1).padStart(3, '0')}.png`, mb: 1 + ((i * 37) % 30) / 10 }));
+    const REJ = { 6: ['concept_board_layers.psd', 'Unsupported format (PSD). Supported: JPG, PNG, GIF, WebP, SVG, AVIF, JFIF.'], 13: ['turnaround_timelapse.mp4', 'Video file — not imported. Videos will have their own module.'], 21: ['notes_for_commission.txt', 'Not an image.'], 30: ['scan_0099.jpg', 'Couldn’t read the file — it may be damaged or still downloading.'], 39: ['aerin_expressions_sheet_A_happy-sad-furious-smug.png', 'Identical image already in this album — skipped.'] };
+    const REN = { 17: ['lathir_bust_wip.jpg', 'Name taken — saved as lathir_bust_wip (2).jpg'], 34: ['scan_0042.jpg', 'Name taken — saved as scan_0042 (2).jpg'] };
+    return { fill, hueOf, TREE, BIN, BULK, EXISTING, IMPORT, REJ, REN };
+  })();
+
+  dRef = React.createRef();
+  state = {
+    toast: null,
+    mvMode: 'move', mvSel: 'regalia', mvOpen: { root: 1, fantasy: 1, elves: 1, court: 1, photo: 1, p2025: 1 }, mvQ: '', mvPolicy: 0, mvNew: {},
+    rn: 'aerin_expressions_sheet_A_happy-sad-furious-smug',
+    bPat: 'ch3_ref_#', bStart: 1, bPad: 2,
+    binGone: {}, binSel: {}, binTab: 'all', bc: null,
+    cf: 'delete', cfText: '',
+    imp: 0, impMin: false, impTab: 'rejected', impCancelled: false,
+    dEdit: false, dText: 'Elves, dragons and everything with pointy ears or a hoard. Reference for the Ilvenmar Cycle lives under Elves; loose battle scenes wait in their own album.', dDraft: '',
+  };
+  componentDidMount() { this.startImport(); }
+  componentWillUnmount() { clearInterval(this.it); }
+  componentDidUpdate(pp, ps) { if (this.state.dEdit && !ps.dEdit && this.dRef.current) { const t = this.dRef.current; t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }
+  startImport() { clearInterval(this.it); this.setState({ imp: 0, impCancelled: false, impTab: 'rejected' }); this.it = setInterval(() => { const n = this.state.imp + 1; this.setState({ imp: n }); if (n >= 48) clearInterval(this.it); }, 140); }
+  toast(b, text) { this.setState({ toast: { b, text } }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 3000); }
+
+  renderVals() {
+    const D = Component.D, st = this.state, set = p => this.setState(p), toast = (b, t) => this.toast(b, t);
+    const tst = b => st.toast && st.toast.b === b ? st.toast.text : '';
+    const seg = (cur, v) => ({ bg: cur === v ? 'var(--text)' : 'transparent', color: cur === v ? 'var(--bg)' : 'var(--text2)' });
+    const backdrop = Array.from({ length: 18 }, (_, i) => ({ key: i, fill: D.fill(D.hueOf(i), 0.4), outline: [2, 3, 9, 10].includes(i) ? '3px solid var(--accent2)' : 'none' }));
+
+    // ---- 01 move/copy
+    const tree = JSON.parse(JSON.stringify(D.TREE));
+    const idx = {}; const walk = (n, parent, path) => { n.parent = parent; n.path = path; idx[n.id] = n; (st.mvNew[n.id] || []).forEach(a => n.children.push(a)); (n.children || []).forEach(c => walk(c, n, path.concat(c.name))); };
+    walk(tree, null, []);
+    const q = st.mvQ.trim().toLowerCase();
+    const matches = n => n.name.toLowerCase().includes(q) || (n.children || []).some(matches);
+    const rows = [];
+    const emit = (n, depth) => {
+      if (q && !matches(n)) return;
+      const isFolder = n.kind === 'rack' || n.kind === 'drawer' || n.kind === 'root';
+      const open = q ? true : !!st.mvOpen[n.id];
+      const albumish = n.kind === 'album' || n.kind === 'inbox';
+      const sel = st.mvSel === n.id, cur = !!n.current;
+      const nKids = (n.children || []).length;
+      rows.push({ key: n.id, name: n.name, pad: (20 + depth * 22) + 'px', caret: isFolder && nKids ? (open ? '▾' : '▸') : '',
+        isRack: n.kind === 'rack', isDrawer: n.kind === 'drawer', isAlbum: n.kind === 'album', isInbox: n.kind === 'inbox', isRoot: n.kind === 'root', isCurrent: cur, isNew: !!n.isNew,
+        meta: albumish ? n.count.toLocaleString('en-US') : (nKids ? '' : 'empty'),
+        weight: albumish ? '400' : '600',
+        color: cur ? 'var(--text2)' : (albumish ? 'var(--text)' : 'var(--text2)'),
+        bg: sel ? (albumish && !cur ? 'color-mix(in oklab, var(--accent) 22%, var(--bg2))' : 'var(--surface2)') : 'transparent',
+        bar: sel ? (albumish && !cur ? 'var(--accent)' : 'var(--text2)') : 'transparent',
+        onToggle: e => { e.stopPropagation(); if (isFolder) set({ mvOpen: { ...st.mvOpen, [n.id]: !st.mvOpen[n.id] } }); },
+        onClick: () => set({ mvSel: n.id, mvOpen: isFolder && !st.mvOpen[n.id] ? { ...st.mvOpen, [n.id]: 1 } : st.mvOpen }) });
+      if (open) (n.children || []).forEach(c => emit(c, depth + 1));
+    };
+    emit(tree, 0);
+    const sn = idx[st.mvSel] || tree;
+    const snAlbum = sn.kind === 'album' || sn.kind === 'inbox';
+    const mvValid = snAlbum && !sn.current;
+    const mvHint = sn.current ? 'The images are already here. Pick a different album.' : sn.kind === 'root' ? 'Images can’t sit at the top level. Pick an album.' : `${sn.kind === 'rack' ? 'Racks' : 'Drawers'} hold albums, not images. Pick an album${sn.kind === 'root' ? '' : ', or create one here'}.`;
+    const verb = st.mvMode === 'move' ? 'Move' : 'Copy';
+    let albumCount = 0; Object.values(idx).forEach(n => { if (n.kind === 'album' || n.kind === 'inbox') albumCount++; });
+
+    // ---- 02 rename
+    const rn = st.rn, rnTrim = rn.trim();
+    const rnBad = /[\\/:*?"<>|]/.test(rn), rnDup = D.EXISTING.includes(rnTrim), rnSame = rnTrim === 'aerin_expressions_sheet_A_happy-sad-furious-smug';
+    const rnErr = !rnTrim ? 'A name is required.' : rnBad ? 'Not allowed in file names:  \\ / : * ? " < > |' : rnDup ? `“${rnTrim}.png” already exists in this album.` : '';
+    const rnOk = !rnErr && !rnSame;
+
+    // ---- 03 bulk
+    const pat = st.bPat, patBad = /[\\/:?"<>|]/.test(pat) ? 'Not allowed:  \\ / : ? " < > |' : !pat.trim() ? 'Pattern is empty.' : '';
+    const outs = D.BULK.map((f, i) => { const dot = f.lastIndexOf('.'); const base = f.slice(0, dot), ext = f.slice(dot);
+      const num = String(st.bStart + i).padStart(st.bPad, '0'); return { before: f, base, ext, after: pat.split('#').join(num).split('*').join(base).trim() }; });
+    const counts = {}; outs.forEach(o => { const k = (o.after + o.ext).toLowerCase(); counts[k] = (counts[k] || 0) + 1; });
+    const bRows = outs.map((o, i) => {
+      const dup = counts[(o.after + o.ext).toLowerCase()] > 1, exists = !D.BULK.map(x => x.slice(0, x.lastIndexOf('.'))).includes(o.after) && D.EXISTING.includes(o.after);
+      const same = o.after === o.base, bad = !!patBad || !o.after;
+      const status = bad ? 'invalid' : dup ? 'duplicate' : exists ? 'exists' : same ? 'unchanged' : 'ok';
+      const red = ['invalid', 'duplicate', 'exists'].includes(status);
+      return { key: i, n: i + 1, before: o.before, after: o.after || '—', ext: o.ext, status,
+        afterColor: red ? 'var(--red)' : same ? 'var(--text2)' : 'var(--text)', bg: red ? 'color-mix(in oklab, var(--red) 9%, transparent)' : 'transparent',
+        stBg: status === 'ok' ? 'var(--text)' : 'transparent', stColor: status === 'ok' ? 'var(--bg)' : red ? 'var(--red)' : 'var(--text2)', stBorder: status === 'ok' ? 'none' : `1px solid ${red ? 'var(--red)' : 'var(--line)'}` };
+    });
+    const nBad = bRows.filter(r => ['invalid', 'duplicate', 'exists'].includes(r.status)).length;
+    const nChange = bRows.filter(r => r.status === 'ok').length;
+    const bOk = !patBad && nBad === 0 && nChange > 0;
+    const ins = tokn => set({ bPat: st.bPat + tokn });
+
+    // ---- 04 bin
+    const live = D.BIN.filter(b => !st.binGone[b.id]);
+    const isImg = b => b.kind === 'Image';
+    const shown = live.filter(b => st.binTab === 'all' || (st.binTab === 'images' ? isImg(b) : !isImg(b)));
+    const mbFmt = mb => mb >= 1000 ? (mb / 1000).toFixed(2) + ' GB' : mb.toFixed(1) + ' MB';
+    const selIds = Object.keys(st.binSel).filter(id => !st.binGone[id]);
+    const selItems = live.filter(b => st.binSel[b.id]);
+    const gone = ids => { const g = { ...st.binGone }; const s = { ...st.binSel }; ids.forEach(id => { g[id] = 1; delete s[id]; }); return { binGone: g, binSel: s }; };
+    const askDel = items => set({ bc: { kind: 'delete', ids: items.map(b => b.id) } });
+    const binRows = shown.map((b, i) => { const sel = !!st.binSel[b.id];
+      return { key: b.id, name: b.name, inner: b.inner || '', hasInner: !!b.inner, isImage: isImg(b), isFolder: !isImg(b), kImage: isImg(b), kAlbum: b.kind === 'Album', kDrawer: b.kind === 'Sub-category', kind: b.kind,
+        fill: D.fill(D.hueOf(i * 5 + 3), 0.42), loc: b.loc, missing: !!b.missing, locColor: b.missing ? 'var(--text2)' : 'var(--text)', locDeco: b.missing ? 'line-through' : 'none',
+        date: b.date, size: mbFmt(b.mb), bg: sel ? 'color-mix(in oklab, var(--accent2) 10%, transparent)' : 'transparent',
+        check: sel ? '✓' : '', boxBg: sel ? 'var(--accent2)' : 'transparent', boxBorder: sel ? 'var(--accent2)' : 'var(--text2)',
+        restoreColor: b.missing ? 'var(--line)' : 'var(--text)', restoreCursor: b.missing ? 'not-allowed' : 'pointer', toBg: b.missing ? 'color-mix(in oklab, var(--amber) 18%, transparent)' : 'transparent',
+        onSel: () => { const s = { ...st.binSel }; if (s[b.id]) delete s[b.id]; else s[b.id] = 1; set({ binSel: s }); },
+        onRestore: () => { if (b.missing) { toast('bin', 'Original location is gone — use Restore to… and pick a new place.'); return; } set(gone([b.id])); toast('bin', `Restored “${b.name}” to ${b.loc}`); },
+        onRestoreTo: () => toast('bin', `Restore to… opens the folder picker (board 01) for “${b.name}”`),
+        onDelete: () => askDel([b]) }; });
+    let bc = null;
+    if (st.bc) {
+      const items = st.bc.kind === 'empty' ? live : live.filter(b => st.bc.ids.includes(b.id));
+      const mb = items.reduce((a, b) => a + b.mb, 0), imgs = items.reduce((a, b) => a + (b.imgs || (isImg(b) ? 1 : 0)), 0);
+      bc = st.bc.kind === 'empty'
+        ? { title: 'Empty the Recycle Bin?', sub: `${items.length} items · ${imgs} images · ${mbFmt(mb)}`, body: 'Everything in the bin will be deleted from disk, along with its tags, descriptions and collection entries.', btn: 'Empty the bin', items: items.slice(0, 40).map(b => ({ key: b.id, name: b.name, size: mbFmt(b.mb) })) }
+        : { title: items.length === 1 ? 'Delete permanently?' : `Delete ${items.length} items permanently?`, sub: `${imgs} image${imgs === 1 ? '' : 's'} · ${mbFmt(mb)}`, body: 'These files will be removed from disk. Their tags and collection entries go with them.', btn: 'Delete permanently', items: items.map(b => ({ key: b.id, name: b.name, size: mbFmt(b.mb) })) };
+    }
+
+    // ---- 05 confirm variants
+    const CF = {
+      delete: { tab: 'Delete permanently', back: 'Recycle Bin', edge: 'var(--red)', title: 'Delete 3 items permanently?', sub: '216 images · 419.6 MB', body: 'These files will be removed from disk. Their tags and collection entries go with them.',
+        items: [['lathir_bust_wip.jpg', '2.1 MB', 'var(--text2)'], ['Old Thumbnails', 'album · 214', 'var(--text2)'], ['untitled-1-final-final.png', '6.3 MB', 'var(--text2)']], foot: 'This can’t be undone', footColor: 'var(--red)', btn: 'Delete permanently', btnBg: 'var(--red)', btnColor: '#fff' },
+      empty: { tab: 'Empty the bin', back: 'Recycle Bin', edge: 'var(--red)', title: 'Empty the Recycle Bin?', sub: '9 items · 304 images · 726.7 MB', body: 'Everything in the bin will be deleted from disk, along with its tags, descriptions and collection entries.', items: [], typed: true, foot: 'This can’t be undone', footColor: 'var(--red)', btn: 'Empty the bin', btnBg: 'var(--red)', btnColor: '#fff' },
+      starred: { tab: 'Starred protection', back: 'Portraits & Expression Sheets', edge: 'var(--accent2)', title: 'Recycle 3 of 5 images?', sub: '2 selected images are starred', body: 'Starred images are protected and won’t be recycled. Unstar them first if you really want them gone.',
+        items: [['aerin_valecrest__court_regalia_turnaround_FINAL_v3 (1).png', 'starred · stays', 'var(--accent2)'], ['blink_loop_aerin.gif', 'starred · stays', 'var(--accent2)'], ['lathir_bust_wip.jpg', 'to bin', 'var(--text2)'], ['IMG_20250614_183302_ref_lighting.jpg', 'to bin', 'var(--text2)'], ['scan_0042.jpg', 'to bin', 'var(--text2)']], foot: 'Restorable from the Recycle Bin', footColor: 'var(--text2)', btn: 'Recycle 3 images', btnBg: 'var(--text)', btnColor: 'var(--bg)' },
+    };
+    const cf = CF[st.cf]; const cfReady = !cf.typed || st.cfText.trim().toUpperCase() === 'EMPTY';
+
+    // ---- 06 import
+    const n = st.imp, running = n < 48 && !st.impCancelled;
+    const rej = Object.entries(D.REJ).filter(([i]) => +i < n), ren = Object.entries(D.REN).filter(([i]) => +i < n);
+    const copied = n - rej.length;
+    const mbDone = D.IMPORT.slice(0, n).reduce((a, f) => a + f.mb, 0), mbAll = D.IMPORT.reduce((a, f) => a + f.mb, 0);
+    const curName = D.REJ[n] ? D.REJ[n][0] : D.REN[n] ? D.REN[n][0] : (D.IMPORT[n] || {}).name || '';
+    const copiedRows = Array.from({ length: n }, (_, i) => i).filter(i => !D.REJ[i]).reverse().slice(0, 30).map(i => ({ key: 'c' + i, name: D.REN[i] ? D.REN[i][1].split('as ')[1] : D.IMPORT[i].name, reason: D.REN[i] ? 'Copied · renamed to avoid a clash' : `Copied · ${D.IMPORT[i].mb.toFixed(1)} MB`, dot: D.REN[i] ? 'var(--blue)' : 'var(--line)' }));
+    const tabRows = { rejected: rej.map(([i, [nm, why]]) => ({ key: 'r' + i, name: nm, reason: why, dot: 'var(--amber)' })), renamed: ren.map(([i, [nm, why]]) => ({ key: 'n' + i, name: nm, reason: why, dot: 'var(--blue)' })), copied: copiedRows }[st.impTab];
+
+    // ---- 07 description
+    const dLen = st.dDraft.length, dOver = dLen > 600;
+    const dSave = () => { if (dOver) return; set({ dEdit: false, dText: st.dDraft.trim() }); toast('desc', 'Description saved to library.db — the folder on disk is untouched.'); };
+
+    return {
+      backdrop,
+      // 01
+      mvTitle: `${verb} 4 images`, mvModes: [['move', 'Move'], ['copy', 'Copy']].map(([m, l]) => ({ key: m, label: l, ...seg(st.mvMode, m), onClick: () => set({ mvMode: m }) })),
+      mvRecent: [['regalia', 'Court Regalia'], ['maps', 'Maps'], ['beach', 'Beach Trip']].map(([id, name]) => ({ key: id, name, bg: st.mvSel === id ? 'var(--surface2)' : 'transparent', onClick: () => { const o = { ...st.mvOpen }; let p = idx[id] && idx[id].parent; while (p) { o[p.id] = 1; p = p.parent; } set({ mvSel: id, mvOpen: o, mvQ: '' }); } })),
+      mvQuery: st.mvQ, onMvQuery: e => set({ mvQ: e.target.value }), mvAlbumCount: albumCount, mvRows: rows,
+      mvValid, mvInvalid: !mvValid, mvHint, mvCanCreate: (sn.kind === 'rack' || sn.kind === 'drawer'), mvSelName: sn.name,
+      mvCreate: () => { const id = 'new' + Date.now(); const list = [...(st.mvNew[sn.id] || []), { id, name: 'New album', kind: 'album', count: 0, isNew: true }]; set({ mvNew: { ...st.mvNew, [sn.id]: list }, mvSel: id, mvOpen: { ...st.mvOpen, [sn.id]: 1 } }); },
+      mvPath: 'D:\\MyLibrary\\Images\\' + sn.path.join('\\') + '\\', mvConflict: st.mvSel === 'regalia',
+      mvPolicies: ['Keep both', 'Replace', 'Skip'].map((l, i) => ({ key: l, label: l, ...seg(st.mvPolicy, i), onClick: () => set({ mvPolicy: i }) })),
+      mvBtnLabel: mvValid ? `${verb} to ${sn.name}` : `${verb} here`, mvBtnBg: mvValid ? 'var(--accent)' : 'var(--surface2)', mvBtnColor: mvValid ? 'var(--accent-ink)' : 'var(--text2)', mvBtnCursor: mvValid ? 'pointer' : 'not-allowed',
+      mvGo: () => mvValid && toast('mv', `${st.mvMode === 'move' ? 'Moved' : 'Copied'} 4 images to ${sn.name}.${st.mvMode === 'move' ? ' Undo from the toast for 10 s.' : ''}`), toast1: tst('mv'),
+      // 02
+      rnName: rn, onRnName: e => set({ rn: e.target.value }), onRnKey: e => { if (e.key === 'Enter' && rnOk) toast('rn', `Renamed to ${rnTrim}.png`); if (e.key === 'Escape') set({ rn: 'aerin_expressions_sheet_A_happy-sad-furious-smug' }); },
+      rnBorder: rnErr ? 'var(--red)' : 'var(--text)', rnMsg: rnErr || (rnSame ? 'Tags, star and collections stay with the file.' : `→ ${rnTrim}.png`), rnMsgColor: rnErr ? 'var(--red)' : 'var(--text2)',
+      rnBtnBg: rnOk ? 'var(--accent)' : 'var(--surface2)', rnBtnColor: rnOk ? 'var(--accent-ink)' : 'var(--text2)', rnGo: () => rnOk && toast('rn', `Renamed to ${rnTrim}.png`), toast2: tst('rn'),
+      // 03
+      bPat: pat, onBPat: e => set({ bPat: e.target.value }), bPatBorder: patBad ? 'var(--red)' : 'var(--text)', bPatErr: patBad, insNum: () => ins('#'), insOrig: () => ins('*'),
+      bStart: st.bStart, bStartDown: () => set({ bStart: Math.max(0, st.bStart - 1) }), bStartUp: () => set({ bStart: st.bStart + 1 }),
+      bPads: [1, 2, 3, 4].map(p => ({ key: p, n: p, bg: st.bPad === p ? 'var(--accent)' : 'transparent', color: st.bPad === p ? 'var(--accent-ink)' : 'var(--text2)', onClick: () => set({ bPad: p }) })),
+      bPresets: [['*_#', 'scan_0042_07'], ['ch3_ref_#', 'ch3_ref_07'], ['# - *', '07 - scan_0042'], ['*', 'scan_0042']].map(([p, eg]) => ({ key: p, pat: p, eg, onClick: () => set({ bPat: p }) })),
+      bRows, bSummary: patBad ? 'Fix the pattern to continue' : nBad ? `${nBad} conflict${nBad > 1 ? 's' : ''} — every name must be unique in the album` : `${nChange} will change · ${8 - nChange} unchanged · no conflicts`,
+      bSumColor: patBad || nBad ? 'var(--red)' : 'var(--text2)', bBtnBg: bOk ? 'var(--accent)' : 'var(--surface2)', bBtnColor: bOk ? 'var(--accent-ink)' : 'var(--text2)',
+      bGo: () => bOk && toast('bulk', `Renamed ${nChange} images. Logged in .mediaview\\logs\\.`), toast3: tst('bulk'),
+      // 04
+      binCount: live.length, binSize: mbFmt(live.reduce((a, b) => a + b.mb, 0)), binImgCount: live.reduce((a, b) => a + (b.imgs || (isImg(b) ? 1 : 0)), 0),
+      binTabs: [['all', 'All', live.length], ['images', 'Images', live.filter(isImg).length], ['folders', 'Folders', live.filter(b => !isImg(b)).length]].map(([k, l, c]) => ({ key: k, label: l, n: c, ...seg(st.binTab, k), onClick: () => set({ binTab: k }) })),
+      binRows, binEmpty: shown.length === 0, binAllBg: selIds.length && selIds.length === shown.length ? 'var(--accent2)' : 'transparent',
+      binSelAll: () => set({ binSel: selIds.length === shown.length ? {} : Object.fromEntries(shown.map(b => [b.id, 1])) }),
+      binHasSel: selItems.length > 0, binSelCount: selItems.length, binSelSize: mbFmt(selItems.reduce((a, b) => a + b.mb, 0)),
+      binRestoreSel: () => { const ok = selItems.filter(b => !b.missing), miss = selItems.length - ok.length; set(gone(ok.map(b => b.id))); toast('bin', `Restored ${ok.length} item${ok.length === 1 ? '' : 's'}${miss ? ` · ${miss} need Restore to… (location gone)` : ''}`); },
+      binRestoreToSel: () => toast('bin', `Restore to… opens the folder picker for ${selItems.length} items`), binDeleteSel: () => askDel(selItems), binClearSel: () => set({ binSel: {} }),
+      askEmpty: () => live.length && set({ bc: { kind: 'empty' } }), emptyOp: live.length ? '1' : '.4', emptyCursor: live.length ? 'pointer' : 'not-allowed',
+      bc, bcCancel: () => set({ bc: null }),
+      bcGo: () => { const ids = st.bc.kind === 'empty' ? live.map(b => b.id) : st.bc.ids; set({ bc: null, ...gone(ids) }); toast('bin', st.bc.kind === 'empty' ? 'Bin emptied.' : `Deleted ${ids.length} item${ids.length === 1 ? '' : 's'} permanently.`); },
+      binReset: () => set({ binGone: {}, binSel: {}, bc: null, binTab: 'all' }), toast4: tst('bin'),
+      // 05
+      cfTabs: Object.entries(CF).map(([k, v]) => ({ key: k, label: v.tab, ...seg(st.cf, k), onClick: () => set({ cf: k, cfText: '' }) })),
+      cfBackTitle: cf.back, cfEdge: cf.edge, cfTitle: cf.title, cfSub: cf.sub, cfBody: cf.body, cfHasList: cf.items.length > 0,
+      cfItems: cf.items.map(([name, note, dot]) => ({ key: name, name, note, dot, color: dot === 'var(--accent2)' ? 'var(--text2)' : 'var(--text)' })),
+      cfTyped: !!cf.typed, cfText: st.cfText, onCfText: e => set({ cfText: e.target.value }), cfInputBorder: cfReady ? 'var(--red)' : 'var(--text)',
+      cfFoot: cf.foot, cfFootColor: cf.footColor, cfBtn: cf.btn, cfBtnBg: cfReady ? cf.btnBg : 'var(--surface2)', cfBtnColor: cfReady ? cf.btnColor : 'var(--text2)', cfBtnCursor: cfReady ? 'pointer' : 'not-allowed',
+      cfGo: () => cfReady && toast('cf', `${cf.btn} — confirmed.`), toast5: tst('cf'),
+      // 06
+      impBackdrop: Array.from({ length: 18 }, (_, i) => ({ key: i, fill: i < Math.round(copied * 18 / 48) ? D.fill(D.hueOf(i + 7), 0.44) : 'var(--surface)', outline: i < Math.round(copied * 18 / 48) ? 'none' : '1px dashed var(--line)' })),
+      impTitle: st.impCancelled ? 'Import cancelled' : running ? 'Importing 48 files' : 'Import finished', impPct: (n / 48 * 100).toFixed(1) + '%', impBarColor: st.impCancelled ? 'var(--text2)' : running ? 'var(--accent)' : 'var(--text)',
+      impDone: n, impCurrent: running ? curName : (st.impCancelled ? 'Stopped — files already copied were kept' : `${rej.length} rejected · see report`), impMB: `${mbDone.toFixed(1)} / ${mbAll.toFixed(1)} MB`,
+      impCopied: copied, impRenamed: ren.length, impRejected: rej.length,
+      impExpanded: !st.impMin, impMinIcon: st.impMin ? '▴' : '▾', impToggleMin: () => set({ impMin: !st.impMin }),
+      impTabs: [['rejected', 'Rejected', rej.length], ['renamed', 'Renamed', ren.length], ['copied', 'Copied', copied]].map(([k, l, c]) => ({ key: k, label: l, n: c, bg: st.impTab === k ? 'var(--surface2)' : 'transparent', color: st.impTab === k ? 'var(--text)' : 'var(--text2)', onClick: () => set({ impTab: k }) })),
+      impRows: tabRows, impNoRows: tabRows.length === 0, impRunning: running, impFinished: !running,
+      impCancel: () => { clearInterval(this.it); set({ impCancelled: true }); }, impReplay: () => this.startImport(),
+      impCopyReport: () => toast('imp', 'Report copied to clipboard (48 lines).'), impOpenLog: () => toast('imp', 'Opening .mediaview\\logs\\2026-10-03.log'), impRetry: () => toast('imp', 'Retrying 1 unreadable file…'), toast6: tst('imp'),
+      // 07
+      dView: !st.dEdit, dEdit: st.dEdit, dShown: st.dText || 'No description yet. Click to add one.', dTextColor: st.dText ? 'var(--text)' : 'var(--text2)',
+      dStart: () => set({ dEdit: true, dDraft: st.dText }), dRef: this.dRef, dDraft: st.dDraft, onDDraft: e => set({ dDraft: e.target.value }),
+      onDKey: e => { if (e.key === 'Escape') set({ dEdit: false }); if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); dSave(); } },
+      dCount: dLen, dCountColor: dOver ? 'var(--red)' : 'var(--text2)', dCancel: () => set({ dEdit: false }), dSave, dSaveBg: dOver ? 'var(--surface2)' : 'var(--accent)', dSaveColor: dOver ? 'var(--text2)' : 'var(--accent-ink)', toast7: tst('desc'),
+    };
+  }
+}
+</script>
+</body>
+</html>

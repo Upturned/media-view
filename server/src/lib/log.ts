@@ -89,6 +89,13 @@ function splitName(name: string): [string, number] {
   return [m[1]!, Number(m[2] ?? 0)];
 }
 
+/** Delete every log file (Library Health's "Clear logs"); new lines start a fresh file. */
+export function clearLogs(): void {
+  if (!dir) return;
+  flush();
+  for (const f of fs.readdirSync(dir)) if (f.endsWith('.log')) fs.rmSync(path.join(dir, f), { force: true });
+}
+
 export function logStats(): { files: number; bytes: number } {
   if (!dir) return { files: 0, bytes: 0 };
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.log'));

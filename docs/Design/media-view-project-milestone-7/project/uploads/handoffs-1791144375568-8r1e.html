@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="ed51d631-5b15-4817-974a-c38c7055b575"></script>
+
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#070707;}
+a{color:#ff4b2b;text-decoration:none}
+a:hover{color:#f3f2ec;text-decoration:underline}
+input::placeholder{color:#77766f}
+</style>
+</helmet>
+<section id="1b" ref="{{ root }}" style="--bg:#121212;--bg2:#0b0b0b;--surface:#1b1b1a;--surface2:#262625;--line:#363631;--text:#f3f2ec;--text2:#9a9990;--accent:#ff4b2b;--accent-ink:#0b0b0b;--accent2:#f2e34b;--red:#ff3d5a;--amber:#ffb020;--blue:#58a6ff;--thumb:#0e0e0e;--scrim:rgba(11,11,11,.8);padding:72px 80px 96px;display:flex;flex-direction:column;gap:56px;font-family:Bahnschrift,'DIN Alternate','Segoe UI',system-ui,sans-serif;color:var(--text);background:#070707;">
+
+  <header style="display:flex;align-items:flex-end;gap:48px;max-width:1440px;">
+    <div style="display:flex;flex-direction:column;gap:12px;flex:none;white-space:nowrap;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font:700 12px/1 'Cascadia Mono',Consolas,Menlo,monospace;background:var(--accent);color:var(--accent-ink);padding:5px 8px;">1b</span>
+        <span style="font:12px/1 'Cascadia Mono',Consolas,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);">Direction B · graphic &amp; technical</span>
+      </div>
+      <h1 style="margin:0;font:700 112px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:-0.01em;text-transform:uppercase;">Darkroom</h1>
+    </div>
+    <p style="margin:0 0 6px;max-width:620px;font-size:15px;line-height:1.55;color:var(--text2);text-wrap:pretty;">A contact sheet under the safelight. Condensed caps, frame numbers, sprocket rails and mono metadata; selections get circled in grease pencil. Square corners, hairlines, one hot red. The tag index lives on the right like a lab log.</p>
+  </header>
+
+  <div style="display:flex;flex-wrap:wrap;gap:72px;align-items:flex-start;">
+
+    <!-- ======================= B1 ALBUM ======================= -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">1b · 01</span><span style="color:var(--text);">Album page</span><span>tags cycle on click · ctrl+click = any of · ○ selects</span>
+        <button sc-camel-on-click="{{ toggleDropAlbum }}" style="margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Preview drop state</button>
+      </div>
+      <div data-tip-root="1" sc-camel-on-drag-over="{{ albumOver }}" sc-camel-on-drag-leave="{{ albumLeave }}" sc-camel-on-drop="{{ albumDrop }}" style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+
+        <div style="height:56px;flex:none;display:flex;align-items:stretch;background:var(--bg2);border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 22px;border-right:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.02em;"><span style="width:12px;height:12px;background:var(--accent);"></span>IMG/VIEW</div>
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 18px;font:13px 'Cascadia Mono',Consolas,Menlo,monospace;min-width:0;">
+            <span style="color:var(--accent);font-weight:700;">&gt;</span>
+            <div style="flex:1;display:flex;gap:10px;white-space:nowrap;overflow:hidden;">
+              <sc-for list="{{ searchTokens }}" as="t" hint-placeholder-count="4">
+                <span style="display:inline-flex;align-items:center;border-bottom:2px solid {{ t.color }};padding-bottom:1px;"><span style="color:{{ t.preColor }};font-weight:700;">{{ t.pre }}</span><span style="color:var(--text2);">{{ t.typ }}</span><span style="color:var(--text);">{{ t.name }}</span></span>
+              </sc-for>
+              <span style="width:8px;height:16px;background:var(--accent);"></span>
+            </div>
+            <span style="flex:none;font-size:11px;color:var(--accent-ink);background:var(--text);padding:3px 7px;">{{ matchCount }} / 1,248</span>
+          </div>
+          <nav style="display:flex;align-items:stretch;font:600 13px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase;">
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);">Tags</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);">Collections</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);">Favorites</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);">Random</a>
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);" style-hover="color:var(--text);background:var(--surface);">Bin</a>
+          </nav>
+          <button sc-camel-on-mouse-enter="{{ healthEnter }}" sc-camel-on-mouse-leave="{{ tipOff }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:var(--red);color:#fff;font:700 13px/1 'Cascadia Mono',Consolas,monospace;cursor:pointer;"><span style="font-size:10px;letter-spacing:.1em;">HEALTH</span>37</button>
+          <button sc-camel-on-click="{{ cycleTheme }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:none;color:var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;"><span style="width:12px;height:12px;border:1.5px solid var(--text);background:linear-gradient(90deg,var(--text) 50%,transparent 50%);"></span>{{ themeName }}</button>
+          <button style="width:52px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;cursor:pointer;">?</button>
+        </div>
+
+        <div style="flex:1;display:flex;min-height:0;">
+          <main style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative;">
+            <div style="padding:20px 32px 16px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line);">
+              <div style="display:flex;align-items:center;gap:8px;font:11.5px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+                <a style="color:var(--text2);">Images</a><span>/</span>
+                <a style="display:flex;align-items:center;gap:5px;color:var(--text2);"><svg width="12" height="12" sc-camel-view-box="0 0 16 16"><rect x="2" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="12.4" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="2" y="4" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="9.5" width="12" height="1.6" fill="currentColor"></rect></svg>Fantasy</a><span>/</span>
+                <a style="display:flex;align-items:center;gap:5px;color:var(--text2);"><svg width="12" height="12" sc-camel-view-box="0 0 16 16"><rect x="1.8" y="3.8" width="12.4" height="9.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="6" y="7.6" width="4" height="1.8" fill="currentColor"></rect></svg>Elves</a><span>/</span>
+                <a style="display:flex;align-items:center;gap:5px;color:var(--text2);"><svg width="12" height="12" sc-camel-view-box="0 0 16 16"><rect x="1.8" y="3.8" width="12.4" height="9.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="6" y="7.6" width="4" height="1.8" fill="currentColor"></rect></svg>High Court of Ilvenmar</a><span>/</span>
+                <span style="display:flex;align-items:center;gap:5px;color:var(--accent);"><svg width="12" height="12" sc-camel-view-box="0 0 16 16"><rect x="4.5" y="1.5" width="10" height="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect><rect x="1.5" y="4" width="10" height="11" fill="currentColor"></rect></svg>Portraits &amp; Expression Sheets</span>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:28px;">
+                <h2 style="margin:0;flex:1;min-width:0;font:700 64px/0.9 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:-0.005em;">Portraits &amp; Expression Sheets</h2>
+                <div style="display:flex;gap:24px;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">
+                  <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">1,248</span>frames</div>
+                  <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--accent2);">112</span>starred</div>
+                  <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:700 30px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">2D</span>since last roll</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:stretch;height:44px;border-bottom:1px solid var(--line);font:12px 'Cascadia Mono',Consolas,Menlo,monospace;text-transform:uppercase;">
+              <button sc-camel-on-click="{{ cycleSort }}" style="padding:0 16px;border:none;border-right:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;"><span style="color:var(--text2);">Sort:</span> {{ sortLabel }}</button>
+              <button sc-camel-on-click="{{ flipSort }}" style="width:40px;border:none;border-right:1px solid var(--line);background:none;color:var(--accent);font:inherit;font-size:15px;cursor:pointer;">{{ sortArrow }}</button>
+              <div style="display:flex;align-items:center;gap:2px;padding:0 12px;border-right:1px solid var(--line);">
+                <span style="color:var(--text2);margin-right:6px;">Cols</span>
+                <sc-for list="{{ colTicks }}" as="k" hint-placeholder-count="9">
+                  <sc-if value="{{ k.on }}"><button sc-camel-on-click="{{ k.onClick }}" style="width:24px;height:24px;border:none;background:var(--accent);color:var(--accent-ink);font:700 11px 'Cascadia Mono',Consolas,monospace;cursor:pointer;">{{ k.n }}</button></sc-if>
+                  <sc-if value="{{ k.off }}"><button sc-camel-on-click="{{ k.onClick }}" style="width:24px;height:24px;border:none;background:none;color:var(--text2);font:11px 'Cascadia Mono',Consolas,monospace;cursor:pointer;" style-hover="color:var(--text);background:var(--surface2);">{{ k.n }}</button></sc-if>
+                </sc-for>
+              </div>
+              <sc-if value="{{ favOn }}"><button sc-camel-on-click="{{ toggleFav }}" style="padding:0 16px;border:none;border-right:1px solid var(--line);background:var(--accent2);color:#111;font:inherit;font-weight:700;cursor:pointer;">★ Keepers only</button></sc-if>
+              <sc-if value="{{ favOff }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ toggleFav }}" style="padding:0 16px;border:none;border-right:1px solid var(--line);background:none;color:var(--text2);font:inherit;cursor:pointer;">☆ Keepers only</button></sc-if>
+              <sc-if value="{{ groupOn }}"><button sc-camel-on-click="{{ toggleGroup }}" style="padding:0 16px;border:none;border-right:1px solid var(--line);background:var(--text);color:var(--bg);font:inherit;font-weight:700;cursor:pointer;">▤ By collection</button></sc-if>
+              <sc-if value="{{ groupOff }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ toggleGroup }}" style="padding:0 16px;border:none;border-right:1px solid var(--line);background:none;color:var(--text2);font:inherit;cursor:pointer;">▤ Group by collection</button></sc-if>
+              <input placeholder="name contains…" style="flex:1;min-width:0;padding:0 16px;border:none;background:none;color:var(--text);font:inherit;text-transform:none;outline:none;">
+              <button style="padding:0 20px;border:none;background:var(--accent);color:var(--accent-ink);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;cursor:pointer;">+ ADD IMAGES</button>
+            </div>
+
+            <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 120px;background:var(--bg2);">
+              <sc-for list="{{ groups }}" as="g" hint-placeholder-count="1">
+                <div style="display:flex;flex-direction:column;">
+                  <sc-if value="{{ g.show }}">
+                    <div style="display:flex;align-items:baseline;gap:14px;padding:18px 32px 8px;background:var(--bg);">
+                      <span style="font:700 26px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ g.title }}</span>
+                      <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ g.meta }}</span>
+                      <button style="margin-left:auto;background:none;border:1px solid var(--line);color:var(--text2);padding:4px 8px;font:11px 'Cascadia Mono',Consolas,monospace;cursor:pointer;">⇅ REVERSE</button>
+                    </div>
+                  </sc-if>
+                  <div style="height:16px;background-color:var(--bg2);background-image:repeating-linear-gradient(90deg, var(--surface2) 0 10px, transparent 10px 22px);background-size:100% 7px;background-position:0 50%;background-repeat:no-repeat;"></div>
+                  <div style="display:grid;grid-template-columns:{{ gridCols }};gap:18px 14px;padding:6px 32px 10px;">
+                    <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="18">
+                      <div sc-camel-on-click="{{ it.onClick }}" title="{{ it.name }}" style="position:relative;display:flex;flex-direction:column;gap:6px;cursor:pointer;">
+                        <div style="position:relative;aspect-ratio:3/2;background:var(--thumb);outline:1px solid var(--line);transition:outline-color .15s;" style-hover="outline:1px solid var(--accent);">
+                          <div style="position:absolute;inset:8px;container-type:size;display:grid;place-items:center;">
+                            <sc-if value="{{ it.big }}" hint-placeholder-val="{{ true }}"><div style="width:min(100cqw, calc(100cqh * {{ it.ar }}));height:min(100cqh, calc(100cqw * {{ it.iar }}));background:{{ it.fill }};"></div></sc-if>
+                            <sc-if value="{{ it.tiny }}"><div style="width:22px;height:22px;background:{{ it.fill }};outline:1px dashed var(--text2);outline-offset:3px;"></div></sc-if>
+                          </div>
+                          <sc-if value="{{ it.gif }}"><span style="position:absolute;top:0;left:0;font:700 10px/1 'Cascadia Mono',Consolas,monospace;padding:4px 6px;background:var(--accent);color:var(--accent-ink);">GIF</span></sc-if>
+                          <sc-if value="{{ it.fav }}"><span style="position:absolute;top:2px;right:6px;color:var(--accent2);font-size:15px;">★</span></sc-if>
+                          <sc-if value="{{ it.sel }}">
+                            <div style="position:absolute;inset:-9px -7px;border:3px solid var(--accent2);border-radius:48% 52% 45% 55% / 55% 42% 58% 45%;transform:rotate(-1.5deg);pointer-events:none;"></div>
+                          </sc-if>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;font:10.5px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);">
+                          <sc-if value="{{ it.sel }}"><span sc-camel-on-click="{{ it.onToggle }}" style="width:14px;height:14px;flex:none;background:var(--accent2);color:#111;font:700 10px/14px sans-serif;text-align:center;">✓</span></sc-if>
+                          <sc-if value="{{ it.unsel }}"><span sc-camel-on-click="{{ it.onToggle }}" style="width:12px;height:12px;flex:none;border:1px solid var(--text2);border-radius:50%;"></span></sc-if>
+                          <span style="color:var(--accent);font-weight:700;">{{ it.frame }}</span>
+                          <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.name }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;left:0;right:0;bottom:0;height:60px;display:flex;align-items:stretch;background:var(--accent2);color:#111;z-index:10;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                <div style="display:flex;align-items:center;gap:10px;padding:0 24px;border-right:2px solid #111;">
+                  <span style="font:700 34px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;">{{ selCount }}</span><span style="line-height:1.2;">frames circled.<br>do something.</span>
+                </div>
+                <button style="padding:0 16px;border:none;border-right:1px solid rgba(0,0,0,.25);background:none;color:#111;font:inherit;font-weight:700;cursor:pointer;" style-hover="background:rgba(0,0,0,.1);">Tag</button>
+                <button style="padding:0 16px;border:none;border-right:1px solid rgba(0,0,0,.25);background:none;color:#111;font:inherit;font-weight:700;cursor:pointer;" style-hover="background:rgba(0,0,0,.1);">+ Collection</button>
+                <button style="padding:0 16px;border:none;border-right:1px solid rgba(0,0,0,.25);background:none;color:#111;font:inherit;font-weight:700;cursor:pointer;" style-hover="background:rgba(0,0,0,.1);">Move</button>
+                <button style="padding:0 16px;border:none;border-right:1px solid rgba(0,0,0,.25);background:none;color:#111;font:inherit;font-weight:700;cursor:pointer;" style-hover="background:rgba(0,0,0,.1);">Copy</button>
+                <button style="padding:0 16px;border:none;border-right:1px solid rgba(0,0,0,.25);background:none;color:#111;font:inherit;font-weight:700;cursor:pointer;" style-hover="background:rgba(0,0,0,.1);">Rename</button>
+                <button style="padding:0 16px;border:none;border-right:1px solid rgba(0,0,0,.25);background:none;color:#111;font:inherit;font-weight:700;cursor:pointer;" style-hover="background:rgba(0,0,0,.1);">★ Star</button>
+                <button style="padding:0 16px;border:none;background:#111;color:var(--accent2);font:inherit;font-weight:700;cursor:pointer;">Recycle</button>
+                <button sc-camel-on-click="{{ selectAll }}" style="margin-left:auto;padding:0 16px;border:none;border-left:1px solid rgba(0,0,0,.25);background:none;color:#111;font:inherit;cursor:pointer;">Select all</button>
+                <button sc-camel-on-click="{{ clearSel }}" style="width:60px;border:none;border-left:2px solid #111;background:none;color:#111;font:700 16px sans-serif;cursor:pointer;">✕</button>
+              </div>
+            </sc-if>
+          </main>
+
+          <!-- index sidebar -->
+          <aside style="width:300px;flex:none;display:flex;flex-direction:column;border-left:1px solid var(--line);background:var(--surface);">
+            <div style="padding:16px 18px 12px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line);">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;">
+                <span style="font:700 26px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Index</span>
+                <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">80 TAGS · 4 TYPES</span>
+              </div>
+              <input value="{{ sideFilter }}" sc-camel-on-change="{{ onSideFilter }}" placeholder="filter…" style="height:30px;padding:0 10px;border:1px solid var(--line);background:var(--bg2);color:var(--text);font:12px 'Cascadia Mono',Consolas,monospace;outline:none;">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:var(--text);color:var(--bg);font:700 10px/12px sans-serif;text-align:center;">+</span>must</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:var(--red);color:#fff;font:700 10px/12px sans-serif;text-align:center;">×</span>never</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border:1px dashed var(--blue);color:var(--blue);font:700 10px/10px sans-serif;text-align:center;">~</span>any of</span>
+              </div>
+              <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ true }}">
+                <button sc-camel-on-click="{{ clearFilters }}" style="align-self:flex-start;background:none;border:none;padding:0;color:var(--accent);font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">✕ clear {{ filterCount }} — open the floodgates</button>
+              </sc-if>
+            </div>
+            <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 24px;position:relative;">
+              <sc-for list="{{ sideGroups }}" as="g" hint-placeholder-count="4">
+                <sc-if value="{{ g.has }}" hint-placeholder-val="{{ true }}">
+                  <div style="position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:5px 18px;background:{{ g.color }};color:{{ g.ink }};font:700 14px/1.2 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">{{ g.label }}<span style="margin-left:auto;font:11px 'Cascadia Mono',Consolas,monospace;">{{ g.n }}</span></div>
+                </sc-if>
+                <sc-for list="{{ g.tags }}" as="t" hint-placeholder-count="6">
+                  <div sc-camel-on-click="{{ t.onClick }}" sc-camel-on-context-menu="{{ t.onCtx }}" sc-camel-on-mouse-enter="{{ t.onEnter }}" sc-camel-on-mouse-leave="{{ t.onLeave }}" style="display:flex;align-items:center;gap:9px;padding:4px 18px 4px 14px;border-left:4px solid transparent;border-bottom:1px solid color-mix(in oklab,var(--line) 50%,transparent);background:{{ t.bg }};cursor:pointer;user-select:none;" style-hover="background:var(--surface2);">
+                    <sc-if value="{{ t.isOff }}"><span style="width:12px;height:12px;flex:none;border:1px solid var(--line);"></span></sc-if>
+                    <sc-if value="{{ t.isInc }}"><span style="width:12px;height:12px;flex:none;background:var(--text);color:var(--bg);font:700 10px/12px sans-serif;text-align:center;">+</span></sc-if>
+                    <sc-if value="{{ t.isExc }}"><span style="width:12px;height:12px;flex:none;background:var(--red);color:#fff;font:700 10px/12px sans-serif;text-align:center;">×</span></sc-if>
+                    <sc-if value="{{ t.isAny }}"><span style="width:12px;height:12px;flex:none;border:1px dashed var(--blue);color:var(--blue);font:700 10px/10px sans-serif;text-align:center;">~</span></sc-if>
+                    <span style="flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ t.deco }};opacity:{{ t.op }};">{{ t.label }}</span>
+                    <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ t.cnt }}</span>
+                  </div>
+                </sc-for>
+              </sc-for>
+            </div>
+          </aside>
+        </div>
+
+        <sc-if value="{{ dropAlbum }}">
+          <div style="position:absolute;inset:0;z-index:40;background:color-mix(in oklab,var(--accent) 30%,var(--scrim));display:flex;flex-direction:column;justify-content:center;padding:0 80px;gap:10px;pointer-events:none;">
+            <div style="position:absolute;inset:16px;border:2px solid var(--accent);"></div>
+            <span style="font:12px 'Cascadia Mono',Consolas,monospace;letter-spacing:.1em;color:var(--text);">DROP TARGET → D:\MyLibrary\Images\Fantasy\Elves\High Court of Ilvenmar\Portraits &amp; Expression Sheets\</span>
+            <span style="font:700 150px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;">Release<br>the roll.</span>
+            <span style="font-size:16px;color:var(--text);">Copied in, originals untouched. No chemicals involved.</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toastAlbum }}">
+          <div style="position:absolute;left:32px;bottom:80px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastAlbum }}</div>
+        </sc-if>
+        <sc-if value="{{ tipAlbum }}">
+          <div style="position:absolute;left:{{ tipAlbum.left }};top:{{ tipAlbum.top }};transform:{{ tipAlbum.transform }};width:280px;z-index:60;pointer-events:none;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;">
+            <span style="padding:5px 12px;background:{{ tipAlbum.color }};color:{{ tipAlbum.ink }};font:700 13px/1.2 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">{{ tipAlbum.typeLabel }}</span>
+            <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;overflow-wrap:anywhere;">{{ tipAlbum.title }}</span>
+              <span style="font-size:13px;line-height:1.45;text-wrap:pretty;">{{ tipAlbum.desc }}</span>
+              <span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ tipAlbum.meta }}</span>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ======================= B2 VIEWER ======================= -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">1b · 02</span><span style="color:var(--text);">Image viewer</span><span>type tags · enter adds · click frames in the strip</span>
+      </div>
+      <div data-tip-root="1" style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg2);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:48px;flex:none;display:flex;align-items:stretch;border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 18px;border-right:1px solid var(--line);font:700 19px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:10px;height:10px;background:var(--accent);"></span>IMG/VIEW</div>
+          <a style="display:flex;align-items:center;gap:8px;padding:0 16px;border-right:1px solid var(--line);color:var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">← Portraits &amp; Expression Sheets</a>
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 16px;font:12.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);"><span style="color:var(--accent);font-weight:700;">&gt;</span>search_</div>
+          <button sc-camel-on-mouse-enter="{{ healthEnterV }}" sc-camel-on-mouse-leave="{{ tipOff }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:var(--red);color:#fff;font:700 13px/1 'Cascadia Mono',Consolas,monospace;cursor:pointer;"><span style="font-size:10px;letter-spacing:.1em;">HEALTH</span>37</button>
+          <button sc-camel-on-click="{{ cycleTheme }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:none;color:var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;"><span style="width:12px;height:12px;border:1.5px solid var(--text);background:linear-gradient(90deg,var(--text) 50%,transparent 50%);"></span>{{ themeName }}</button>
+          <button style="width:48px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;cursor:pointer;">?</button>
+        </div>
+        <div style="flex:1;display:flex;min-height:0;">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+            <div style="flex:1;position:relative;min-height:0;background:var(--bg2);">
+              <div style="position:absolute;top:18px;left:24px;z-index:3;display:flex;align-items:baseline;gap:12px;">
+                <span style="font:700 72px/0.8 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;color:var(--accent);">{{ vPosLabel }}</span>
+                <span style="font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);line-height:1.4;">in collection<br><span style="color:var(--text);">“Chapter 3 refs”</span></span>
+              </div>
+              <div style="position:absolute;top:100px;left:40px;right:40px;bottom:24px;container-type:size;display:grid;place-items:center;">
+                <div style="width:min(100cqw, calc(100cqh * {{ vAr }}));height:min(100cqh, calc(100cqw * {{ vIar }}));background:{{ vFill }};transform:{{ zoomScale }};transition:transform .3s;outline:1px solid var(--line);outline-offset:10px;display:grid;place-items:end start;">
+                  <span style="margin:10px;font:10.5px 'Cascadia Mono',Consolas,monospace;color:#fff;background:rgba(0,0,0,.45);padding:3px 6px;">IMAGE · {{ vRatio }} · {{ vExt }}</span>
+                </div>
+              </div>
+              <div style="position:absolute;top:24px;right:24px;z-index:3;display:flex;align-items:stretch;height:34px;border:1px solid var(--line);background:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">
+                <button sc-camel-on-click="{{ zoomOut }}" style="width:34px;border:none;background:none;color:var(--text);font:inherit;cursor:pointer;">−</button>
+                <button sc-camel-on-click="{{ zoomReset }}" style="min-width:56px;border:none;border-left:1px solid var(--line);border-right:1px solid var(--line);background:none;color:var(--accent);font:inherit;cursor:pointer;">{{ zoomLabel }}</button>
+                <button sc-camel-on-click="{{ zoomIn }}" style="width:34px;border:none;background:none;color:var(--text);font:inherit;cursor:pointer;">+</button>
+                <button sc-camel-on-click="{{ toggleShow }}" style="padding:0 12px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:inherit;text-transform:uppercase;cursor:pointer;"><sc-if value="{{ showOn }}">❚❚ 5s</sc-if><sc-if value="{{ showOff }}" hint-placeholder-val="{{ true }}">▶ Slideshow</sc-if></button>
+                <button sc-camel-on-click="{{ togglePanels }}" style="padding:0 12px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:inherit;text-transform:uppercase;cursor:pointer;"><sc-if value="{{ panels }}" hint-placeholder-val="{{ true }}">Log ⟩</sc-if><sc-if value="{{ noPanels }}">⟨ Log</sc-if></button>
+              </div>
+              <sc-if value="{{ showOn }}"><div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--line);"><div style="width:38%;height:100%;background:var(--accent);"></div></div></sc-if>
+            </div>
+            <div style="flex:none;height:108px;background:#050505;display:flex;flex-direction:column;border-top:1px solid var(--line);">
+              <div style="height:12px;background-image:repeating-linear-gradient(90deg, #2a2a28 0 9px, transparent 9px 20px);background-size:100% 6px;background-position:0 50%;background-repeat:no-repeat;"></div>
+              <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;">
+                <button sc-camel-on-click="{{ vPrev }}" style="width:36px;height:56px;border:1px solid #333;background:none;color:#eee;font-size:13px;cursor:pointer;">◀</button>
+                <sc-for list="{{ vStrip }}" as="s" hint-placeholder-count="12">
+                  <sc-if value="{{ s.on }}"><div sc-camel-on-click="{{ s.onClick }}" style="flex:1;height:60px;background:{{ s.fill }};outline:3px solid var(--accent);position:relative;cursor:pointer;"><span style="position:absolute;bottom:-1px;left:0;padding:1px 4px;background:var(--accent);color:var(--accent-ink);font:700 10px 'Cascadia Mono',Consolas,monospace;">{{ s.n }}A</span></div></sc-if>
+                  <sc-if value="{{ s.off }}"><div sc-camel-on-click="{{ s.onClick }}" style="flex:1;height:56px;background:{{ s.fill }};opacity:.5;position:relative;cursor:pointer;" style-hover="opacity:1;"><span style="position:absolute;bottom:0;left:0;padding:1px 4px;color:#ddd;font:10px 'Cascadia Mono',Consolas,monospace;">{{ s.n }}</span></div></sc-if>
+                </sc-for>
+                <button sc-camel-on-click="{{ vNext }}" style="width:36px;height:56px;border:1px solid #333;background:none;color:#eee;font-size:13px;cursor:pointer;">▶</button>
+              </div>
+              <div style="height:12px;background-image:repeating-linear-gradient(90deg, #2a2a28 0 9px, transparent 9px 20px);background-size:100% 6px;background-position:0 50%;background-repeat:no-repeat;"></div>
+            </div>
+          </div>
+
+          <sc-if value="{{ panels }}" hint-placeholder-val="{{ true }}">
+            <aside style="width:420px;flex:none;overflow-y:auto;overflow-x:hidden;background:var(--surface);border-left:1px solid var(--line);position:relative;">
+              <div sc-camel-on-click="{{ togInfo }}" style="display:flex;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line);cursor:pointer;font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">01 · Info<span style="margin-left:auto;font-family:'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ pInfoArrow }}</span></div>
+              <sc-if value="{{ pInfo }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:14px 20px 18px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line);">
+                  <span style="font:700 22px/1.05 'Bahnschrift Condensed','DIN Condensed',sans-serif;overflow-wrap:anywhere;">{{ vName }}</span>
+                  <div style="display:flex;flex-wrap:wrap;font:11px 'Cascadia Mono',Consolas,monospace;">
+                    <sc-for list="{{ pathParts }}" as="p" hint-placeholder-count="7"><a style="color:var(--text2);" style-hover="color:var(--accent);">{{ p.p }}</a><sc-if value="{{ p.notLast }}"><span style="color:var(--accent);padding:0 3px;">\</span></sc-if></sc-for>
+                  </div>
+                  <div style="display:grid;grid-template-columns:110px 1fr;font:12px 'Cascadia Mono',Consolas,monospace;border-top:1px solid var(--line);">
+                    <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">SIZE</span><span style="padding:5px 0;border-bottom:1px solid var(--line);">14.2 MB</span>
+                    <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">DIMENSIONS</span><span style="padding:5px 0;border-bottom:1px solid var(--line);">3840 × 5760</span>
+                    <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">MODIFIED</span><span style="padding:5px 0;border-bottom:1px solid var(--line);">2025-06-14 18:33</span>
+                    <span style="padding:5px 0;color:var(--text2);border-bottom:1px solid var(--line);">ADDED</span><span style="padding:5px 0;border-bottom:1px solid var(--line);">2025-06-15 09:02</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font:11px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">
+                    <button style="height:30px;border:none;background:var(--accent2);color:#111;font:inherit;font-weight:700;cursor:pointer;">★ Starred</button>
+                    <button style="height:30px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Open with…</button>
+                    <button style="height:30px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Rename</button>
+                    <button style="height:30px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Move</button>
+                    <button style="height:30px;border:1px solid var(--line);background:none;color:var(--text);font:inherit;cursor:pointer;">Cover of ▸</button>
+                    <button style="height:30px;border:1px solid var(--red);background:none;color:var(--red);font:inherit;cursor:pointer;">Recycle</button>
+                  </div>
+                </div>
+              </sc-if>
+              <div sc-camel-on-click="{{ togTags }}" style="display:flex;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line);cursor:pointer;font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">02 · Tags <span style="margin-left:8px;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ vTagCount }}</span><span style="margin-left:auto;font-family:'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ pTagsArrow }}</span></div>
+              <sc-if value="{{ pTags }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:14px 20px 18px;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--line);">
+                  <div style="display:flex;flex-direction:column;border:1px solid var(--text);background:var(--bg2);">
+                    <div style="display:flex;align-items:center;gap:8px;padding:0 10px;"><span style="color:var(--accent);font:700 13px 'Cascadia Mono',Consolas,monospace;">+</span><input value="{{ tagQuery }}" sc-camel-on-change="{{ onQuery }}" sc-camel-on-key-down="{{ onQueryKey }}" placeholder="tag it — type:name works" style="flex:1;height:36px;border:none;background:none;color:var(--text);font:13px 'Cascadia Mono',Consolas,monospace;outline:none;"></div>
+                    <sc-if value="{{ showSugg }}" hint-placeholder-val="{{ true }}">
+                      <div style="border-top:1px solid var(--line);display:flex;flex-direction:column;">
+                        <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="4">
+                          <div sc-camel-on-click="{{ s.onPick }}" style="display:flex;align-items:center;gap:8px;padding:0 10px 0 0;height:30px;cursor:pointer;font-size:12.5px;border-bottom:1px solid color-mix(in oklab,var(--line) 60%,transparent);" style-hover="background:var(--surface2);">
+                            <span style="width:4px;align-self:stretch;background:{{ s.color }};"></span>
+                            <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><sc-if value="{{ s.hasAlias }}"><span style="color:var(--text2);font-family:'Cascadia Mono',Consolas,monospace;">{{ s.alias }} ⇒ </span></sc-if>{{ s.label }}</span>
+                            <sc-if value="{{ s.onImage }}"><span style="font:10px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">ON IT</span></sc-if>
+                            <span style="font:10px 'Cascadia Mono',Consolas,monospace;padding:2px 5px;background:{{ s.color }};color:{{ s.ink }};text-transform:uppercase;">{{ s.typeLabel }}</span>
+                            <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);min-width:42px;text-align:right;">{{ s.count }}</span>
+                          </div>
+                        </sc-for>
+                        <sc-if value="{{ showCreate }}" hint-placeholder-val="{{ true }}">
+                          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;font:12px 'Cascadia Mono',Consolas,monospace;">
+                            <span style="color:var(--accent);">NEW:</span>
+                            <button sc-camel-on-click="{{ doCreate }}" style="background:none;border:none;padding:0;color:var(--text);font:inherit;cursor:pointer;text-decoration:underline;">create “{{ createName }}” as</button>
+                            <button sc-camel-on-click="{{ cycleCreateType }}" style="height:22px;padding:0 8px;border:none;background:{{ createColor }};color:{{ createInk }};font:inherit;font-weight:700;text-transform:uppercase;cursor:pointer;">{{ createType }} ▾</button>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <sc-for list="{{ vGroups }}" as="g" hint-placeholder-count="4">
+                    <sc-if value="{{ g.has }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:grid;grid-template-columns:78px 1fr;gap:10px;">
+                        <span style="font:700 13px/22px 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;border-top:3px solid {{ g.color }};">{{ g.label }}</span>
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                          <sc-for list="{{ g.tags }}" as="t" hint-placeholder-count="5">
+                            <sc-if value="{{ t.own }}" hint-placeholder-val="{{ true }}"><span sc-camel-on-mouse-enter="{{ t.onEnter }}" sc-camel-on-mouse-leave="{{ t.onLeave }}" style="padding:3px 8px;background:{{ t.color }};color:{{ t.ink }};font-size:12.5px;cursor:pointer;overflow-wrap:anywhere;" style-hover="outline:2px solid var(--text);">{{ t.label }}</span></sc-if>
+                            <sc-if value="{{ t.implied }}"><span sc-camel-on-mouse-enter="{{ t.onEnter }}" sc-camel-on-mouse-leave="{{ t.onLeave }}" style="display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid {{ t.color }};background:repeating-linear-gradient(135deg, color-mix(in oklab,{{ t.color }} 22%,transparent) 0 4px, transparent 4px 8px);color:var(--text);font-size:12.5px;cursor:default;"><svg width="9" height="10" sc-camel-view-box="0 0 10 11"><rect x="1" y="5" width="8" height="6" fill="currentColor"></rect><rect x="2.6" y="1" width="4.8" height="6" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.4"></rect></svg>{{ t.label }}</span></sc-if>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div sc-camel-on-click="{{ togColl }}" style="display:flex;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line);cursor:pointer;font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">03 · Collections<span style="margin-left:auto;font-family:'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ pCollArrow }}</span></div>
+              <sc-if value="{{ pColl }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:12px 20px 28px;display:flex;flex-direction:column;">
+                  <sc-for list="{{ vColls }}" as="k" hint-placeholder-count="3">
+                    <sc-if value="{{ k.current }}"><div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--accent);color:var(--accent-ink);font-size:13px;font-weight:600;"><span style="flex:1;">{{ k.name }}</span><span style="font:11px 'Cascadia Mono',Consolas,monospace;">{{ k.pos }} ◀ HERE</span></div></sc-if>
+                    <sc-if value="{{ k.other }}"><div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer;" style-hover="background:var(--surface2);"><span style="flex:1;">{{ k.name }}</span><span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">{{ k.pos }}</span></div></sc-if>
+                  </sc-for>
+                  <button style="margin-top:10px;height:34px;border:1px dashed var(--text2);background:none;color:var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;">+ Add to another collection</button>
+                </div>
+              </sc-if>
+            </aside>
+          </sc-if>
+        </div>
+        <sc-if value="{{ tipViewer }}">
+          <div style="position:absolute;left:{{ tipViewer.left }};top:{{ tipViewer.top }};transform:{{ tipViewer.transform }};width:280px;z-index:60;pointer-events:none;background:var(--bg2);border:1px solid var(--text);display:flex;flex-direction:column;">
+            <span style="padding:5px 12px;background:{{ tipViewer.color }};color:{{ tipViewer.ink }};font:700 13px/1.2 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;">{{ tipViewer.typeLabel }}</span>
+            <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;overflow-wrap:anywhere;">{{ tipViewer.title }}</span>
+              <span style="font-size:13px;line-height:1.45;text-wrap:pretty;">{{ tipViewer.desc }}</span>
+              <span style="font:10.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">{{ tipViewer.meta }}</span>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ======================= B3 LIBRARY ======================= -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:14px;font:12px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);text-transform:uppercase;">
+        <span style="color:var(--accent);">1b · 03</span><span style="color:var(--text);">Library</span><span>drop files on the page or the tray</span>
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <button sc-camel-on-click="{{ toggleDropLib }}" style="background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Preview page drop</button>
+          <button sc-camel-on-click="{{ toggleDropInbox }}" style="background:transparent;border:1px solid var(--line);color:var(--text2);padding:6px 12px;font:inherit;cursor:pointer;">Preview card drop</button>
+        </div>
+      </div>
+      <div data-tip-root="1" sc-camel-on-drag-over="{{ libOver }}" sc-camel-on-drag-leave="{{ libLeave }}" sc-camel-on-drop="{{ libDrop }}" style="position:relative;width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--text);display:flex;flex-direction:column;outline:1px solid var(--line);">
+        <div style="height:56px;flex:none;display:flex;align-items:stretch;background:var(--bg2);border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 22px;border-right:1px solid var(--line);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;"><span style="width:12px;height:12px;background:var(--accent);"></span>IMG/VIEW</div>
+          <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 18px;font:13px 'Cascadia Mono',Consolas,Menlo,monospace;color:var(--text2);"><span style="color:var(--accent);font-weight:700;">&gt;</span>search 40,265 frames, or #tag_</div>
+          <nav style="display:flex;align-items:stretch;font:600 13px/1 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase;">
+            <a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Tags</a><a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Collections</a><a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Favorites</a><a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Random</a><a style="display:flex;align-items:center;padding:0 12px;color:var(--text2);border-left:1px solid var(--line);">Bin</a>
+          </nav>
+          <button sc-camel-on-mouse-enter="{{ healthEnterL }}" sc-camel-on-mouse-leave="{{ tipOff }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:var(--red);color:#fff;font:700 13px/1 'Cascadia Mono',Consolas,monospace;cursor:pointer;"><span style="font-size:10px;letter-spacing:.1em;">HEALTH</span>37</button>
+          <button sc-camel-on-click="{{ cycleTheme }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;border:none;border-left:1px solid var(--line);background:none;color:var(--text2);font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;cursor:pointer;"><span style="width:12px;height:12px;border:1.5px solid var(--text);background:linear-gradient(90deg,var(--text) 50%,transparent 50%);"></span>{{ themeName }}</button>
+          <button style="width:52px;border:none;border-left:1px solid var(--line);background:none;color:var(--text);font:700 18px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;cursor:pointer;">?</button>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 40px 64px;display:flex;flex-direction:column;gap:24px;">
+          <div style="display:flex;align-items:flex-end;gap:32px;border-bottom:1px solid var(--line);padding-bottom:18px;">
+            <h2 style="margin:0;font:700 140px/0.78 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:-0.01em;">Library</h2>
+            <div style="display:flex;flex-direction:column;gap:4px;font:12px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;padding-bottom:4px;">
+              <span>D:\MyLibrary\Images\</span>
+              <span><span style="color:var(--text);">40,265</span> frames · <span style="color:var(--text);">10</span> racks · <span style="color:var(--accent);">214</span> undeveloped</span>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:0;">
+              <button style="height:42px;padding:0 18px;border:1px solid var(--line);background:none;color:var(--text);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">+ New category</button>
+              <button style="height:42px;padding:0 18px;border:none;background:var(--accent);color:var(--accent-ink);font:700 15px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">+ Add images</button>
+            </div>
+          </div>
+
+          <div sc-camel-on-drag-over="{{ inboxOver }}" sc-camel-on-drag-leave="{{ inboxLeave }}" sc-camel-on-drop="{{ inboxDrop }}" style="position:relative;flex:none;display:grid;grid-template-columns:auto 1fr auto;align-items:stretch;background:color-mix(in oklab,var(--accent) 16%,var(--bg2));border:1px solid var(--accent);cursor:pointer;">
+            <div style="display:flex;flex-direction:column;justify-content:space-between;gap:12px;padding:20px 28px;border-right:1px solid var(--accent);">
+              <span style="display:flex;align-items:center;gap:8px;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--accent);"><svg width="15" height="15" sc-camel-view-box="0 0 16 16"><path d="M1.5 9 L4 3.5 H12 L14.5 9 V13 H1.5 Z" fill="none" stroke="currentColor" stroke-width="1.5"></path><rect x="5.5" y="8.3" width="5" height="1.5" fill="currentColor"></rect></svg>Inbox · developing tray</span>
+              <span style="font:700 150px/0.78 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;color:var(--accent);letter-spacing:-0.02em;">214</span>
+              <span style="font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;">frames in the soup</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;padding:20px 28px;min-width:0;">
+              <span style="font:700 34px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;text-wrap:pretty;">They’re not going to develop themselves.</span>
+              <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;">
+                <sc-for list="{{ inboxThumbs }}" as="t" hint-placeholder-count="6"><div style="aspect-ratio:3/2;background:{{ t.fill }};outline:1px solid color-mix(in oklab,var(--accent) 40%,transparent);"></div></sc-for>
+              </div>
+              <span style="font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);text-transform:uppercase;">38 new this week · oldest: 41 days · 1 GIF that won’t stop blinking</span>
+            </div>
+            <button style="width:150px;border:none;border-left:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;cursor:pointer;">Sort<br>the tray<br>→</button>
+            <sc-if value="{{ dropInbox }}">
+              <div style="position:absolute;inset:0;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;gap:24px;pointer-events:none;">
+                <span style="font:700 72px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">Into the soup ↓</span>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;align-items:baseline;gap:12px;font:12px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--text2);"><span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text);">Racks</span><span>10 categories · a→z</span></div>
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);">
+            <sc-for list="{{ cats }}" as="c" hint-placeholder-count="10">
+              <sc-if value="{{ c.full }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;grid-template-columns:56px 260px 1fr;align-items:center;gap:20px;padding:14px 20px 14px 0;background:var(--bg);cursor:pointer;" style-hover="background:var(--surface);">
+                  <span style="font:700 34px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text2);text-align:right;">{{ c.num }}</span>
+                  <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px;height:96px;">
+                    <div style="background:{{ c.f1 }};"></div><div style="background:{{ c.f2 }};"></div><div style="background:{{ c.f3 }};"></div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
+                    <span style="display:flex;align-items:center;gap:6px;font:10.5px 'Cascadia Mono',Consolas,monospace;text-transform:uppercase;color:var(--accent);"><svg width="11" height="11" sc-camel-view-box="0 0 16 16"><rect x="2" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="12.4" y="1" width="1.6" height="14" fill="currentColor"></rect><rect x="2" y="4" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="9.5" width="12" height="1.6" fill="currentColor"></rect></svg>Rack</span>
+                    <span style="font:700 28px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;text-wrap:pretty;">{{ c.name }}</span>
+                    <span style="font:11.5px 'Cascadia Mono',Consolas,monospace;color:var(--text2);"><span style="color:var(--text);">{{ c.count }}</span> frames · {{ c.meta }}</span>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ c.empty }}">
+                <div style="display:grid;grid-template-columns:56px 260px 1fr;align-items:center;gap:20px;padding:14px 20px 14px 0;background:var(--bg);">
+                  <span style="font:700 34px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;color:var(--text2);text-align:right;">{{ c.num }}</span>
+                  <div style="height:96px;border:1px dashed var(--text2);display:grid;place-items:center;font:11px 'Cascadia Mono',Consolas,monospace;color:var(--text2);">NO EXPOSURES</div>
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <span style="font:700 28px/0.95 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ c.name }}</span>
+                    <span style="font-size:13px;color:var(--text2);text-wrap:pretty;">Blank rack. Hang a drawer or an album here before it starts collecting dust instead.</span>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ dropLib }}">
+          <div style="position:absolute;inset:0;z-index:40;background:color-mix(in oklab,var(--accent) 30%,var(--scrim));display:flex;flex-direction:column;justify-content:center;padding:0 80px;gap:10px;pointer-events:none;">
+            <div style="position:absolute;inset:16px;border:2px solid var(--accent);"></div>
+            <span style="font:12px 'Cascadia Mono',Consolas,monospace;letter-spacing:.1em;">DROP TARGET → D:\MyLibrary\Images\Inbox\</span>
+            <span style="font:700 150px/0.85 'Bahnschrift Condensed','DIN Condensed','Arial Narrow',sans-serif;text-transform:uppercase;">Straight<br>to the tray.</span>
+            <span style="font-size:16px;">No album here, so the Inbox gets them. Sort later. (Sure.)</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toastLib }}">
+          <div style="position:absolute;left:40px;bottom:24px;z-index:45;padding:12px 16px;background:var(--text);color:var(--bg);font:12px 'Cascadia Mono',Consolas,monospace;">{{ toastLib }}</div>
+        </sc-if>
+        <sc-if value="{{ tipLib }}">
+          <div style="position:absolute;left:{{ tipLib.left }};top:{{ tipLib.top }};width:280px;z-index:60;pointer-events:none;background:var(--bg2);border:1px solid var(--text);padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+            <span style="font:700 22px/1 'Bahnschrift Condensed','DIN Condensed',sans-serif;text-transform:uppercase;">{{ tipLib.title }}</span>
+            <span style="font-size:13px;line-height:1.45;">{{ tipLib.desc }}</span>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Modern&quot;,&quot;Minimal&quot;,&quot;Warm&quot;,&quot;High Contrast&quot;],&quot;default&quot;:&quot;Modern&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { M: null };
+  root = React.createRef();
+  componentDidMount() {
+    import((window.__resources && window.__resources.sharedJs) || new URL('imgview-shared.js', document.baseURI).href).then(M => this.setState({ M, ...M.initState(this.props) }));
+  }
+  componentDidUpdate(pp) {
+    const M = this.state.M; if (!M) return;
+    if (pp.theme !== this.props.theme && this.props.theme) this.setState({ theme: this.props.theme });
+    M.applyTheme(this.root.current, 'B', this.state.theme);
+  }
+  renderVals() {
+    const M = this.state.M;
+    return M ? { ...M.vals(this), root: this.root } : { root: this.root };
+  }
+}
+</script>
+
+
+</body></html>

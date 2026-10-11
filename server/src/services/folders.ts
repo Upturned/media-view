@@ -139,7 +139,7 @@ export function folderDetail(lib: OpenLibrary, id: number): FolderDetail | Inbox
 
 // ─── Changes: validate, then disk, then the DB in one transaction (technical doc §7.3) ─
 
-interface LiveFolder extends FolderRow {
+export interface LiveFolder extends FolderRow {
   uuid: string;
 }
 
@@ -238,7 +238,7 @@ export function moveFolder(lib: OpenLibrary, id: number, parentId: number | null
 }
 
 /** Disk rename/move of a folder, then its row, everything under it and the files' category. */
-function relocate(lib: OpenLibrary, f: LiveFolder, relPath: string, parentId: number | null, kind: FolderKind): void {
+export function relocate(lib: OpenLibrary, f: LiveFolder, relPath: string, parentId: number | null, kind: FolderKind): void {
   const { db } = lib;
   const root = lib.moduleRoot('images');
   const from = toAbsolute(root, f.rel_path);
