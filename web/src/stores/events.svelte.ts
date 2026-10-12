@@ -12,6 +12,8 @@ export const live = $state({
   library: 0,
   /** Bumped when Library Health issues change (the badge, the Health page). */
   health: 0,
+  /** Viewer copies (TIFF) being made in the background; undefined until the first news of it. */
+  converting: undefined as { done: number; total: number } | null | undefined,
 });
 
 const COALESCE_MS = 250;
@@ -40,6 +42,10 @@ export function connectEvents(): void {
   source.addEventListener('folders-changed', () => bump('folders'));
   source.addEventListener('library-changed', () => bump('library'));
   source.addEventListener('health-changed', () => bump('health'));
+  source.addEventListener('converting', (e) => {
+    const p = JSON.parse((e as MessageEvent<string>).data) as { done: number; total: number };
+    live.converting = p.total ? { done: p.done, total: p.total } : null;
+  });
   // EventSource reconnects by itself; after a reconnect, assume something changed.
   source.addEventListener('open', () => {
     bump('files');

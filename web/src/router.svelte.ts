@@ -98,3 +98,33 @@ export const href = (path: string) => '#' + path;
 
 export const folderHref = (f: { id: number; kind: string }) =>
   href(f.kind === 'album' || f.kind === 'inbox' ? `/images/a/${f.id}` : `/images/f/${f.id}`);
+
+/**
+ * Backspace = up one level (design M8 · 1A). Pages that know their parent (albums, folders) set it
+ * while shown; the rest follow the route (App.svelte).
+ */
+export const up = $state({ path: null as string | null });
+
+export function useUp(get: () => string | null): void {
+  $effect(() => {
+    const path = get();
+    up.path = path;
+    return () => {
+      if (up.path === path) up.path = null;
+    };
+  });
+}
+
+/** The page above this one, from the route alone. */
+export function routeUp(r: Route): string | null {
+  switch (r.name) {
+    case 'images': return '/';
+    case 'tag': return `/tags/${r.params.id}`;
+    case 'wiki': case 'tag-types': return '/tags';
+    case 'collection': return '/collections';
+    case 'health-review': case 'health-untagged': return '/health';
+    case 'health-grid': return '/health/untagged';
+    case 'search': case 'tags': case 'collections': case 'favorites': case 'recycle': case 'health': case 'settings': return '/images';
+    default: return null;
+  }
+}

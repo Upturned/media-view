@@ -7,7 +7,7 @@
   import FolderActions from '../components/FolderActions.svelte';
   import ImageBrowser from '../components/ImageBrowser.svelte';
   import { fmt } from '../media.ts';
-  import { folderHref, href, navigate, router } from '../router.svelte.ts';
+  import { folderHref, href, navigate, router, useUp } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
   import { drag, importDrop } from '../stores/imports.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
@@ -89,6 +89,14 @@
       throw err;
     }
   }
+
+  // Backspace: the folder above (or, from "All images in", that folder's own page).
+  useUp(() => {
+    if (!folder) return null;
+    if (all) return `/images/f/${folder.id}`;
+    const parent = folder.ancestors.at(-1);
+    return parent ? folderHref(parent).slice(1) : '/images';
+  });
 
   const crumbs = $derived(folder ? [...folder.ancestors, { id: folder.id, kind: folder.kind, name: folder.name }] : []);
 </script>

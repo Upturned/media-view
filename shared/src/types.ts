@@ -1,7 +1,17 @@
 export type Module = 'images' | 'videos' | 'audio' | 'texts';
 export type FolderKind = 'category' | 'subcategory' | 'album' | 'inbox';
 
-export const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'jfif', 'png', 'gif', 'webp', 'svg', 'avif'] as const;
+export const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'jfif', 'jpe', 'png', 'gif', 'webp', 'svg', 'svgz', 'avif', 'bmp', 'ico', 'tif', 'tiff'] as const;
+
+/** The format an image is sorted and labelled by: jpg, jpeg, jfif and jpe are one JPG; tif is TIFF, svgz SVG. */
+export function formatOf(ext: string): string {
+  const e = ext.toLowerCase();
+  return FORMAT_ALIASES[e] ?? e.toUpperCase();
+}
+const FORMAT_ALIASES: Record<string, string> = { jpeg: 'JPG', jfif: 'JPG', jpe: 'JPG', tif: 'TIFF', svgz: 'SVG' };
+
+/** SVG images: shown as they are, never made into a thumbnail. */
+export const isVector = (ext: string) => ext === 'svg' || ext === 'svgz';
 
 export function isImageFile(name: string): boolean {
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
@@ -27,6 +37,8 @@ export interface ScanStatus {
   lastScan: number | null;
   /** Files still waiting to be hashed. */
   hashing: number;
+  /** Viewer copies (TIFF) being made in the background, or null. */
+  converting: { done: number; total: number } | null;
 }
 
 export interface AboutInfo {
@@ -77,7 +89,7 @@ export interface InboxSummary extends FolderCard {
 }
 
 /** `position` is a collection's own order (only with a collection scope). */
-export type SortKey = 'name' | 'modified' | 'added' | 'size' | 'random' | 'position';
+export type SortKey = 'name' | 'modified' | 'added' | 'size' | 'format' | 'random' | 'position';
 
 export interface FileItem {
   id: number;

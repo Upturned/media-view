@@ -181,14 +181,24 @@ The number counts only red and amber items. Blue items are listed on the Library
 
 ### 3.4 Keyboard
 
+You can use most of the app from the keyboard, the way you'd use Windows Explorer. The first arrow key shows a **white ring** — the keyboard cursor — on the first image, card or row; the arrows move it. It hides as soon as you move the mouse over something else, and the next key carries on from where it was. Clicking an image or card moves the ring's place too, without showing it, and when you come back from the viewer it's on the image you were looking at.
+
+- **Image grids:** ← → ↑ ↓ move between frames; `Home` / `End` jump to the first / last, `PgUp` / `PgDn` a screen at a time. `Space` selects or deselects the frame, `Shift` + arrows extends the selection, `Ctrl` + arrows moves without touching it. With *Group by collection*, the arrows walk through the sections as one list.
+- **Card pages** (the Library, racks, drawers, Collections) and **lists** (Tags, Library Health, Recycle Bin): the arrows move between cards or rows, `Enter` opens (on Library Health: *Review ▸*; in the Recycle Bin: *Restore*), `Space` selects a row, `Delete` deletes permanently in the Recycle Bin (it asks first).
+- **Buttons, toolbars and the top bar:** `Tab` moves between them; a row of joined buttons (like *Group* or *Cols*) is one stop, with ← → inside it and `Space` / `Enter` to pick.
+- The first time the arrows move the ring, a small bar at the bottom lists the keys for that page.
+
 These work on every page; the image viewer adds its own (see §4.5). Press `F1` on any page to see the shortcuts available there.
 
 | Key                  | Action                                                      |
 |----------------------|-------------------------------------------------------------|
 | `F1`                 | Help                                                        |
 | `/`                  | Jump to the search box                                      |
+| ← → ↑ ↓              | Move the keyboard cursor (see above)                        |
 | `Enter`              | Open the focused card or image (in selection mode: select it) |
-| `Esc`                | Close the open menu or dialog; on the Search page, put the cursor back in the search box |
+| `Space`              | Select or deselect the focused image or row                 |
+| `Backspace`          | Up one level: an album to its drawer or rack, a rack to the Library, a tag gallery to its wiki page, a review page to Library Health… |
+| `Esc`                | Close the open menu or dialog; with nothing open, clear the selection; on the Search page, put the cursor back in the search box |
 | `Enter` in a dialog  | Confirm                                                     |
 | `Enter` or `,` while tagging | Add the typed tag                                   |
 
@@ -225,13 +235,15 @@ Opening a category or sub-category shows what's inside it: its sub-categories an
 The heart of the module: a grid of the images in one album. The Inbox uses this same page.
 
 **Viewing**
-- Thumbnail grid with adjustable size (2–10 columns); your choice is remembered.
+- Thumbnail grid with adjustable size (2–10 columns). Columns, sort, grouping and the index are remembered for every grid — **Settings → Grids** sets them too (§4.16).
 - Images load as you scroll, so even large albums open quickly.
 - A star (★) marks favorites.
 
-**Sorting** — by name, date modified, date added, file size or random; ascending or descending.
+**Sorting** — by name, date modified, date added, file size, format or random; ascending or descending. **By format**, images are grouped by type — JPG, JPEG, JFIF and JPE all count as *JPG* — then by name; hover a frame to see its format in a small label.
 
-**Group by collection** — the **Group: None / Collection** switch next to Sort splits the grid into one section per collection (collections in alphabetical order, images in each collection's own order, which you can reverse per section). Each section's header shows how many of these images the collection holds and opens it. An image in several collections appears in each of their sections (marked *2×*) — it's still one image, so selecting it in either section selects it once. Images in no collection come last, under *Not in a collection*. The switch is on every grid of images: albums, *All images*, Favorites, Search and tag galleries.
+**Group by format** — **Group: Format** splits the grid into one section per format, a→z (BMP, GIF, ICO, JPG, PNG, SVG, TIFF, WebP…; JPEG, JFIF and JPE count as JPG), each section in the page's sort, with the format and its count in the header. Every image is in exactly one section, so selecting a range with Shift and stepping through in the viewer follow the grid's order. It's on the same grids as *Group by collection*.
+
+**Group by collection** — the **Group: None / Collection / Format** switch next to Sort splits the grid into one section per collection (collections in alphabetical order, images in each collection's own order, which you can reverse per section). Each section's header shows how many of these images the collection holds and opens it. An image in several collections appears in each of their sections (marked *2×*) — it's still one image, so selecting it in either section selects it once. Images in no collection come last, under *Not in a collection*. The switch is on every grid of images: albums, *All images*, Favorites, Search and tag galleries.
 
 **Filtering** — all filters stack:
 - favorites only
@@ -261,7 +273,8 @@ Opens when you click an image. Shows the image as large as possible with its det
 - **Fit to screen** by default; large images are scaled down, small ones shown at natural size.
 - **Zoom** from 0.1× to 10× with the mouse wheel; **pan** by clicking and dragging.
 - **Previous / Next** follow the order of the page you came from — an album, a search, a tag, a collection.
-- **Slideshow** with a configurable interval (1–30 s) and a progress bar.
+- **Slideshow** with a configurable interval (2–30 s) and a progress bar. Next to the interval: **⟳ loop** — start over at the end, or stop there — and **⤨ shuffle** — a random order that shows each image once per round. Their defaults are in Settings (§4.16).
+- **TIFF** images can't be shown by a browser, so the viewer shows a copy. Copies are made in the background as soon as the images are found (the top bar shows *TIFF 3 / 12* meanwhile); open one before its copy is ready and it's made right away, just a little slower.
 - **Info panel:** file name, full folder path (clickable), size, dimensions, dates.
 - **Tags panel:** the image's tags grouped by type (see §3.1 for clicking them).
   - Add tags by typing: suggestions appear with their type color and image count, and aliases are recognized.
@@ -284,7 +297,8 @@ When opened from a collection, the viewer shows your position in it (e.g. *3 / 1
 | `R`              | Random image                                                           |
 | `S`              | Start / stop slideshow                                                 |
 | `T`              | Type a tag: puts the cursor in the Tags panel (`Esc` goes back to the images) |
-| `Esc`            | One step back, in this order: exit fullscreen → stop the slideshow → back to the previous page (in the tag field, `Esc` just leaves the field) |
+| `Esc`            | One step back, in this order: leave the film strip or the side panel you tabbed into → exit fullscreen → stop the slideshow → back to the previous page (in the tag field, `Esc` just leaves the field) |
+| `Tab` to the film strip | ← → move the ring along the strip without changing the image; `Enter` shows that image; `Esc` goes back to it |
 | `Backspace`      | Back to the previous page                                              |
 | `F1`             | Help                                                                   |
 
@@ -361,12 +375,14 @@ All your collections, each as a numbered contact strip: its cover, the next few 
 
 - **Header** — cover, name, description and number of images, with **Edit**, **Delete**, **Random** and **▶ Slideshow** (in the page's order).
 - **Images** in the collection's own order, each numbered with its place in the list. **Drag** images to reorder them; drag a selection to move it together.
-- **Sort** by own order (the default), name or size, ascending or descending. Reordering works only in own order with no filter on — otherwise a quiet hint says so. The numbers always show the list's own order.
+- **Sort** by own order (the default), name, size or format, ascending or descending. Reordering works only in own order with no filter on — otherwise a quiet hint says so. The numbers always show the list's own order.
 - Open any image to step through the collection in the viewer, in the page's order.
 - **Remove from collection** in the selection bar (never deletes the files), plus the usual bulk actions. The index works as on other grids.
 - **Edit** — name, description (up to 500 characters) and cover: *First image* (the default) or one you choose. If the chosen cover is taken off the list, the first image is used again.
 - **Delete** asks first; the images stay where they are, and the message after it offers **Undo** for a few seconds.
 - Names are unique: capitals, and spaces vs. `_`, don't count (*Chapter 3 refs* and *chapter_3_refs* are the same name).
+
+**Dropping files from Explorer** onto a collection page adds them too: they're copied into the Inbox (the originals stay untouched) and put at the end of the list. An image that's already in the Inbox isn't copied again — it's simply added to the list. Dropped folders are flattened.
 
 **Adding images** — select images in any grid and press **+ Collection**, or right-click one and choose **Add to collection…** (also in the viewer's Collections panel). Pick a list (type to filter; the three you added to most recently are at the top) or type a new name to create one on the spot; double-click adds right away. Each list shows how many of the chosen images it already has. Images are added at the end; ones already on the list stay where they are, and the message says so (*Added 2 · 3 were already in Chapter 3 refs*), with **Go to**.
 
@@ -378,7 +394,7 @@ It's a view, not a folder: starring an image doesn't move or copy it — it stay
 
 ### 4.13 Random
 
-Show a random image — from the whole library, a category, sub-category or album, a tag, or a collection. The current image is never repeated immediately. Also available from the viewer with the `R` key.
+Show a random image. **Random** in the top bar picks from the page you're on — an album, *All images*, a tag, a collection, Favorites or a search — and from the whole library on any other page (or when the page has no images). Hover it to see where it will pick from. Collections and tag galleries have their own **⚄ Random** too, and in the viewer `R` picks another image from the same list. The current image is never repeated immediately.
 
 ### 4.14 Recycle Bin
 
@@ -425,8 +441,9 @@ A maintenance page that compares your library folder with what the app remembers
 
 - **Library** — see which library is open, **Open library…** to switch to another folder, or **New library…** to start one. Recent libraries are listed for quick switching.
 - **Theme** — see §4.18.
-- **Grid defaults** — default column count and sort order.
-- **Slideshow** — default interval.
+- **Grids** — what album, tag and search grids open with: columns (2–10), sort and direction, grouping (none, by collection or by format), and whether the index is shown. Changing them on a grid changes them here too.
+- **Slideshow** — how long each image stays (2–30 s), what happens at the end (*Start over* or *Stop*) and the order (*The list's order* or *Shuffle*). The viewer's own slideshow controls change them too.
+- Grid and slideshow settings are kept by the browser you use the app in.
 
 ### 4.17 Help
 
@@ -533,15 +550,18 @@ While you type, suggestions appear, colored by tag type and showing how many ima
 
 ## 6. Supported formats
 
-JPG, JPEG, JFIF, PNG, GIF (including animated), WebP, SVG and AVIF.
+JPG (also `.jpeg`, `.jfif` and `.jpe`), PNG, GIF (including animated), WebP, AVIF, SVG (also the compressed `.svgz`), BMP, ICO and TIFF (`.tif`, `.tiff`). For TIFF the viewer shows a copy, made in the background (§4.5); the original is never changed.
+
+Other image formats (PSD, HEIC, camera RAW files…) are listed under *Not supported* in Library Health, where you can leave them where they are or set them aside.
 
 ---
 
 ## 7. Good to know
 
+- **Running it.** Unzip `media-view-<version>-win-x64.zip` anywhere and double-click **start.bat**: the app opens in your browser. Keep the black window that opens with it while you use the app — closing it stops media-view. Double-clicking *start.bat* again while it runs just opens the browser. Nothing is installed; Windows 10 or 11, 64-bit.
 - **Offline and private.** The app never connects to the internet.
 - **Desktop only.** Designed for a computer screen with mouse and keyboard.
-- **Thumbnails** are generated in the background the first time images are seen, and kept so they only need to be made once.
+- **Thumbnails** are generated in the background the first time images are seen, and kept so they only need to be made once. So are the viewer copies of TIFF images.
 - **Logs** are kept in `.mediaview\logs\` inside your library: errors, Library Health fixes and bulk operations, one file per day. Old logs are deleted automatically (at most 100 log files and 50 MB are kept, oldest removed first), and you can clear them from Library Health.
 - **Back up the whole library folder**, including the hidden `.mediaview` folder — that's where your tags, collections and descriptions live.
 

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:relative;padding:6px 6px 8px;outline:{{ ol }};outline-offset:{{ oo }};box-shadow:{{ bs }};cursor:default">
+  <div style="position:relative;aspect-ratio:3/2;background:{{ thumbBg }};overflow:hidden">
+    <div style="position:absolute;top:0;left:0;display:flex;align-items:flex-start">
+      <sc-if value="{{ hasNum }}" hint-placeholder-val="{{ false }}"><span style="background:#0b0b0b;color:#f3f2ec;font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:700;font-size:26px;line-height:1;padding:3px 7px 1px">{{ num }}</span></sc-if>
+      <sc-if value="{{ gif }}" hint-placeholder-val="{{ false }}"><span style="background:#ff4b2b;color:#0b0b0b;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 5px">GIF</span></sc-if>
+    </div>
+    <sc-if value="{{ star }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:0;right:0;background:#0b0b0b;color:#f2e34b;font-size:12px;line-height:1;padding:3px 4px">★</span></sc-if>
+    <sc-if value="{{ isNew }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;bottom:0;left:0;background:#f3f2ec;color:#0b0b0b;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 5px">NEW</span></sc-if>
+    <sc-if value="{{ showFmt }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;bottom:0;right:0;background:#0b0b0b;color:#9a9990;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;padding:2px 5px">{{ fmt }}</span></sc-if>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:6px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;white-space:nowrap;overflow:hidden">
+    <span style="color:#9a9990">{{ code }}</span>
+    <span style="color:#f3f2ec;overflow:hidden;text-overflow:ellipsis">{{ file }}</span>
+  </div>
+  <sc-if value="{{ selected }}" hint-placeholder-val="{{ false }}">
+    <svg style="position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <ellipse cx="50" cy="50" rx="49.5" ry="49" fill="none" stroke="#f2e34b" stroke-width="2.5" vector-effect="non-scaling-stroke"></ellipse>
+      <ellipse cx="50.5" cy="49.5" rx="48" ry="49.5" fill="none" stroke="#f2e34b" stroke-width="1.2" opacity="0.55" vector-effect="non-scaling-stroke"></ellipse>
+    </svg>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:220,&quot;height&quot;:170}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props, s = p.state || 'rest';
+    const tones = [['#3d352d','#221f1b'],['#2c3540','#1a1e24'],['#3a3226','#1f1b15'],['#33303d','#1c1a22'],['#2d3a33','#19201c'],['#40302e','#231b1a']];
+    const t = tones[(p.tone ?? 0) % tones.length];
+    return {
+      ol: s === 'focus' ? '2px solid #f3f2ec' : s === 'hover' ? '1px solid #ff4b2b' : '0px solid transparent',
+      oo: s === 'focus' ? '3px' : '0px',
+      bs: s === 'focus' ? '0 0 0 3px #0b0b0b' : 'none',
+      thumbBg: `repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 6px,transparent 6px 12px),linear-gradient(160deg,${t[0]},${t[1]})`,
+      hasNum: p.num != null && p.num !== '',
+      num: p.num, gif: !!p.gif, star: !!p.star, isNew: !!p.isNew, selected: !!p.selected, fmt: p.fmt,
+      showFmt: !!p.fmt && (s === 'hover' || (s === 'focus' && !!p.fmtOnFocus) || !!p.fmtAlways),
+      code: p.code ?? '12A', file: p.file ?? 'file_name.jpg'
+    };
+  }
+}
+</script>
+</body>
+</html>

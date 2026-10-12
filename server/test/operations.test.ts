@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
+import zlib from 'node:zlib';
 import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readMarker } from '../src/lib/markers.ts';
@@ -251,8 +252,24 @@ describe('importing', () => {
     const maps = fid('Fantasy/Maps');
 
     expect(await importPath(lib, maps, path.join(outside, 'a.png'))).toMatchObject({ status: 'renamed', savedAs: 'a (1).png' });
-    expect(await importPath(lib, maps, path.join(outside, 'red copy.png'))).toMatchObject({ status: 'skipped' });
+    // skipped, but with the id of the image already there (a drop on a collection still adds it)
+    expect(await importPath(lib, maps, path.join(outside, 'red copy.png'))).toMatchObject({ status: 'skipped', fileId: fileByPath(lib, 'Fantasy/Maps/a (1).png')!.id });
     expect(await importPath(lib, maps, path.join(outside, 'blue.png'))).toMatchObject({ status: 'copied' });
+    // BMP (decoded by the app) and gzipped SVG
+    const bmp = Buffer.alloc(58);
+    bmp.write('BM', 0, 'latin1');
+    bmp.writeUInt32LE(58, 2);
+    bmp.writeUInt32LE(54, 10);
+    bmp.writeUInt32LE(40, 14);
+    bmp.writeInt32LE(1, 18);
+    bmp.writeInt32LE(1, 22);
+    bmp.writeUInt16LE(1, 26);
+    bmp.writeUInt16LE(24, 28);
+    fs.writeFileSync(path.join(outside, 'dot.bmp'), bmp);
+    fs.writeFileSync(path.join(outside, 'logo.svgz'), zlib.gzipSync('<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"/>'));
+    expect(await importPath(lib, maps, path.join(outside, 'dot.bmp'))).toMatchObject({ status: 'copied' });
+    expect(fileByPath(lib, 'Fantasy/Maps/dot.bmp')).toMatchObject({ width: 1, height: 1 });
+    expect(await importPath(lib, maps, path.join(outside, 'logo.svgz'))).toMatchObject({ status: 'copied' });
     expect((await importPath(lib, maps, path.join(outside, 'clip.mp4'))).reason).toMatch(/Video/);
     expect((await importPath(lib, maps, path.join(outside, 'layers.psd'))).reason).toMatch(/Unsupported format \(PSD\)/);
     expect((await importPath(lib, maps, path.join(outside, 'broken.png'))).reason).toMatch(/Couldn’t read/);
@@ -262,6 +279,16 @@ describe('importing', () => {
     expect(fs.existsSync(path.join(outside, 'blue.png'))).toBe(true); // originals untouched
     expect(fs.readdirSync(path.join(lib.root, '.mediaview', 'tmp'))).toEqual([]);
     await expectQuietScan();
+  });
+
+  it('reports an imported image that already lives in another album as a duplicate', async () => {
+    const outside = path.join(dir, 'Downloads');
+    await png(path.join(outside, 'red.png'), '#ff0000');
+    await importPath(lib, fid('Fantasy/Maps'), path.join(outside, 'red.png'));
+    await importPath(lib, fid('Fantasy/Portraits'), path.join(outside, 'red.png'));
+    expect(issues(lib, 'duplicate')).toHaveLength(0); // already hashed: the hasher has nothing to do
+    await new Promise((r) => setTimeout(r, 600));
+    expect(issues(lib, 'duplicate')).toMatchObject([{ payload: { fileIds: [id('Fantasy/Maps/red.png'), id('Fantasy/Portraits/red.png')] } }]);
   });
 
   it('imports a dropped file from a stream, into the Inbox by default', async () => {

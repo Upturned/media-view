@@ -7,7 +7,7 @@
   import KindIcon from '../components/KindIcon.svelte';
   import NameDialog from '../components/NameDialog.svelte';
   import Thumb from '../components/Thumb.svelte';
-  import { groupsOf, SECTIONS, type Group, type Section } from '../health.ts';
+  import { groupsOf, looksLikeAlbum, SECTIONS, type Group, type Section } from '../health.ts';
   import { fmt, formatDate } from '../media.ts';
   import { href, router } from '../router.svelte.ts';
   import { ask } from '../stores/confirm.svelte.ts';
@@ -201,6 +201,8 @@
   }
 
   const plural = (n: number, one: string, many = `${one}s`) => `${fmt(n)} ${n === 1 ? one : many}`;
+  const dirOf = (p: string) => p.split('/').slice(0, -1).join('/');
+  const nameOf = (p: string) => p.split('/').at(-1) ?? '';
   const folderLabel = (k: FolderKind) => (k === 'subcategory' ? 'Sub-category' : k === 'category' ? 'Category' : k === 'inbox' ? 'Inbox' : 'Album');
   const KEEP_ALL_TIP = 'Every copy stays where it is, as its own image with its own tags. The group stops showing here until another copy turns up.';
   const RECORD_TIP = 'Moves the file into the library’s hidden Invalid folder (.mediaview\\Invalid\\…, keeping its path) and counts it in the statistics. Get it back from Explorer if you change your mind.';
@@ -302,27 +304,37 @@
             <div class="unclear">
               <span class="stripe" style:background={stripe}></span>
               <div class="uc-body">
-                <div class="cards">
-                  <div class="found">
-                    <div class="band">Found · {formatDate(i.detectedAt)}</div>
+                <!-- Side by side: the found image, then each history it could be, row by row -->
+                <div class="uc-top">
+                  <div class="uc-pic">
                     <div class="pic"><Thumb file={d.file.thumb ?? undefined} /></div>
-                    <span class="title">{d.file.path.split('/').at(-1)}</span>
-                    <span class="meta">{winPath(d.file.path.split('/').slice(0, -1).join('/'))}<br />identical to {plural(d.candidates.length, 'image')} the app is missing</span>
+                    <span class="meta">same pixels as {plural(d.candidates.length, 'missing image')}</span>
                   </div>
-                  {#each d.candidates as c, k (c.id)}
-                    {@const on = picks[i.id] === c.id}
-                    <button class="cand" class:on onclick={() => (picks = { ...picks, [i.id]: c.id })}>
-                      <div class="band" class:on>{on ? '● It’s this one' : `○ Candidate ${String.fromCharCode(65 + k)}`}</div>
-                      <span class="title">{c.path.split('/').at(-1)}</span>
-                      {@render plain('WAS', winPath(c.path.split('/').slice(0, -1).join('/')))}
-                      {#if c.tags.length}{@render tags(c.tags)}{:else}<span class="notags">NO TAGS</span>{/if}
-                      <div class="facts">
-                        <span>STAR</span><span>{c.favorited ? '★ starred' : '—'}</span>
-                        <span>COLLECTIONS</span><span>{c.collections ? plural(c.collections, 'list') : '—'}</span>
-                        <span>NOTE</span><span>{c.description ?? '—'}</span>
-                      </div>
-                    </button>
-                  {/each}
+                  <div class="cmp" style:--n={d.candidates.length + 1}>
+                    <div class="col labels"><div class="hd"></div><div>Name</div><div>Folder</div><div>Tags</div><div>Star</div><div>Collections</div><div>Note</div></div>
+                    <div class="col found">
+                      <div class="hd">Found · {formatDate(i.detectedAt)}</div>
+                      <div class="nm">{nameOf(d.file.path)}</div>
+                      <div><span class="lab">NOW</span> {winPath(dirOf(d.file.path)) || 'Images'}</div>
+                      <div class="mute">new · none yet</div>
+                      <div class="mute">—</div>
+                      <div class="mute">—</div>
+                      <div class="mute">—</div>
+                    </div>
+                    {#each d.candidates as c, k (c.id)}
+                      {@const on = picks[i.id] === c.id}
+                      {@const [was] = diff(dirOf(c.path), dirOf(d.file.path))}
+                      <button class="col cand" class:on onclick={() => (picks = { ...picks, [i.id]: c.id })}>
+                        <div class="hd" class:on>{on ? '● It’s this one' : `○ Candidate ${String.fromCharCode(65 + k)}`}</div>
+                        <div class="nm">{#if nameOf(c.path) === nameOf(d.file.path)}{nameOf(c.path)}{:else}<mark>{nameOf(c.path)}</mark>{/if}</div>
+                        <div><span class="lab">WAS</span> {was.pre}{#if was.hit}<mark>{was.hit}</mark>{/if}{was.post}</div>
+                        <div>{#if c.tags.length}{@render tags(c.tags)}{:else}<span class="mute">no tags</span>{/if}</div>
+                        <div class:mute={!c.favorited}>{c.favorited ? '★ starred' : '—'}</div>
+                        <div class:mute={!c.collections}>{c.collections ? plural(c.collections, 'list') : '—'}</div>
+                        <div class:mute={!c.description}>{c.description ?? '—'}</div>
+                      </button>
+                    {/each}
+                  </div>
                 </div>
                 <div class="uc-foot">
                   <span>Same pixels, {d.candidates.length} histories. Pick the one it really is: its tags, star and collection places come back. The others stay on Missing images.</span>
@@ -407,7 +419,7 @@
                   <KindIcon kind={d.kind === 'missing_folder' ? d.folderKind : d.kind === 'unmarked_folder' ? (kinds[i.id] ?? d.current) : 'subcategory'} size={22} />
                 </div>
               {:else if d.kind === 'loose_files' || d.kind === 'nested_in_album'}
-                <div class="icon"><KindIcon kind={d.kind === 'nested_in_album' ? 'album' : d.folderId === null ? 'category' : 'subcategory'} size={22} /></div>
+                <div class="icon" class:guess={looksLikeAlbum(i)}><KindIcon kind={d.kind === 'nested_in_album' || looksLikeAlbum(i) ? 'album' : d.folderId === null ? 'category' : 'subcategory'} size={22} /></div>
               {:else}
                 <div class="icon"><svg width="22" height="22" viewBox="0 0 16 16"><path d="M3 1.5 H10 L13 4.5 V14.5 H3 Z" fill="none" stroke="currentColor" stroke-width="1.4" /><rect x="5" y="8" width="6" height="1.4" fill="currentColor" /><rect x="5" y="10.8" width="4" height="1.4" fill="currentColor" /></svg></div>
               {/if}
@@ -438,6 +450,10 @@
                     <div class="strip">{#each d.files.slice(0, 5) as f (f.id)}<div><Thumb file={f.thumb ?? undefined} fit="cover" /></div>{/each}{#if d.files.length > 5}<span>+{d.files.length - 5}</span>{/if}</div>
                   {/if}
                   <span class="meta">{d.files.length > 1 ? `one item, because they moved together · Keep or Undo covers all ${d.files.length}` : `tags followed · seen ${formatDate(i.detectedAt)}`}</span>
+                {:else if d.kind === 'loose_files' && looksLikeAlbum(i)}
+                  <div class="t-row"><span class="title">{d.path}</span>{@render chip('Looks like an album', 'guess')}</div>
+                  {@render plain('IN', 'Images')}
+                  <span class="meta">{plural(d.count, 'image')}, no folders · a folder directly in Images is always a category, so its images are loose · <b>Move as album…</b> puts it inside a category, or keep it as a category and move its images into an album inside it</span>
                 {:else if d.kind === 'loose_files'}
                   <div class="t-row"><span class="title">{plural(d.count, 'loose image')} in {d.path ? d.path.split('/').at(-1) : 'Images'}</span>{@render chip(d.folderId === null ? 'Images' : 'Folder')}{@render chip('Loose images')}</div>
                   {@render plain('IN', winPath(d.path))}
@@ -614,16 +630,33 @@
   .unclear, .dup { display: grid; grid-template-columns: 4px minmax(0, 1fr); border-bottom: 1px solid var(--line); }
   .dup { display: flex; flex-direction: column; gap: 12px; padding: 14px 32px 16px 20px; }
   .uc-body { display: flex; flex-direction: column; gap: 12px; padding: 14px 32px 16px 16px; }
+  .uc-top { display: flex; gap: 16px; align-items: flex-start; }
+  .uc-pic { display: flex; flex-direction: column; gap: 6px; width: 160px; flex: none; }
+  .uc-pic .pic { width: 160px; height: 160px; }
+  .cmp { flex: 1; min-width: 0; display: grid; grid-template-columns: 92px repeat(var(--n), minmax(180px, 1fr)); grid-template-rows: repeat(7, auto); overflow-x: auto; outline: 1px solid var(--line); }
+  .col { grid-row: 1 / span 7; display: grid; grid-template-rows: subgrid; padding: 0; border: none; border-left: 1px solid var(--line); background: none; color: var(--text); text-align: left; font: inherit; }
+  .col.labels { border-left: none; }
+  .col > div { padding: 7px 12px; border-bottom: 1px solid var(--line); font: 11.5px/1.45 var(--font-mono); overflow-wrap: anywhere; }
+  .col > div:last-child { border-bottom: none; }
+  .col .hd { padding: 6px 12px; background: var(--surface2); color: var(--text2); font-weight: 700; font-size: 11px; text-transform: uppercase; }
+  .col .hd.on { background: var(--accent); color: var(--accent-ink); }
+  .labels > div { color: var(--text2); font-size: 10.5px; text-transform: uppercase; }
+  .col .nm { font: 700 16px/1.1 var(--font-display); }
+  .col .lab { color: var(--text2); }
+  .col .mute, .col.found .mute { color: var(--text2); }
+  .found { background: var(--bg2); }
+  .cand { cursor: pointer; }
+  .cand:hover { background: var(--surface); }
+  .cand.on { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--surface); }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-  .found, .cand, .copy { display: flex; flex-direction: column; gap: 8px; padding: 0 0 12px; border: none; outline: 1px solid var(--line); background: var(--bg2); color: var(--text); text-align: left; font: inherit; }
-  .found > :not(.band), .cand > :not(.band), .copy > :not(.band) { margin: 0 12px; }
-  .cand, .copy { cursor: pointer; }
-  .cand.on, .copy.keep { outline: 2px solid var(--accent); }
+  .copy { display: flex; flex-direction: column; gap: 8px; padding: 0 0 12px; border: none; outline: 1px solid var(--line); background: var(--bg2); color: var(--text); text-align: left; font: inherit; }
+  .copy > :not(.band) { margin: 0 12px; }
+  .copy { cursor: pointer; }
+  .copy.keep { outline: 2px solid var(--accent); }
   .copy.gone { opacity: 0.6; }
   .band { padding: 6px 12px; background: var(--surface2); color: var(--text2); font: 700 11px var(--font-mono); text-transform: uppercase; }
   .band.on, .band.keep { background: var(--accent); color: var(--accent-ink); }
   .band.star { background: var(--accent2); color: #111; }
-  .found .pic { width: auto; height: 120px; }
   .notags { font: 10.5px var(--font-mono); color: var(--text2); }
   .facts { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 3px 8px; font: 11px var(--font-mono); }
   .facts span:nth-child(odd) { color: var(--text2); }

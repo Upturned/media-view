@@ -6,3 +6,4 @@ Images and folders you recycle wait here — with their stars and descriptions �
 - **Delete** removes an item from disk for good, after asking. **Empty the bin** deletes everything in it.
 - Select several items (the boxes on the left) to restore or delete them together.
 - Starred images are never recycled: unstar them first.
+- **Keyboard:** ↑ ↓ move a white ring between the rows (it shows after the first key and hides when you move the mouse); Enter restores, Space selects, Delete deletes permanently (it asks first).

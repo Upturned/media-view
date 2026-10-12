@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import sharp from 'sharp';
+import { isVector } from '@media-view/shared';
+import { openImage } from '../lib/image.ts';
 import { log } from '../lib/log.ts';
 import { DATA_DIR } from '../lib/paths.ts';
 import { raiseIssue } from './issues.ts';
@@ -23,7 +24,7 @@ interface ThumbSource {
   ext: string;
 }
 
-export const isRaster = (ext: string) => ext !== 'svg';
+export const isRaster = (ext: string) => !isVector(ext);
 
 export function thumbDir(lib: OpenLibrary): string {
   return path.join(lib.root, DATA_DIR, 'thumbnails');
@@ -107,7 +108,8 @@ export function stopThumbnails(): void {
 async function generate(lib: OpenLibrary, file: ThumbSource, target: string): Promise<void> {
   const source = absPath(lib, file.rel_path);
   try {
-    const meta = await sharp(source, { failOn: 'none' }).metadata();
+    const image = openImage(source, file.ext);
+    const meta = await image.metadata();
     // EXIF orientations 5–8 are rotated by 90°: the displayed size is swapped.
     const rotated = (meta.orientation ?? 1) >= 5;
     lib.db.prepare('UPDATE files SET width = ?, height = ? WHERE id = ?')
@@ -115,7 +117,7 @@ async function generate(lib: OpenLibrary, file: ThumbSource, target: string): Pr
 
     fs.mkdirSync(path.dirname(target), { recursive: true });
     const tmp = `${target}.${process.pid}.part`;
-    await sharp(source, { failOn: 'none' })
+    await image
       .rotate()
       .resize({ width: THUMB_SIZE, height: THUMB_SIZE, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: QUALITY })
@@ -167,7 +169,7 @@ function adopt(temp: string, target: string): void {
 export async function queueBacklog(lib: OpenLibrary): Promise<number> {
   const rows = lib.db.prepare(
     `SELECT id, rel_path, hash, ext FROM files
-     WHERE media_type = 'image' AND recycled = 0 AND missing_since IS NULL AND hash IS NOT NULL AND ext <> 'svg'`,
+     WHERE media_type = 'image' AND recycled = 0 AND missing_since IS NULL AND hash IS NOT NULL AND ext NOT IN ('svg', 'svgz')`,
   ).all() as ThumbSource[];
   let queued = 0;
   for (let i = 0; i < rows.length; i++) {

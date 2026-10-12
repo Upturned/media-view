@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { FolderCard, InboxSummary } from '@media-view/shared';
+  import { navItems } from '../kbd.svelte.ts';
   import { client, unwrap } from '../api.ts';
   import FolderCardView from '../components/FolderCardView.svelte';
   import DropOverlay from '../components/DropOverlay.svelte';
@@ -70,7 +71,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="page" ondragover={onDragOver} ondrop={onDrop}>
+<div class="page" ondragover={onDragOver} ondrop={onDrop} use:navItems={{ kind: 'cards' }}>
   <header class="head">
     <h1 class="display title">Library</h1>
     <div class="facts">

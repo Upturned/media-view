@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { CollectionDetail } from '@media-view/shared';
   import { ApiError, client, unwrap } from '../api.ts';
+  import DropOverlay from '../components/DropOverlay.svelte';
   import ImageBrowser from '../components/ImageBrowser.svelte';
   import ListIcon from '../components/ListIcon.svelte';
   import Thumb from '../components/Thumb.svelte';
@@ -8,6 +9,7 @@
   import { href, navigate, router } from '../router.svelte.ts';
   import { deleteCollection } from '../stores/collections.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
+  import { drag, importDrop } from '../stores/imports.svelte.ts';
   import { openOps } from '../stores/ops.svelte.ts';
   import { useSearchContext } from '../stores/search.svelte.ts';
   import { toastError } from '../stores/toasts.svelte.ts';
@@ -48,6 +50,17 @@
     return days < 1 ? 'Today' : days < 14 ? `${days}D` : days < 120 ? `${Math.round(days / 7)}W` : `${Math.round(days / 30)}M`;
   });
 
+  // Files dropped from Explorer go to the Inbox and join the end of the list (milestone 8).
+  function onDragOver(e: DragEvent) {
+    if (detail && e.dataTransfer?.types.includes('Files')) e.preventDefault();
+  }
+
+  function onDrop(e: DragEvent) {
+    if (!detail || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    void importDrop(e.dataTransfer, { id: null, label: `Inbox → ${detail.name}` }, { id: detail.id, name: detail.name });
+  }
+
   async function random() {
     try {
       const r = await unwrap(client.api.files.random.$get({ query: { collection: String(id), sort: 'position', order: 'asc' } }));
@@ -78,7 +91,8 @@
   </div>
 {:else if detail}
   {@const d = detail}
-  <div class="coll-page">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="coll-page" ondragover={onDragOver} ondrop={onDrop}>
     <header class="head">
       <div class="cover">
         {#if d.covers[0]}<Thumb file={d.covers[0]} fit="cover" />{/if}
@@ -112,14 +126,17 @@
         scope={{ collection: d.id }}
         collection={{ id: d.id, name: d.name }}
         where={d.name}
-        emptyText="This list is empty — add images from any grid."
+        emptyText="This list is empty — add images from any grid, or drop files here."
       />
     {/key}
+    {#if drag.files}
+      <DropOverlay target={`INBOX → ${d.name}`} headline={'Drop to add\nthem to the list.'} body="Copied into the Inbox, originals untouched, and added at the end of this collection. Folders are flattened." />
+    {/if}
   </div>
 {/if}
 
 <style>
-  .coll-page { height: calc(100vh - 56px); display: flex; flex-direction: column; }
+  .coll-page { position: relative; height: calc(100vh - 56px); display: flex; flex-direction: column; }
   .gone { display: flex; flex-direction: column; gap: 12px; padding-top: 60px; }
   .gone .display { font-size: 48px; }
   .gone a { font: 12px var(--font-mono); color: var(--accent); text-transform: uppercase; text-decoration: none; }

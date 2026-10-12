@@ -25,7 +25,7 @@
   const link = $derived(href(`/images/a/${inbox.id}`));
 </script>
 
-<a class="inbox" href={link}>
+<a class="inbox" data-nav href={link}>
   <div class="count-col">
     <span class="kind"><KindIcon kind="inbox" size={15} />Inbox</span>
     <span class="big display">{fmt(inbox.imageCount)}</span>

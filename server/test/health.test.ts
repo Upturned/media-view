@@ -238,6 +238,27 @@ describe('rule problems and wrong types', () => {
     expect(psd('scene.psd')).toBeDefined();
   });
 
+  it('a format the app learned to show since it was ignored is tracked like any image', async () => {
+    t.file('Fantasy/Portraits/old.bmp', 'bmp');
+    lib.db.prepare('INSERT INTO untracked_files (rel_path, ext, reason, ignored_at) VALUES (?, ?, ?, ?)').run('Fantasy/Portraits/old.bmp', 'bmp', 'unsupported', 1);
+    await scan();
+    expect(healthReport(lib).untracked).toEqual([]);
+    expect(fileByPath(lib, 'Fantasy/Portraits/old.bmp')).toBeDefined();
+  });
+
+  it('a top-level folder of images looks like an album: Apply to all leaves it for a choice', async () => {
+    t.file('Wallpapers/w1.png', 'w1');
+    t.file('Wallpapers/w2.png', 'w2');
+    t.file('Sci-fi/loose.png', 'l');
+    t.file('Sci-fi/Ships/s.png', 's');
+    await scan();
+    const wall = issue('loose_files', (x) => x.details.kind === 'loose_files' && x.details.path === 'Wallpapers')!;
+    expect(wall.details).toMatchObject({ topLevel: true, subfolders: 0, count: 2 });
+    await expect(fixAll(lib, 'loose_files', 'new-album')).resolves.toMatchObject({ done: 1, skipped: 1 });
+    expect(fileByPath(lib, 'Sci-fi/Loose images/loose.png')).toBeDefined();
+    expect(fileByPath(lib, 'Wallpapers/w1.png')).toBeDefined();
+  });
+
   it('never asks about a new top-level folder (always a category)', async () => {
     t.file('Sci-fi/Ships/s.png', 's');
     await scan();

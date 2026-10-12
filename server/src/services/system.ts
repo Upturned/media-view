@@ -1,8 +1,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { IMAGE_EXTENSIONS, type AboutInfo } from '@media-view/shared';
+import { ROOT_PACKAGE } from '../lib/app-dir.ts';
 import { getLogDir } from '../lib/log.ts';
 import { openInExplorer, powershell } from '../lib/windows.ts';
 
@@ -30,10 +29,8 @@ export function openLogsFolder(): boolean {
   return true;
 }
 
-const rootPackage = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../package.json');
-
 export function about(): AboutInfo {
-  const pkg = JSON.parse(fs.readFileSync(rootPackage, 'utf8')) as { version: string; releaseDate?: string };
+  const pkg = JSON.parse(fs.readFileSync(ROOT_PACKAGE, 'utf8')) as { version: string; releaseDate?: string };
   return {
     name: 'media-view',
     version: pkg.version,
@@ -51,7 +48,7 @@ export async function pickFiles(title: string): Promise<string[]> {
     $d = New-Object System.Windows.Forms.OpenFileDialog
     $d.Title = $env:MV_DIALOG_TITLE
     $d.Multiselect = $true
-    $d.Filter = 'Images|*.jpg;*.jpeg;*.jfif;*.png;*.gif;*.webp;*.svg;*.avif|All files|*.*'
+    $d.Filter = 'Images|*.jpg;*.jpeg;*.jfif;*.jpe;*.png;*.gif;*.webp;*.svg;*.svgz;*.avif;*.bmp;*.ico;*.tif;*.tiff|All files|*.*'
     if ($d.ShowDialog($owner) -eq 'OK') { [Console]::Out.Write(($d.FileNames -join [char]10)) }
     $owner.Dispose()`;
   process.env.MV_DIALOG_TITLE = title;

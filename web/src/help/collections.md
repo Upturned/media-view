@@ -7,3 +7,4 @@ Every collection in your library. A collection is an ordered list of images from
 - **+ New collection** creates an empty list. Names are unique — capitals, and spaces vs. `_`, don't count.
 - To fill a list, select images in any grid and press **+ Collection** in the yellow bar, or right-click an image → **Add to collection…**.
 - Click a card to open the collection.
+- **Keyboard:** the arrows move a white ring between the cards (it shows after the first key and hides when you move the mouse); Enter opens, Backspace goes up a level.

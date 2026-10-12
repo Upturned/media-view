@@ -11,10 +11,10 @@ export const MODULE_EXTS: Record<OtherModule, readonly string[]> = {
   texts: ['txt', 'md', 'pdf', 'doc', 'docx', 'rtf', 'odt', 'epub'],
 };
 
-/** Image formats the app can't show (yet): "Not supported" on Library Health. TIFF, BMP and ICO arrive in milestone 8. */
+/** Image formats the app can't show (yet): "Not supported" on Library Health. */
 export const UNSUPPORTED_IMAGE_EXTS: readonly string[] = [
   'psd', 'psb', 'heic', 'heif', 'cr2', 'cr3', 'nef', 'arw', 'dng', 'orf', 'rw2', 'raf',
-  'kra', 'clip', 'xcf', 'jxl', 'jp2', 'j2k', 'tga', 'exr', 'tif', 'tiff', 'bmp', 'ico',
+  'kra', 'clip', 'xcf', 'jxl', 'jp2', 'j2k', 'tga', 'exr',
 ];
 
 export function moduleFor(ext: string): OtherModule | null {

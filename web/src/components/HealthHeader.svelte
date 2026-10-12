@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { HealthReport } from '@media-view/shared';
   import { client, unwrap } from '../api.ts';
-  import { fmt } from '../media.ts';
+  import { looksLikeAlbum } from '../health.ts';
+import { fmt } from '../media.ts';
   import { href } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
   import { report as reportResult, when } from '../stores/health.svelte.ts';
@@ -31,7 +32,7 @@
     if (!report) return { lines: [] as ApplyLine[], skipped: 0 };
     const n = (k: string) => report!.issues.filter((i) => i.kind === k).length;
     const s = (x: number, one: string, many = `${one}s`) => `${fmt(x)} ${x === 1 ? one : many}`;
-    const loose = report.issues.filter((i) => i.details.kind === 'loose_files' && i.details.folderId !== null).length;
+    const loose = report.issues.filter((i) => i.details.kind === 'loose_files' && i.details.folderId !== null && !looksLikeAlbum(i)).length;
     const clearDups = report.issues.filter((i) => i.details.kind === 'duplicate' && i.details.keepId !== null && i.details.reason !== 'different-tags' && i.details.reason !== 'two-starred').length;
     const lines: (ApplyLine | 0)[] = [
       n('missing_folder') && { section: 'red', kind: 'missing_folder', action: 'recreate', name: `Recreate ${s(n('missing_folder'), 'missing folder')} and their markers`, note: 'never Forget', on: true },

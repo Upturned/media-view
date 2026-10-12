@@ -55,6 +55,35 @@ describe('reconciliation: importing an existing tree', () => {
     expect(unmarked.find((i) => i.payload.path === 'Fantasy/Empty')?.payload).toMatchObject({ inferred: 'album', certain: false });
   });
 
+  it('keeps guessing a new folder’s kind until it is confirmed (made empty, filled afterwards)', async () => {
+    t.file('Fantasy/Maps/world.webp');
+    await scan();
+    t.dir('Fantasy/Elves');
+    await scan();
+    expect(folderByPath(lib, 'Fantasy/Elves')?.kind).toBe('album'); // empty: only a default
+
+    t.file('Fantasy/Elves/Court/x.png', 'x');
+    await scan();
+    expect(folderByPath(lib, 'Fantasy/Elves')?.kind).toBe('subcategory');
+    expect(readMarker(t.abs('Fantasy/Elves'))).toMatchObject({ kind: 'subcategory' });
+    expect(issues(lib, 'nested_in_album')).toEqual([]);
+    expect(issues(lib, 'unmarked_folder').find((i) => i.payload.path === 'Fantasy/Elves')?.payload).toMatchObject({ inferred: 'subcategory', certain: true });
+
+    // A kind set in the app since the guess stays.
+    t.dir('Fantasy/Later');
+    await scan();
+    lib.db.prepare("UPDATE folders SET kind = 'subcategory' WHERE rel_path = 'Fantasy/Later'").run();
+    t.file('Fantasy/Later/y.png', 'y');
+    await scan();
+    expect(folderByPath(lib, 'Fantasy/Later')?.kind).toBe('subcategory');
+
+    // A folder guessed from its images stays an album when a folder turns up inside: a rule problem.
+    t.dir('Fantasy/Maps/Old');
+    await scan();
+    expect(folderByPath(lib, 'Fantasy/Maps')?.kind).toBe('album');
+    expect(issues(lib, 'nested_in_album')).toHaveLength(1);
+  });
+
   it('a second scan of an unchanged library changes nothing', async () => {
     t.file('Fantasy/Maps/world.webp');
     await scan();

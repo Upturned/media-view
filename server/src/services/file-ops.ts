@@ -9,6 +9,7 @@ import { splitExt, uniqueName, validateName } from '../lib/names.ts';
 import { toAbsolute } from '../lib/paths.ts';
 import { fileDetail } from './files.ts';
 import { liveFolder, MAX_DESCRIPTION } from './folders.ts';
+import { scheduleDuplicateRefresh } from './issues.ts';
 import type { OpenLibrary } from './library.ts';
 import { recycleFiles } from './recycle.ts';
 import { copyFileTags } from './tags.ts';
@@ -202,6 +203,7 @@ export async function copyFiles(lib: OpenLibrary, ids: number[], targetId: numbe
 
   if (result.done > 0) {
     log('info', 'files', 'copy', { ids, to: target.rel_path, done: result.done });
+    scheduleDuplicateRefresh(lib.db); // copies carry the original's hash
     emit({ type: 'files-changed' });
     emit({ type: 'folders-changed' });
   }

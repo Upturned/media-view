@@ -43,6 +43,13 @@ const plural = (n: number, one: string, many = `${one}s`) => `${fmt(n)} ${n === 
 const last = (p: string) => p.split('/').filter(Boolean).at(-1) ?? 'Images';
 const list = (xs: string[], max = 3) => xs.slice(0, max).join(' · ') + (xs.length > max ? ` · +${xs.length - max}` : '');
 
+/**
+ * Loose images in a top-level folder with no folders inside: it looks like an album made in the
+ * wrong place, so it's shown with the unmarked folders (Move as album…) and Apply to all skips it.
+ */
+export const looksLikeAlbum = (i: HealthIssue) =>
+  i.details.kind === 'loose_files' && i.details.folderId !== null && i.details.topLevel && i.details.subfolders === 0;
+
 /** The groups with something in them, from a report. */
 export function groupsOf(r: HealthReport): Group[] {
   const of = (...kinds: IssueKind[]) => r.issues.filter((i) => kinds.includes(i.kind));
@@ -79,7 +86,7 @@ export function groupsOf(r: HealthReport): Group[] {
     key: 'unclear', section: 'amber', title: 'Unclear moves', kinds: ['ambiguous_move'], issues: unclear, need: true, hint: 'one image, several histories',
     sample: list(unclear.map((i) => (i.details.kind === 'ambiguous_move' ? `${last(i.details.file.path)} matches ${plural(i.details.candidates.length, 'missing image')}` : ''))), fix: null,
   });
-  const rules = of('loose_files', 'nested_in_album');
+  const rules = of('loose_files', 'nested_in_album').filter((i) => !looksLikeAlbum(i));
   const loose = rules.filter((i) => i.details.kind === 'loose_files' && i.details.folderId !== null);
   const nested = rules.filter((i) => i.kind === 'nested_in_album');
   const looseImages = rules.reduce((n, i) => n + (i.details.kind === 'loose_files' ? i.details.count : 0), 0);
@@ -93,9 +100,14 @@ export function groupsOf(r: HealthReport): Group[] {
     } : null,
   });
   const unmarked = of('unmarked_folder');
+  const albumLike = of('loose_files').filter(looksLikeAlbum);
   add({
-    key: 'unmarked', section: 'amber', title: 'Unmarked folders', kinds: ['unmarked_folder'], issues: unmarked, hint: 'made outside the app · kind guessed',
-    sample: unmarked.length ? `${list(unmarked.map((i) => (i.details.kind === 'unmarked_folder' ? last(i.details.path) : '')))} — kinds guessed` : '',
+    key: 'unmarked', section: 'amber', title: 'Unmarked folders', kinds: ['unmarked_folder', 'loose_files'], issues: [...albumLike, ...unmarked],
+    hint: 'made outside the app · kind guessed', need: unmarked.length === 0,
+    sample: [
+      albumLike.length && `${list(albumLike.map((i) => (i.details.kind === 'loose_files' ? last(i.details.path) : '')))} — ${albumLike.length === 1 ? 'looks like an album' : 'look like albums'}`,
+      unmarked.length && `${list(unmarked.map((i) => (i.details.kind === 'unmarked_folder' ? last(i.details.path) : '')))} — kinds guessed`,
+    ].filter(Boolean).join(' · '),
     fix: unmarked.length ? { label: `Confirm ${unmarked.length}`, does: `Confirm ${plural(unmarked.length, 'guessed folder kind')} and write their markers`, steps: [{ kind: 'unmarked_folder', action: 'confirm' }] } : null,
   });
   const unsupported = of('unsupported');
@@ -120,7 +132,7 @@ export function groupsOf(r: HealthReport): Group[] {
   const dups = of('duplicate');
   const clear = dups.filter((i) => i.details.kind === 'duplicate' && i.details.keepId !== null && i.details.reason !== 'different-tags' && i.details.reason !== 'two-starred');
   add({
-    key: 'duplicates', section: 'blue', title: 'Duplicates', kinds: ['duplicate'], issues: dups, count: plural(dups.length, 'group'), hint: 'click a copy to keep it · keep one, merge, or keep them all',
+    key: 'duplicates', section: 'blue', title: 'Duplicates', kinds: ['duplicate'], issues: dups, count: dups.length ? plural(dups.length, 'group') : undefined, hint: 'click a copy to keep it · keep one, merge, or keep them all',
     need: clear.length === 0,
     sample: [clear.length && `${fmt(clear.length)} with a suggested copy`, dups.length - clear.length && `${fmt(dups.length - clear.length)} need your choice`].filter(Boolean).join(' · '),
     fix: clear.length ? { label: `Keep suggested (${clear.length})`, does: `Keep the suggested copy in ${plural(clear.length, 'group')} and send the other copies to the Recycle Bin`, steps: [{ kind: 'duplicate', action: 'keep-one' }] } : null,

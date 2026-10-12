@@ -1,10 +1,12 @@
 <script lang="ts">
-  import type { CollectionCount, CollectionRef, Crumb, FileItem, GroupedFileItem, SortKey } from '@media-view/shared';
+  import { formatOf, type CollectionCount, type CollectionRef, type Crumb, type FileItem, type GroupedFileItem, type SortKey } from '@media-view/shared';
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { client, unwrap } from '../api.ts';
+  import { input, rememberedFocus, rememberFocus, segmented, showKeyHint } from '../kbd.svelte.ts';
   import { registerKeys } from '../keymap.svelte.ts';
   import { fmt, isGif, toParams, viewerHref, type ListQuery } from '../media.ts';
+  import { DEFAULTS, groupPref, stored, store, type GroupKey } from '../prefs.ts';
   import { navigate } from '../router.svelte.ts';
   import { collectionHref, removeFromCollection, reorder, setCollectionCover } from '../stores/collections.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
@@ -12,6 +14,7 @@
   import { setDragPayload, startImport } from '../stores/imports.svelte.ts';
   import { openMenu, type MenuItem } from '../stores/menu.svelte.ts';
   import { openOps, openWith, recycleImages, setCover, setStar } from '../stores/ops.svelte.ts';
+  import { useRandomScope } from '../stores/random.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
   import { word } from '../themes/index.ts';
   import ListIcon from './ListIcon.svelte';
@@ -63,46 +66,35 @@
     { key: 'modified', label: 'Date modified' },
     { key: 'added', label: 'Date added' },
     { key: 'size', label: 'File size' },
+    { key: 'format', label: 'Format' },
     { key: 'random', label: 'Random' },
   ];
   const LIST_SORTS: { key: SortKey; label: string }[] = [
     { key: 'position', label: 'Collection order' },
     { key: 'name', label: 'Name' },
     { key: 'size', label: 'Size' },
+    { key: 'format', label: 'Format' },
   ];
-
-  function stored<T>(key: string, fallback: T): T {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw === null ? fallback : (JSON.parse(raw) as T);
-    } catch {
-      return fallback;
-    }
-  }
-  function store(key: string, value: unknown) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-      // private mode: preferences just aren't remembered
-    }
-  }
 
   // svelte-ignore state_referenced_locally
   const inList = !!collection;
   const sortKey = inList ? 'list.sort' : 'grid.sort';
   const orderKey = inList ? 'list.order' : 'grid.order';
 
-  let cols = $state(stored('grid.cols', 6));
+  let cols = $state(stored('grid.cols', DEFAULTS['grid.cols']));
   /** The remembered sort, if it's one this grid offers. */
   function initialSort(): SortKey {
-    const s = stored<SortKey>(sortKey, inList ? 'position' : 'name');
+    const s = stored<SortKey>(sortKey, inList ? 'position' : DEFAULTS['grid.sort']);
     return (inList ? LIST_SORTS : SORTS).some((x) => x.key === s) ? s : inList ? 'position' : 'name';
   }
   let sort = $state<SortKey>(initialSort());
   let order = $state<'asc' | 'desc'>(stored(orderKey, 'asc'));
-  let grouped = $state<boolean>(!inList && stored('grid.group', false));
+  /** Group: none, by collection (an image can be in several sections) or by format (one list, cut by format). */
+  let group = $state<GroupKey>(inList ? 'none' : groupPref(stored<unknown>('grid.group', DEFAULTS['grid.group'])));
+  const grouped = $derived(group !== 'none');
+  const byCollection = $derived(group === 'collection');
   let favorites = $state(false);
-  let showIndex = $state(stored('grid.index', true));
+  let showIndex = $state(stored('grid.index', DEFAULTS['grid.index']));
   $effect(() => store('grid.index', showIndex));
   let nameInput = $state('');
   let name = $state('');
@@ -114,7 +106,7 @@
   $effect(() => store(sortKey, sort));
   $effect(() => store(orderKey, order));
   $effect(() => {
-    if (!inList) store('grid.group', grouped);
+    if (!inList) store('grid.group', group);
   });
 
   // Debounce the name filter.
@@ -138,7 +130,11 @@
     // A collection's own order has no direction to flip.
     order: sort === 'position' ? 'asc' : order,
     seed: sort === 'random' ? seed : undefined,
+    byFormat: group === 'format' || undefined,
   });
+
+  // Random in the top bar picks from what this page shows.
+  useRandomScope(() => ({ query, where }));
 
   function cycleSort() {
     const i = SORTS.findIndex((s) => s.key === sort);
@@ -155,13 +151,15 @@
   let pages = $state<Record<number, (FileItem | GroupedFileItem)[]>>({});
   /** Group by collection: the sections, in the server's order (collections by name, then the rest). */
   let groupCounts = $state<{ collections: CollectionCount[]; none: number } | null>(null);
+  /** Group by format: the sections, a→z. */
+  let formatGroups = $state<{ format: string; count: number }[] | null>(null);
   let generation = 0;
   const loading = new Set<number>();
   let allIds: number[] | null = null;
 
   const requestParams = $derived({
     ...toParams(query),
-    ...(grouped ? { group: 'collection' as const, ...(reversed.size ? { rev: [...reversed].join(',') } : {}) } : {}),
+    ...(byCollection ? { group: 'collection' as const, ...(reversed.size ? { rev: [...reversed].join(',') } : {}) } : {}),
   });
 
   async function loadPage(p: number, gen: number) {
@@ -182,6 +180,11 @@
 
   async function loadGroups(gen: number) {
     try {
+      if (group === 'format') {
+        const r = await unwrap(client.api.files['format-counts'].$get({ query: toParams(query) }));
+        if (gen === generation) formatGroups = r.formats;
+        return;
+      }
       const r = await unwrap(client.api.files['collection-counts'].$get({ query: { ...toParams(query), by: 'name' } }));
       if (gen === generation) groupCounts = r;
     } catch (err) {
@@ -214,6 +217,7 @@
         pages = {};
         total = null;
         groupCounts = null;
+        formatGroups = null;
         selected.clear();
         anchor = null;
         if (scroller) scroller.scrollTop = 0;
@@ -228,14 +232,14 @@
   let plainTotal = $state<number | null>(null);
   $effect(() => {
     void live.files;
-    if (!grouped) return;
+    if (!byCollection) return;
     const params = toParams(query);
     unwrap(client.api.files.$get({ query: { ...params, limit: '1' } }))
       .then((r) => (plainTotal = r.total))
       .catch(() => {});
   });
   $effect(() => {
-    const n = grouped ? plainTotal : total;
+    const n = byCollection ? plainTotal : total;
     if (n !== null) ontotal?.(n);
   });
 
@@ -291,6 +295,8 @@
 
   interface Section {
     group: CollectionCount | null;
+    /** Group by format: the section's format. */
+    format?: string;
     /** First flat index, and how many. */
     start: number;
     count: number;
@@ -306,11 +312,11 @@
       const count = (total ?? 0) + (dragIds ? 1 : 0);
       return [{ group: null, start: 0, count, top: 0, rowsTop: PAD_TOP, rows: Math.ceil(count / cols) }];
     }
-    if (!groupCounts || total === null) return [];
-    const list = [
+    const list = group === 'format' ? (formatGroups ?? []).map((f) => ({ group: null, format: f.format, count: f.count })) : groupCounts ? [
       ...groupCounts.collections.filter((c) => c.count > 0).map((c) => ({ group: c as CollectionCount | null, count: c.count })),
       ...(groupCounts.none > 0 ? [{ group: null, count: groupCounts.none }] : []),
-    ];
+    ] : [];
+    if (total === null || list.length === 0) return [];
     let start = 0;
     let top = 0;
     return list.map((s) => {
@@ -383,13 +389,16 @@
   }
 
   function onCellClick(e: MouseEvent, item: FileItem, index: number) {
+    // Clicks move the remembered place (no ring); the next key goes on from here.
+    focus = index;
+    rememberFocus(focusKey, item.id);
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       toggle(item.id, index);
     } else if (e.shiftKey) {
       e.preventDefault();
       // Grouped rows don't match the list's order (an image can come twice): Shift just toggles.
-      if (grouped) toggle(item.id, index);
+      if (byCollection) toggle(item.id, index);
       else {
         void selectRange(anchor ?? index, index);
         anchor ??= index;
@@ -400,6 +409,121 @@
       toggle(item.id, index);
     }
   }
+
+  // ─── Keyboard (design M8 · 1A): a cursor over the frames, like Explorer ─────
+
+  /** The keyboard cursor, a flat index: remembered always, drawn only while the keyboard is in use. */
+  let focus = $state<number | null>(null);
+  const focusKey = $derived(new URLSearchParams(toParams(query)).toString());
+  const flatCount = $derived(grouped ? sections.reduce((n, s) => n + s.count, 0) : (total ?? 0));
+
+  function place(i: number): { s: Section; si: number; row: number; col: number } | null {
+    for (let si = 0; si < sections.length; si++) {
+      const s = sections[si]!;
+      if (i >= s.start && i < s.start + s.count) return { s, si, row: Math.floor((i - s.start) / cols), col: (i - s.start) % cols };
+    }
+    return null;
+  }
+
+  function scrollToIndex(i: number) {
+    const p = place(i);
+    if (!p || !scroller) return;
+    const top = p.s.rowsTop + p.row * stride;
+    const cover = grouped ? HEAD : 0; // the pinned header
+    if (top - cover - 8 < scroller.scrollTop) scroller.scrollTop = Math.max(0, top - cover - 8);
+    else if (top + stride > scroller.scrollTop + height) scroller.scrollTop = top + stride - height + 8;
+  }
+
+  /** The same column `rows` rows away, walking across section breaks as one list; stops at the ends. */
+  function vertical(i: number, dir: 1 | -1, rows = 1): number {
+    const p = place(i);
+    if (!p) return i;
+    let { s, si, row } = p;
+    for (let n = 0; n < rows; n++) {
+      if (dir > 0 && row + 1 < s.rows) row++;
+      else if (dir > 0 && si + 1 < sections.length) { s = sections[++si]!; row = 0; }
+      else if (dir < 0 && row > 0) row--;
+      else if (dir < 0 && si > 0) { s = sections[--si]!; row = s.rows - 1; }
+      else break;
+    }
+    return s.start + Math.min(row * cols + p.col, s.count - 1);
+  }
+
+  /** The first frame on screen: where the first key lands when nothing is remembered. */
+  function firstOnScreen(): number {
+    return visible.find((v) => v.top >= scrollTop)?.index ?? 0;
+  }
+
+  async function moveFocus(target: (from: number) => number, how: 'move' | 'extend' | 'keep') {
+    if (flatCount === 0) return;
+    if (focus === null || focus >= flatCount) {
+      focus = firstOnScreen();
+      scrollToIndex(focus);
+      showKeyHint('grid');
+      return;
+    }
+    const from = focus;
+    const next = Math.max(0, Math.min(flatCount - 1, target(from)));
+    focus = next;
+    scrollToIndex(next);
+    showKeyHint('grid');
+    const id = itemAt(next)?.id;
+    if (id !== undefined) rememberFocus(focusKey, id);
+    if (how === 'extend' && !byCollection) {
+      // Shift+arrows: the selection becomes the range from the anchor (collection sections aren't one order).
+      const start = anchor ?? from;
+      selected.clear();
+      await selectRange(start, next);
+      anchor = start;
+    } else if (how === 'move') anchor = null;
+  }
+
+  function act(kind: 'space' | 'enter') {
+    if (focus === null) return void moveFocus((i) => i, 'keep');
+    const item = itemAt(focus);
+    if (!item) return;
+    rememberFocus(focusKey, item.id);
+    // Enter opens; while selecting it selects, like a click (user guide §3.4).
+    if (kind === 'space' || selected.size > 0) toggle(item.id, focus);
+    else navigate(viewerHref(item.id, query).slice(1));
+  }
+
+  $effect(() => {
+    const rowsPerPage = () => Math.max(1, Math.floor(height / stride));
+    const arrows: [string, (i: number) => number][] = [
+      ['ArrowLeft', (i) => i - 1],
+      ['ArrowRight', (i) => i + 1],
+      ['ArrowUp', (i) => vertical(i, -1)],
+      ['ArrowDown', (i) => vertical(i, 1)],
+    ];
+    return registerKeys('grid', [
+      ...arrows.map(([key, f]) => ({ key, description: 'Move between frames', handler: () => void moveFocus(f, 'move') })),
+      ...arrows.map(([key, f]) => ({ key: `Shift+${key}`, description: 'Extend the selection', handler: () => void moveFocus(f, 'extend') })),
+      ...arrows.map(([key, f]) => ({ key: `Ctrl+${key}`, description: 'Move without changing the selection', handler: () => void moveFocus(f, 'keep') })),
+      { key: 'Home', description: 'First frame', handler: () => void moveFocus(() => 0, 'move') },
+      { key: 'End', description: 'Last frame', handler: () => void moveFocus(() => flatCount - 1, 'move') },
+      { key: 'PageUp', description: 'One screen up', handler: () => void moveFocus((i) => vertical(i, -1, rowsPerPage()), 'move') },
+      { key: 'PageDown', description: 'One screen down', handler: () => void moveFocus((i) => vertical(i, 1, rowsPerPage()), 'move') },
+      { key: ' ', description: 'Select / deselect the frame', handler: () => act('space') },
+      { key: 'Enter', description: 'Open the frame (select it while selecting)', handler: () => act('enter') },
+    ]);
+  });
+
+  // A new list: start from the frame last opened or clicked in it (back from the viewer lands there).
+  $effect(() => {
+    const key = focusKey;
+    untrack(() => {
+      focus = null;
+      const id = rememberedFocus(key);
+      if (id === undefined || byCollection) return;
+      void ids().then((list) => {
+        const i = list.indexOf(id);
+        if (i < 0 || key !== focusKey) return;
+        focus = i;
+        if (input.kbd) requestAnimationFrame(() => scrollToIndex(i));
+      }).catch(() => {});
+    });
+  });
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
@@ -555,7 +679,7 @@
       return { text: slotLabel ? `release to place ${dragIds.length > 1 ? `${dragIds.length} images` : 'it'} at ${slotLabel} · esc cancels` : `moving ${dragIds.length} · aim between two frames`, tone: 'accent' };
     }
     if (sort !== 'position') {
-      return { text: `Sorted by ${sort === 'name' ? 'name' : 'size'} · reordering works only in collection order`, tone: 'dim', action: { label: '↺ Collection order', run: () => (sort = 'position') } };
+      return { text: `Sorted by ${sortLabel.toLowerCase()} · reordering works only in collection order`, tone: 'dim', action: { label: '↺ Collection order', run: () => (sort = 'position') } };
     }
     if (filtered) {
       return {
@@ -578,7 +702,12 @@
 </script>
 
 {#snippet head(s: Section)}
-  {#if s.group}
+  {#if s.format}
+    <div class="ghead">
+      <span class="gtitle">{s.format}</span>
+      <span class="gmeta">{fmt(s.count)} {s.count === 1 ? word('image') : word('images')} · sorted by {sortLabel.toLowerCase()}</span>
+    </div>
+  {:else if s.group}
     {@const g = s.group}
     <div class="ghead">
       <ListIcon size={14} />
@@ -603,7 +732,7 @@
     {#if inList}
       <span class="lbl">Sort</span>
       <div class="segwrap">
-        <div class="seg">
+        <div class="seg" use:segmented>
           {#each LIST_SORTS as s (s.key)}
             <button class:on={sort === s.key} onclick={() => (sort = s.key)}>{s.label}</button>
           {/each}
@@ -624,12 +753,13 @@
         title={order === 'asc' ? 'Ascending' : 'Descending'}>{order === 'asc' ? '↑' : '↓'}</button>
       <div class="tool group">
         <span class="dim">Group</span>
-        <div class="seg">
-          <button class:on={!grouped} onclick={() => (grouped = false)}>None</button>
-          <button class:on={grouped} onclick={() => (grouped = true)}>Collection</button>
+        <div class="seg" use:segmented>
+          <button class:on={group === 'none'} onclick={() => (group = 'none')}>None</button>
+          <button class:on={group === 'collection'} onclick={() => (group = 'collection')}>Collection</button>
+          <button class:on={group === 'format'} onclick={() => (group = 'format')}>Format</button>
         </div>
       </div>
-      <div class="tool cols">
+      <div class="tool cols" use:segmented>
         <span class="dim">Cols</span>
         {#each { length: 9 } as _, i (i)}
           <button class:on={cols === i + 2} onclick={() => (cols = i + 2)}>{i + 2}</button>
@@ -663,7 +793,7 @@
         <div class="pin">{@render head(pinned)}</div>
       {/if}
       <div class="canvas" style:height="{canvasHeight}px">
-        {#each visibleHeads as s (s.group?.id ?? 'none')}
+        {#each visibleHeads as s (s.format ?? s.group?.id ?? 'none')}
           <div class="ghead-at" style:top="{s.top}px">{@render head(s)}</div>
         {/each}
         {#each visible as v (v.index)}
@@ -678,6 +808,7 @@
             <a
               class="cell"
               class:selected={selected.has(item.id)}
+              class:is-focused={focus === v.index}
               class:ghosted={dragIds?.includes(item.id)}
               class:stale={stale.has(item.id)}
               class:grab={canReorder}
@@ -698,6 +829,7 @@
                 {#if inList || (g && g.group)}
                   <span class="num" class:big={inList} class:dim={inList && sort !== 'position'}>{pad(item.position ?? 0)}</span>
                 {:else if isGif(item)}<span class="badge">GIF</span>{/if}
+                {#if sort === 'format' && !isGif(item)}<span class="fmt">{formatOf(item.ext)}</span>{/if}
                 {#if item.favorited}<span class="star">★</span>{/if}
                 {#if untaggedView && item.isNew && !stale.has(item.id)}<span class="newb">NEW</span>{/if}
                 {#if g && g.group && g.listed > 1}<span class="dup" title="On {g.listed} lists">{g.listed}×</span>{/if}
@@ -785,12 +917,12 @@
   .dim { color: var(--text2); margin-right: 6px; }
   .arrow { width: 40px; justify-content: center; padding: 0; color: var(--accent); font-size: 15px; }
   .cols { padding: 0 12px; cursor: default; }
-  .cols button { width: 24px; height: 24px; border: none; background: none; color: var(--text2); font: 700 11px var(--font-mono); cursor: pointer; }
+  .cols button { position: relative; width: 20px; height: 24px; border: none; background: none; color: var(--text2); font: 700 11px var(--font-mono); cursor: pointer; }
   .cols button.on { background: var(--text); color: var(--bg); }
   .group { padding: 0 12px; gap: 8px; cursor: default; }
   .group .dim { margin-right: 0; }
   .seg { display: flex; border: 1px solid var(--line); }
-  .seg button { height: 28px; padding: 0 10px; border: none; background: none; color: var(--text2); font: inherit; font-weight: 700; text-transform: uppercase; cursor: pointer; }
+  .seg button { position: relative; height: 28px; padding: 0 8px; border: none; background: none; color: var(--text2); font: inherit; font-weight: 700; text-transform: uppercase; cursor: pointer; }
   .seg button.on { background: var(--text); color: var(--bg); }
   .lbl { display: flex; align-items: center; padding: 0 12px 0 16px; color: var(--text2); }
   .segwrap { display: flex; align-items: center; padding-right: 10px; border-right: 1px solid var(--line); }
@@ -845,6 +977,12 @@
   .placeholder .frame { background: none; outline: 1px dashed var(--line); }
   .inner { position: absolute; inset: 8px; }
   .badge { position: absolute; top: 0; left: 0; padding: 4px 6px; background: var(--accent); color: var(--accent-ink); font: 700 10px/1 var(--font-mono); }
+  /* Sorted by format: the format, quietly, on hover (GIF keeps its badge). */
+  .fmt { position: absolute; right: 0; bottom: 0; padding: 3px 6px; background: var(--bg2); color: var(--text2); font: 10px/1 var(--font-mono); letter-spacing: 0.06em; opacity: 0; transition: opacity 0.12s; pointer-events: none; }
+  .cell:hover .fmt { opacity: 1; }
+  /* Keyboard in use: the cursor shows the format too (design M8 · 2A), and hover keeps quiet. */
+  :global([data-input='kbd']) .cell.is-focused .fmt { opacity: 1; }
+  :global([data-input='kbd']) .cell:hover .frame { outline-color: var(--line); }
   .num { position: absolute; top: 0; left: 0; padding: 3px 6px; background: var(--bg2); font: 700 15px/1 var(--font-display); color: var(--accent); }
   .num.big { padding: 4px 7px; font-size: 18px; }
   .num.dim { color: var(--text2); }

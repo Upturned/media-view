@@ -60,7 +60,7 @@
 </script>
 
 {#if folder.kind === 'category'}
-  <a class="rack" href={link} oncontextmenu={onContext}>
+  <a class="rack" data-nav href={link} oncontextmenu={onContext}>
     {#if empty}
       <div class="cover empty-box">This {word('category').toLowerCase()} is empty —<br />add an album or a {word('subcategory').toLowerCase()}.</div>
     {:else}
@@ -76,7 +76,7 @@
     </div>
   </a>
 {:else if folder.kind === 'subcategory'}
-  <a class="drawer" href={link} oncontextmenu={onContext}>
+  <a class="drawer" data-nav href={link} oncontextmenu={onContext}>
     <div class="drawer-head">
       <KindIcon kind="subcategory" size={11} />{word('subcategory')}{isStyled('subcategory') ? ' · sub-category' : ''}
       <span class="right">{contents}</span>
@@ -97,7 +97,7 @@
     </div>
   </a>
 {:else}
-  <a class="album" href={link} oncontextmenu={onContext} ondragover={onDragOver} ondragleave={() => (dropping = false)} ondrop={onDrop}>
+  <a class="album" data-nav href={link} oncontextmenu={onContext} ondragover={onDragOver} ondragleave={() => (dropping = false)} ondrop={onDrop}>
     <div class="stack">
       <div class="sheet back2"></div>
       <div class="sheet back1"></div>

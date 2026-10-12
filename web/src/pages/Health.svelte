@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { HealthReport } from '@media-view/shared';
+  import { navItems } from '../kbd.svelte.ts';
   import { client, unwrap } from '../api.ts';
   import HealthHeader from '../components/HealthHeader.svelte';
   import { groupsOf, reviewHref, SECTIONS, type Group, type Section } from '../health.ts';
@@ -35,6 +36,7 @@
     red: groups.filter((g) => g.section === 'red').reduce((n, g) => n + g.issues.length, 0),
     amber: groups.filter((g) => g.section === 'amber').reduce((n, g) => n + g.issues.length, 0),
     blue: groups.filter((g) => g.section === 'blue').length,
+    white: groups.filter((g) => g.section === 'white').reduce((n, g) => n + (g.key === 'untracked' ? report?.untracked.length ?? 0 : g.issues.length), 0),
   });
   const allClear = $derived(report !== null && counts.red + counts.amber + counts.blue === 0);
   const sub = (s: Section) => {
@@ -74,7 +76,8 @@
 
   async function openLogs() {
     try {
-      await unwrap(client.api.system['open-logs'].$post());
+      const r = await unwrap(client.api.system['open-logs'].$post());
+      if (!r.opened) toast('There’s no logs folder yet — it’s made with the first log line.');
     } catch (err) {
       toastError(err);
     }
@@ -94,7 +97,7 @@
   }
 </script>
 
-<div class="health-page">
+<div class="health-page" use:navItems={{ kind: 'rows' }}>
   <HealthHeader {report} />
 
   {#if report && allClear && !scanning}
@@ -114,9 +117,10 @@
   {:else if report}
     <div class="body" class:dim={scanning}>
       <div class="summary">
-        <div class="card" style:--c="var(--red)"><div class="n-row"><span class="n">{fmt(counts.red)}</span><span class="lbl">missing</span></div><span class="sub">{sub('red')}</span><span class="foot">counted in the badge</span></div>
-        <div class="card" style:--c="var(--amber)"><div class="n-row"><span class="n">{fmt(counts.amber)}</span><span class="lbl">need a decision</span></div><span class="sub">{sub('amber')}</span><span class="foot">counted in the badge</span></div>
-        <div class="card" style:--c="var(--blue)"><div class="n-row"><span class="n">{fmt(counts.blue)}</span><span class="lbl">just so you know</span></div><span class="sub">{sub('blue')}</span><span class="foot">not counted · a blue dot when only these are left</span></div>
+        <a class="card" href={href('/health/review/red')} title="Review the missing items" style:--c="var(--red)"><div class="n-row"><span class="n">{fmt(counts.red)}</span><span class="lbl">missing</span></div><span class="sub">{sub('red')}</span><span class="foot">counted in the badge</span></a>
+        <a class="card" href={href('/health/review/amber')} title="Review the decisions" style:--c="var(--amber)"><div class="n-row"><span class="n">{fmt(counts.amber)}</span><span class="lbl">need a decision</span></div><span class="sub">{sub('amber')}</span><span class="foot">counted in the badge</span></a>
+        <a class="card" href={href('/health/review/blue')} title="Review what’s for your information" style:--c="var(--blue)"><div class="n-row"><span class="n">{fmt(counts.blue)}</span><span class="lbl">just so you know</span></div><span class="sub">{sub('blue')}</span><span class="foot">not counted · a blue dot when only these are left</span></a>
+        <a class="card notices" href={href('/health/review/white')} title="Review the notices" style:--c="var(--text)"><span class="n">{fmt(counts.white)}</span><span class="lbl">notices</span><span class="foot">never counted</span></a>
       </div>
 
       {#each bySection as s (s.section)}
@@ -125,7 +129,7 @@
           <div class="sec-titles"><span class="sec-title">{s.title}</span><span class="sec-sub">{s.sub}</span></div>
         </div>
         {#each s.groups as g (g.key)}
-          <div class="group">
+          <div class="group" data-nav>
             <span class="stripe" style:background={s.color}></span>
             <div class="g-title"><span class="g-name">{g.title}</span><span class="g-count" style:color={s.section === 'white' ? 'var(--text2)' : s.color}>{g.count}</span></div>
             <div class="g-sample"><span>{g.sample}</span>{#if g.need}<span class="need">needs your choice</span>{/if}</div>
@@ -137,7 +141,7 @@
               {:else if mainFix(g)}
                 <button class="gbtn pri" disabled={scanning} onclick={() => groupFix(g)}>{mainFix(g)!.label}</button>
               {/if}
-              {#if g.key !== 'thumbnails'}<a class="gbtn" href={href(reviewHref(g))}>Review ▸</a>{/if}
+              {#if g.key !== 'thumbnails'}<a class="gbtn" data-nav-open href={href(reviewHref(g))}>Review ▸</a>{/if}
             </div>
           </div>
         {/each}
@@ -176,8 +180,12 @@
   .body { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
   .body.dim { opacity: 0.4; pointer-events: none; }
 
-  .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--line); flex: none; }
-  .card { display: flex; flex-direction: column; gap: 6px; padding: 16px 24px 16px 40px; border-right: 1px solid var(--line); box-shadow: inset 0 4px 0 var(--c); }
+  .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; border-bottom: 1px solid var(--line); flex: none; }
+  .card { display: flex; flex-direction: column; gap: 6px; padding: 16px 24px 16px 40px; border-right: 1px solid var(--line); box-shadow: inset 0 4px 0 var(--c); color: var(--text); text-decoration: none; }
+  .card:hover { background: var(--surface); }
+  .card.notices { justify-content: space-between; min-width: 150px; padding: 16px 24px; border-right: none; }
+  .notices .n { color: var(--text); }
+  .notices .lbl { font-size: 16px; }
   .n-row { display: flex; align-items: baseline; gap: 12px; }
   .n { font: 700 56px/0.9 var(--font-display); color: var(--c); }
   .lbl { font: 700 20px/1 var(--font-display); text-transform: uppercase; }
@@ -203,6 +211,8 @@
   .g-acts { display: flex; gap: 6px; }
   .gbtn { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 14px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; text-decoration: none; cursor: pointer; }
   .gbtn:hover:not(:disabled) { border-color: var(--text); }
+  /* The focused group's Enter target (design M8 · 1D). */
+  :global([data-input='kbd']) .group:global(.is-focused) .gbtn[data-nav-open] { border-color: var(--text); }
   .gbtn.pri { border-color: transparent; background: var(--accent); color: var(--accent-ink); }
   .gbtn.red { border-color: var(--red); color: var(--red); }
   .gbtn:disabled { opacity: 0.4; cursor: not-allowed; }

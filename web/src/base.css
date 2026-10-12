@@ -19,7 +19,17 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 
 input::placeholder { color: #77766f; }
 
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/*
+ * The keyboard cursor (design M8 · 1.0): 2 px text-colour ring, set off by a bg2 band so it reads on
+ * any content, shown only while the keyboard is in use (kbd.svelte.ts sets data-input). No motion.
+ * .is-focused marks the remembered item of a grid, card page or list; native focus gets the compact ring.
+ */
+:focus { outline: none; }
+[data-input=kbd] :focus-visible,
+[data-input=kbd] .is-focused.kb-compact { outline: 2px solid var(--text); outline-offset: 2px; box-shadow: 0 0 0 2px var(--bg2); z-index: 2; }
+[data-input=kbd] .is-focused { outline: 2px solid var(--text); outline-offset: 3px; box-shadow: 0 0 0 3px var(--bg2); }
+/* Lists scroll and clip: the ring goes inside. */
+[data-input=kbd] .is-focused.kb-row { outline-offset: -2px; box-shadow: inset 0 0 0 3px var(--bg2); }
 
 ::selection { background: var(--accent); color: var(--accent-ink); }
 

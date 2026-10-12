@@ -3,6 +3,7 @@ import { log } from '../lib/log.ts';
 import { toAbsolute } from '../lib/paths.ts';
 import { refreshDuplicates } from '../services/issues.ts';
 import type { OpenLibrary } from '../services/library.ts';
+import { adoptTempPreview, kickPreviews } from '../services/previews.ts';
 import { adoptTempThumbnail, queueBacklog } from '../services/thumbnails.ts';
 
 /**
@@ -56,6 +57,7 @@ async function run(lib: OpenLibrary): Promise<void> {
     if (owner !== lib) return;
     if (hashed > 0) log('info', 'hasher', 'hashing finished', { hashed });
     await queueBacklog(lib);
+    void kickPreviews(lib);
   } catch (err) {
     if (owner === lib) log('error', 'hasher', 'hashing failed', { message: (err as Error).message });
   }
@@ -86,6 +88,7 @@ export async function hashPending(lib: OpenLibrary, keepGoing: () => boolean = (
           if (store.run(hash, f.id, f.mtime).changes > 0) {
             hashed++;
             adoptTempThumbnail(lib, f.id, hash);
+            adoptTempPreview(lib, f.id, hash);
           }
         } catch {
           // Vanished or locked: the next scan will sort it out.

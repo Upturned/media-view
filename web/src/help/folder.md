@@ -9,3 +9,4 @@ A category or sub-category, with what's inside it. In the Darkroom style, catego
 - Click the description (or **✎ Edit description**) to change it; Ctrl+Enter saves.
 - Drag images from Explorer onto an **album card** to add them to that album. Dropped on the page, loose images go to the Inbox and a dropped folder becomes a new album here.
 - **Rename · Move · Recycle** under the buttons act on this folder. A folder can't be recycled while it holds starred images.
+- **Keyboard:** the arrows move a white ring between the cards (it shows after the first key and hides when you move the mouse); Enter opens, Backspace goes up a level.

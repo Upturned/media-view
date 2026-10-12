@@ -25,9 +25,18 @@ export function powershell(script: string): Promise<string> {
   });
 }
 
-/** Open a folder in Explorer (path passed as an argument, never through a shell string). */
+/**
+ * Open a folder in Explorer (path passed as an argument, never through a shell string). Not
+ * `windowsHide`: Explorer honours the hidden show-state and opens the window invisible.
+ */
 export function openInExplorer(target: string): void {
-  execFile(isWindows ? 'explorer.exe' : 'xdg-open', [target], { windowsHide: true }, () => {
+  execFile(isWindows ? 'explorer.exe' : 'xdg-open', [target], () => {
     // explorer.exe exits with code 1 even on success; nothing to report.
   });
+}
+
+/** Open a web address in the default browser (the packaged app's start.bat asks for it). */
+export function openUrl(url: string): void {
+  if (isWindows) execFile('rundll32.exe', ['url.dll,FileProtocolHandler', url], () => {});
+  else execFile('xdg-open', [url], () => {});
 }

@@ -23,6 +23,7 @@ import { clearIssue, raiseIssue, SEVERITY } from './issues.ts';
 import type { OpenLibrary } from './library.ts';
 import { recycleFiles, recycleStray } from './recycle.ts';
 import { recomputeImplied } from './tags.ts';
+import { previewDir } from './previews.ts';
 import { thumbDir } from './thumbnails.ts';
 
 /**
@@ -331,27 +332,28 @@ export function setUntaggedFlags(lib: OpenLibrary, ids: number[] | 'all', action
 
 // ─── Thumbnail cleanup and logs ──────────────────────────────────────────────
 
-/** Cached thumbnails that no image (live, missing or in the bin) uses any more. */
+/** Cached thumbnails and viewer copies (TIFF) that no image (live, missing or in the bin) uses any more. */
 function orphanThumbnails(lib: OpenLibrary): { files: string[]; bytes: number } {
-  const dir = thumbDir(lib);
-  if (!fs.existsSync(dir)) return { files: [], bytes: 0 };
   const hashes = new Set(lib.db.prepare('SELECT DISTINCT hash FROM files WHERE hash IS NOT NULL').pluck().all() as string[]);
   const unhashed = new Set((lib.db.prepare('SELECT id FROM files WHERE hash IS NULL').pluck().all() as number[]).map(String));
   const files: string[] = [];
   let bytes = 0;
-  for (const sub of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!sub.isDirectory()) continue;
-    const subDir = path.join(dir, sub.name);
-    for (const name of fs.readdirSync(subDir)) {
-      const stem = name.replace(/\.webp$/, '');
-      const used = sub.name === 'tmp' ? unhashed.has(stem) : hashes.has(stem);
-      if (used) continue;
-      const file = path.join(subDir, name);
-      try {
-        bytes += fs.statSync(file).size;
-        files.push(file);
-      } catch {
-        // gone meanwhile
+  for (const dir of [thumbDir(lib), previewDir(lib)]) {
+    if (!fs.existsSync(dir)) continue;
+    for (const sub of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!sub.isDirectory()) continue;
+      const subDir = path.join(dir, sub.name);
+      for (const name of fs.readdirSync(subDir)) {
+        const stem = name.replace(/\.webp$/, '');
+        const used = sub.name === 'tmp' ? unhashed.has(stem) : hashes.has(stem);
+        if (used) continue;
+        const file = path.join(subDir, name);
+        try {
+          bytes += fs.statSync(file).size;
+          files.push(file);
+        } catch {
+          // gone meanwhile
+        }
       }
     }
   }
@@ -532,6 +534,18 @@ export interface FixAllOptions {
   albumName?: string;
 }
 
+/**
+ * Loose images in a top-level folder with no folders inside: it looks like an album put in the
+ * wrong place, so it waits for a choice (Move as album…, or an album inside it) instead of Apply to all.
+ */
+function looksLikeAlbum(db: DB, subject: string): boolean {
+  const id = Number(subject.slice('folder:'.length));
+  return db.prepare(
+    `SELECT 1 FROM folders f WHERE f.id = ? AND f.parent_id IS NULL
+       AND NOT EXISTS (SELECT 1 FROM folders c WHERE c.parent_id = f.id AND c.recycled = 0 AND c.missing_since IS NULL)`,
+  ).get(id) !== undefined;
+}
+
 /** A free name for a new album of loose images in a folder: "Loose images", then "Loose images (2)"… */
 function looseAlbumName(lib: OpenLibrary, subject: string, base = 'Loose images'): string {
   if (subject === 'root') return base;
@@ -565,7 +579,8 @@ export async function fixAll(lib: OpenLibrary, kind: IssueKind, action: FixActio
         fix = clear ? { action: 'keep-one', keepId: d.keepId! } : null;
       }
     } else if (kind === 'loose_files') {
-      fix = r.subject === 'root' ? null : { action: 'new-album', name: looseAlbumName(lib, r.subject, opts.albumName?.trim() || undefined) };
+      fix = r.subject === 'root' || looksLikeAlbum(lib.db, r.subject) ? null
+        : { action: 'new-album', name: looseAlbumName(lib, r.subject, opts.albumName?.trim() || undefined) };
     } else if (kind === 'wrong_type' && r.subject.startsWith('file:') && action !== 'recycle') {
       fix = null;
     }

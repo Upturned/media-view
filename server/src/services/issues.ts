@@ -91,3 +91,18 @@ export function refreshDuplicates(db: DB): void {
   })();
   emit({ type: 'health-changed' });
 }
+
+let dupTimer: NodeJS.Timeout | null = null;
+
+/**
+ * `refreshDuplicates` shortly after, once per burst: for hashes stored outside the hasher (imports,
+ * copies, move detection during a scan), which would otherwise wait for the next file it hashes.
+ */
+export function scheduleDuplicateRefresh(db: DB): void {
+  if (dupTimer) clearTimeout(dupTimer);
+  dupTimer = setTimeout(() => {
+    dupTimer = null;
+    if (db.open) refreshDuplicates(db);
+  }, 500);
+  dupTimer.unref();
+}

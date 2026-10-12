@@ -193,6 +193,7 @@ function matchFolders(
     try {
       db.transaction(() => {
         const row = assigned.get(k);
+        if (row && parent) reguess(db, row, childDirs.get(k) ?? 0, directImages.get(k) ?? 0);
         const folder = row
           ? updateKnownFolder(lib, row, d, parent ?? null, rows, result)
           : insertNewFolder(lib, d, parent ?? null, restoredUuid.get(k), childDirs.get(k) ?? 0, directImages.get(k) ?? 0, now, result);
@@ -302,6 +303,22 @@ function insertNewFolder(
   }
   result.foldersAdded++;
   return { id, uuid, parent_id: parent?.id ?? null, kind, name, rel_path: d.relPath, missing_since: null };
+}
+
+/**
+ * A folder made outside the app while it was empty was guessed before anything was put in it: the
+ * guess is redone once there's something to go by. Only uncertain guesses (a folder of images that
+ * gets a folder inside is a rule problem, not a sub-category), and only while the kind is still the
+ * guess — a kind set in the app since then stays.
+ */
+function reguess(db: DB, row: FolderRow, childDirCount: number, directImageCount: number): void {
+  const subject = `folder:${row.id}`;
+  const guess = getIssuePayload<{ inferred: FolderKind; certain: boolean }>(db, 'unmarked_folder', subject);
+  if (!guess || guess.certain || guess.inferred !== row.kind) return;
+  const next = inferKind(childDirCount, directImageCount);
+  if (next.kind === guess.inferred && next.certain === guess.certain) return;
+  row.kind = next.kind; // written to the DB and the marker by updateKnownFolder
+  raiseIssue(db, 'unmarked_folder', subject, { ...guess, inferred: next.kind, certain: next.certain });
 }
 
 /** Folders with images and no folders → album; folders with folders → sub-category; otherwise a guess. */
@@ -471,10 +488,11 @@ function nearestFolder(relPath: string, resolved: Map<string, FolderRow>): Folde
 function checkRules(lib: OpenLibrary, files: DiskFile[], resolved: Map<string, FolderRow>, sweep: IssueSweep): void {
   const { db } = lib;
   const loose = new Map<string, string[]>();
-  // Files the user chose to ignore stay where they are, unreported; the list forgets ones that are gone.
+  // Files the user chose to ignore stay where they are, unreported; the list forgets ones that are
+  // gone, and ones in a format the app has learned to show since (they're tracked like any image).
   const untracked = new Set((db.prepare('SELECT rel_path FROM untracked_files').pluck().all() as string[]).map(key));
   const onDisk = new Set(files.map((f) => key(f.relPath)));
-  for (const p of untracked) if (!onDisk.has(p)) db.prepare('DELETE FROM untracked_files WHERE rel_path = ?').run(p);
+  for (const p of untracked) if (!onDisk.has(p) || isImageFile(p)) db.prepare('DELETE FROM untracked_files WHERE rel_path = ?').run(p);
 
   for (const f of files) {
     const name = baseName(f.relPath);

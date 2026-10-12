@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { TagSummary } from '@media-view/shared';
   import { SvelteSet } from 'svelte/reactivity';
+  import { navItems } from '../kbd.svelte.ts';
   import { client, unwrap } from '../api.ts';
   import DialogFrame from '../components/DialogFrame.svelte';
   import NameDialog from '../components/NameDialog.svelte';
@@ -112,7 +113,7 @@
   });
 </script>
 
-<div class="tags-page">
+<div class="tags-page" use:navItems={{ kind: 'cards', inset: true }}>
   <header class="head">
     <h1 class="display title">Tags</h1>
     <span class="meta"><b>{fmt(tags.length)}</b> tags · <b>{tagTypes.list.length}</b> types</span>
@@ -139,8 +140,8 @@
       </div>
       <div class="grid">
         {#each g.tags as t (t.id)}
-          <div class="tag" class:sel={selected.has(t.id)} oncontextmenu={(e) => menu(e, t)} role="row" tabindex="-1">
-            <button class="box" class:on={selected.has(t.id)} onclick={() => toggle(t)} aria-label="Select {t.name}">{selected.has(t.id) ? '✓' : ''}</button>
+          <div class="tag" data-nav class:sel={selected.has(t.id)} oncontextmenu={(e) => menu(e, t)} role="row" tabindex="-1">
+            <button class="box" data-nav-select tabindex="-1" class:on={selected.has(t.id)} onclick={() => toggle(t)} aria-label="Select {t.name}">{selected.has(t.id) ? '✓' : ''}</button>
             <a class="name" href={href(`/tags/${t.id}/images`)} onclick={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); navigate(`/tags/${t.id}`); } else if (selected.size > 0) { e.preventDefault(); toggle(t); } }}>
               <span>{t.name}</span>
               {#if t.aliases.length}<span class="aka">aka {t.aliases.join(', ')}</span>{/if}
