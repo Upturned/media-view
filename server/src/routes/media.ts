@@ -1,17 +1,19 @@
 import fs from 'node:fs';
 import { Readable } from 'node:stream';
 import { Hono } from 'hono';
+import { isVector } from '@media-view/shared';
 import { z } from 'zod';
 import { notFound } from '../lib/errors.ts';
 import { valid } from '../lib/validate.ts';
 import { absPath, requireLibrary } from '../services/library.ts';
+import { getPreview, needsPreview } from '../services/previews.ts';
 import { getThumbnail, isRaster } from '../services/thumbnails.ts';
 
 /** Originals and thumbnails, addressed by file id (technical doc §8.5). */
 
 const MIME: Record<string, string> = {
-  jpg: 'image/jpeg', jpeg: 'image/jpeg', jfif: 'image/jpeg', png: 'image/png', gif: 'image/gif',
-  webp: 'image/webp', svg: 'image/svg+xml', avif: 'image/avif',
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', jfif: 'image/jpeg', jpe: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+  webp: 'image/webp', svg: 'image/svg+xml', svgz: 'image/svg+xml', avif: 'image/avif', bmp: 'image/bmp', ico: 'image/x-icon', tif: 'image/tiff', tiff: 'image/tiff',
 };
 
 interface MediaRow {
@@ -61,19 +63,38 @@ function sendFile(file: string, type: string, etag: string, headers: Record<stri
 
 const params = z.object({ id: z.coerce.number().int().positive() });
 
-function original(row: MediaRow, c: { req: { query(k: string): string | undefined; header(k: string): string | undefined } }): Response {
+type Ctx = { req: { query(k: string): string | undefined; header(k: string): string | undefined } };
+
+/** What the viewer shows: the file itself, or its viewer copy (TIFF), made now if needed. */
+async function forViewer(row: MediaRow, c: Ctx): Promise<Response> {
+  if (!needsPreview(row.ext)) return original(row, c);
+  const lib = requireLibrary();
+  if (!fs.existsSync(absPath(lib, row.rel_path))) throw notFound('FILE_MISSING', 'The file is missing on disk.');
+  let copy: string;
+  try {
+    copy = await getPreview(lib, row);
+  } catch {
+    throw notFound('NO_PREVIEW', 'This image could not be read.');
+  }
+  const etag = `"p-${row.hash ?? `${row.size}-${row.mtime}`}"`;
+  return sendFile(copy, 'image/webp', etag, { 'Cache-Control': cacheControl(c.req.query('v') !== undefined) }, undefined, c.req.header('if-none-match'));
+}
+
+function original(row: MediaRow, c: Ctx): Response {
   const lib = requireLibrary();
   const file = absPath(lib, row.rel_path);
   if (!fs.existsSync(file)) throw notFound('FILE_MISSING', 'The file is missing on disk.');
   const headers: Record<string, string> = { 'Cache-Control': cacheControl(c.req.query('v') !== undefined) };
   // SVGs can carry scripts: sandbox them when opened directly.
-  if (row.ext === 'svg') headers['Content-Security-Policy'] = 'sandbox';
+  if (isVector(row.ext)) headers['Content-Security-Policy'] = 'sandbox';
+  // An .svgz is a gzipped SVG: the browser unzips it (no ranges — they'd count compressed bytes).
+  if (row.ext === 'svgz') headers['Content-Encoding'] = 'gzip';
   const etag = `"${row.hash ?? `${row.size}-${row.mtime}`}"`;
-  return sendFile(file, MIME[row.ext] ?? 'application/octet-stream', etag, headers, c.req.header('range'), c.req.header('if-none-match'));
+  return sendFile(file, MIME[row.ext] ?? 'application/octet-stream', etag, headers, row.ext === 'svgz' ? undefined : c.req.header('range'), c.req.header('if-none-match'));
 }
 
 export const mediaRoutes = new Hono()
-  .get('/file/:id', valid('param', params), (c) => original(fileRow(c.req.valid('param').id), c))
+  .get('/file/:id', valid('param', params), (c) => forViewer(fileRow(c.req.valid('param').id), c))
   .get('/thumb/:id', valid('param', params), async (c) => {
     const row = fileRow(c.req.valid('param').id, true);
     if (!isRaster(row.ext)) return original(row, c); // SVG: served as-is, no thumbnail

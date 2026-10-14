@@ -53,8 +53,12 @@
   let images = $state<FileItem[]>([]);
   let imageTotal = $state(0);
   let folders = $state<(FolderCard & { path: string })[]>([]);
-  let tags = $state<TagSummary[]>([]);
-  let lists = $state<Card[]>([]);
+  /** Matched by the plain words of the query. */
+  let tagsByWord = $state<TagSummary[]>([]);
+  let listsByWord = $state<Card[]>([]);
+  /** Named in the query (`#elf`, `@refs`, not the left-out ones): pinned first on their tabs. */
+  let searchedTags = $state<TagSummary[]>([]);
+  let searchedLists = $state<Card[]>([]);
 
   $effect(() => {
     void live.files;
@@ -65,8 +69,10 @@
       images = [];
       imageTotal = 0;
       folders = [];
-      tags = [];
-      lists = [];
+      tagsByWord = [];
+      listsByWord = [];
+      searchedTags = [];
+      searchedLists = [];
       return;
     }
     unwrap(client.api.files.$get({ query: { q, sort: 'name', order: 'asc', limit: '12' } }))
@@ -75,16 +81,28 @@
         imageTotal = r.total;
       })
       .catch(toastError);
+    unwrap(client.api.files.searched.$get({ query: { q } }))
+      .then((r) => {
+        searchedTags = r.tags;
+        searchedLists = r.collections;
+      })
+      .catch(toastError);
     if (w) {
       unwrap(client.api.folders.search.$get({ query: { q: w } })).then((r) => (folders = r.folders)).catch(toastError);
-      unwrap(client.api.tags.$get({ query: { q: w, sort: 'count' } })).then((r) => (tags = r.tags)).catch(toastError);
-      unwrap(client.api.collections.$get({ query: { q: w, sort: 'name' } })).then((r) => (lists = r.collections)).catch(toastError);
+      unwrap(client.api.tags.$get({ query: { q: w, sort: 'count' } })).then((r) => (tagsByWord = r.tags)).catch(toastError);
+      unwrap(client.api.collections.$get({ query: { q: w, sort: 'name' } })).then((r) => (listsByWord = r.collections)).catch(toastError);
     } else {
       folders = [];
-      tags = [];
-      lists = [];
+      tagsByWord = [];
+      listsByWord = [];
     }
   });
+
+  const pinnedTags = $derived(new Set(searchedTags.map((t) => t.id)));
+  const pinnedLists = $derived(new Set(searchedLists.map((c) => c.id)));
+  const tags = $derived([...searchedTags, ...tagsByWord.filter((t) => !pinnedTags.has(t.id))]);
+  const wordLists = $derived(listsByWord.filter((c) => !pinnedLists.has(c.id)));
+  const lists = $derived([...searchedLists, ...wordLists]);
 
   const albums = $derived(folders.filter((f) => f.kind === 'album'));
   const racks = $derived(folders.filter((f) => f.kind !== 'album'));
@@ -179,14 +197,17 @@
         <section>
           <div class="section-title"><strong>Tags</strong><span>{fmt(tags.length)}</span>
             {#if tab === 'all' && tags.length > 6}<button class="see" onclick={() => setTab('tags')}>See all {fmt(tags.length)} →</button>{/if}</div>
-          {#if !words}<p class="none">Tags are matched by the words in your search.</p>
+          {#if !words && !tags.length}<p class="none">Tags are matched by the words in your search, or named with #.</p>
           {:else if tags.length}
             <div class="rows">
               {#each tab === 'all' ? tags.slice(0, 6) : tags as t (t.id)}
                 {@const c = typeColor(t.typeId)}
                 <a class="trow" href={href(`/tags/${t.id}/images`)}>
                   <span class="tbar" style:background={c}></span>
-                  <div class="fname"><span class="display">{t.name}</span><span class="path">{t.aliases.length ? `aka ${t.aliases.join(', ')}` : ''}</span></div>
+                  <div class="fname">
+                    <span class="display">{t.name}</span>
+                    <span class="path">{#if pinnedTags.has(t.id)}<b class="named">in your search</b>{/if}{t.aliases.length ? `aka ${t.aliases.join(', ')}` : ''}</span>
+                  </div>
                   <span class="type" style:background={c} style:color={inkFor(c)}>{typeOf(t.typeId)?.name}</span>
                   <span class="count">{fmt(t.count)} {word('images')}</span>
                 </a>
@@ -200,13 +221,13 @@
         <section class="lists-row">
           <div class="section-title"><ListIcon size={14} /><strong>Collections</strong><span>{fmt(lists.length)}</span>
             {#if lists.length > 4}<button class="see" onclick={() => setTab('collections')}>See all {fmt(lists.length)} →</button>{/if}</div>
-          {#if !words}<p class="none">Collections are matched by the words in your search.</p>
+          {#if !words && !lists.length}<p class="none">Collections are matched by the words in your search, or named with @.</p>
           {:else if lists.length}
             <div class="minis">
               {#each lists.slice(0, 4) as c (c.id)}
                 <a class="mini" href={collectionHref(c.id)}>
                   <div class="mini-cover">{#if c.covers[0]}<Thumb file={c.covers[0]} fit="cover" />{/if}<span>{pad(1)}</span></div>
-                  <div class="fname"><span class="mini-name">{c.name}</span><span class="path">{fmt(c.count)} {c.count === 1 ? 'image' : 'images'}</span></div>
+                  <div class="fname"><span class="mini-name">{c.name}</span><span class="path">{#if pinnedLists.has(c.id)}<b class="named">in your search</b>{/if}{fmt(c.count)} {c.count === 1 ? 'image' : 'images'}</span></div>
                 </a>
               {/each}
             </div>
@@ -214,13 +235,20 @@
         </section>
       {:else if tab === 'collections'}
         <section>
-          <div class="section-title"><span>{fmt(lists.length)} {lists.length === 1 ? 'collection whose name contains' : 'collections whose names contain'} “{words}” · images inside them are on the images tab only if they match</span></div>
-          {#if !words}<p class="none">Collections are matched by the words in your search.</p>
-          {:else if lists.length}
+          {#if searchedLists.length}
+            <div class="section-title"><span>{searchedLists.length === 1 ? 'Named in your search' : `${fmt(searchedLists.length)} named in your search`}</span></div>
             <div class="list-cards">
-              {#each lists as c (c.id)}<CollectionCard collection={c} highlight={words} surface="var(--bg)" />{/each}
+              {#each searchedLists as c (c.id)}<CollectionCard collection={c} surface="var(--bg)" />{/each}
             </div>
-          {:else}<p class="none">No collections are named like that.</p>{/if}
+          {/if}
+          {#if words}
+            <div class="section-title"><span>{fmt(wordLists.length)} {wordLists.length === 1 ? 'collection whose name contains' : 'collections whose names contain'} “{words}” · images inside them are on the images tab only if they match</span></div>
+            {#if wordLists.length}
+              <div class="list-cards">
+                {#each wordLists as c (c.id)}<CollectionCard collection={c} highlight={words} surface="var(--bg)" />{/each}
+              </div>
+            {:else}<p class="none">No collections are named like that.</p>{/if}
+          {:else if !searchedLists.length}<p class="none">Collections are matched by the words in your search, or named with @.</p>{/if}
         </section>
       {/if}
     </div>
@@ -253,6 +281,7 @@
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 28px 22px; padding-top: 12px; }
   .card { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .path { font: 11px var(--font-mono); color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .named { margin-right: 8px; color: var(--accent); font-weight: 700; text-transform: uppercase; }
 
   .rows { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
   .frow, .trow { display: grid; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--text); }

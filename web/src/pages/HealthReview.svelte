@@ -1,16 +1,18 @@
 <script lang="ts">
   import type { DuplicateCopy, FolderKind, HealthIssue, HealthReport, TagRef } from '@media-view/shared';
   import { ApiError, client, unwrap } from '../api.ts';
-  import AlbumPickDialog from '../components/AlbumPickDialog.svelte';
+  import FolderPickDialog from '../components/FolderPickDialog.svelte';
+  import type { PickerNode } from '../components/FolderPicker.svelte';
   import HealthHeader from '../components/HealthHeader.svelte';
   import KindIcon from '../components/KindIcon.svelte';
+  import NameDialog from '../components/NameDialog.svelte';
   import Thumb from '../components/Thumb.svelte';
-  import { groupsOf, SECTIONS, type Group, type Section } from '../health.ts';
+  import { groupsOf, looksLikeAlbum, pathDiff, SECTIONS, type Group, type Section } from '../health.ts';
   import { fmt, formatDate } from '../media.ts';
   import { href, router } from '../router.svelte.ts';
   import { ask } from '../stores/confirm.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
-  import { applyFix, winPath } from '../stores/health.svelte.ts';
+  import { applyFix, runGroupFix, winPath } from '../stores/health.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
   import { inkFor, typeColor } from '../stores/tags.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
@@ -23,9 +25,11 @@
   const focus = $derived(router.route.query.get('group'));
   let report = $state<HealthReport | null>(null);
   /** Rows being worked on: a name being typed, a convert note, the album picker. */
-  let naming = $state<{ id: number; name: string } | null>(null);
+  let naming = $state<HealthIssue | null>(null);
   let converting = $state<{ id: number; name: string } | null>(null);
   let picking = $state<HealthIssue | null>(null);
+  /** A folder of loose images going somewhere as an album (Move as album…). */
+  let moving = $state<HealthIssue | null>(null);
   let kinds = $state<Record<number, FolderKind>>({});
   let picks = $state<Record<number, number>>({});
   let dupModes = $state<Record<number, 'keep' | 'merge'>>({});
@@ -43,9 +47,11 @@
   });
 
   const scanning = $derived(live.scanning || library.info?.scan.status === 'scanning');
-  const groups = $derived(report ? groupsOf(report).filter((g) => g.section === section && g.key !== 'untagged') : []);
+  const groups = $derived(report ? groupsOf(report).filter((g) => g.section === section) : []);
   const isOpen = (g: Group) => (closed[g.key] === undefined ? !focus || focus === g.key : !closed[g.key]);
-  const total = $derived(groups.reduce((n, g) => n + (g.issues.length || (g.key === 'untracked' ? report?.untracked.length ?? 0 : 0)), 0));
+  // Blue counts its groups, like its card on the overview (untagged images and duplicate groups don't add up).
+  const total = $derived(section === 'blue' ? groups.length
+    : groups.reduce((n, g) => n + (g.issues.length || (g.key === 'untracked' ? report?.untracked.length ?? 0 : 0)), 0));
   const TABS: [Section, string][] = [['red', 'Red · missing'], ['amber', 'Amber · decisions'], ['blue', 'Blue · for your info'], ['white', 'White · notices']];
 
   async function run(fn: () => Promise<unknown>) {
@@ -60,21 +66,7 @@
   const fix = (i: HealthIssue, f: Parameters<typeof applyFix>[1]) => run(() => applyFix(i.id, f));
 
   // ── Paths: WAS / NOW, with the part that changed highlighted ──
-  function diff(a: string, b: string): [{ pre: string; hit: string; post: string }, { pre: string; hit: string; post: string }] {
-    const A = winPath(a).split('\\');
-    const B = winPath(b).split('\\');
-    let i = 0;
-    while (i < A.length && i < B.length && A[i] === B[i]) i++;
-    let j = 0;
-    while (j < A.length - i && j < B.length - i && A[A.length - 1 - j] === B[B.length - 1 - j]) j++;
-    const part = (S: string[]) => {
-      const pre = S.slice(0, i).join('\\');
-      const hit = S.slice(i, S.length - j).join('\\');
-      const post = S.slice(S.length - j).join('\\');
-      return { pre: pre + (pre && hit ? '\\' : ''), hit, post: (post && hit ? '\\' : '') + post };
-    };
-    return [part(A), part(B)];
-  }
+  const diff = (a: string, b: string) => pathDiff(winPath(a), winPath(b));
 
   // ── Forget: the normal confirmation, then "Are you sure?" ──
   async function forget(i: HealthIssue) {
@@ -144,11 +136,24 @@
     }
   }
 
-  async function intoAlbum(albumId: number | null, name: string) {
+  /** The name dialog's Create: an error (a name taken…) keeps it open and shows there. */
+  async function newAlbum(name: string) {
+    const issue = naming;
+    if (!issue) return;
+    const r = await unwrap(client.api.health[':id'].fix.$post({ param: { id: String(issue.id) }, json: { action: 'new-album', name: name.trim() } }));
+    toast(r.message);
+  }
+
+  async function intoAlbum(node: PickerNode) {
     const issue = picking;
     picking = null;
-    if (issue) await fix(issue, { action: 'into-album', albumId });
-    void name;
+    if (issue) await fix(issue, { action: 'into-album', albumId: node.kind === 'inbox' ? null : node.id });
+  }
+
+  async function asAlbum(node: PickerNode) {
+    const issue = moving;
+    moving = null;
+    if (issue) await fix(issue, { action: 'as-album', parentId: node.id });
   }
 
   // ── Duplicates ──
@@ -184,7 +189,10 @@
   }
 
   const plural = (n: number, one: string, many = `${one}s`) => `${fmt(n)} ${n === 1 ? one : many}`;
+  const dirOf = (p: string) => p.split('/').slice(0, -1).join('/');
+  const nameOf = (p: string) => p.split('/').at(-1) ?? '';
   const folderLabel = (k: FolderKind) => (k === 'subcategory' ? 'Sub-category' : k === 'category' ? 'Category' : k === 'inbox' ? 'Inbox' : 'Album');
+  const KEEP_ALL_TIP = 'Every copy stays where it is, as its own image with its own tags. The group stops showing here until another copy turns up.';
   const RECORD_TIP = 'Moves the file into the library’s hidden Invalid folder (.mediaview\\Invalid\\…, keeping its path) and counts it in the statistics. Get it back from Explorer if you change your mind.';
 </script>
 
@@ -228,13 +236,23 @@
 
     {#each groups as g (g.key)}
       {@const open = isOpen(g)}
-      <button class="g-head" onclick={() => (closed = { ...closed, [g.key]: open })}>
-        <span class="arrow">{open ? '▾' : '▸'}</span>
-        <span class="g-name">{g.title}</span>
-        <span class="g-count" style:color={section === 'white' ? 'var(--text2)' : SECTIONS[section].color}>{g.count}</span>
-        {#if g.need}<span class="need">needs your choice</span>{/if}
-        <span class="g-hint">{g.hint}</span>
-      </button>
+      {@const fixes = [...(g.fix ? [g.fix] : []), ...(g.more ?? [])]}
+      <div class="g-head">
+        <button class="g-toggle" onclick={() => (closed = { ...closed, [g.key]: open })}>
+          <span class="arrow">{open ? '▾' : '▸'}</span>
+          <span class="g-name">{g.title}</span>
+          <span class="g-count" style:color={section === 'white' ? 'var(--text2)' : SECTIONS[section].color}>{g.count}</span>
+          {#if g.need}<span class="need">needs your choice</span>{/if}
+          <span class="g-hint">{g.hint}</span>
+        </button>
+        {#if fixes.length}
+          <div class="g-acts">
+            {#each fixes as f, k (f.label)}
+              <button class="rbtn sm" class:pri={k === 0} disabled={busy || scanning} title={f.does} onclick={() => run(() => runGroupFix(f, g.title))}>{f.label}</button>
+            {/each}
+          </div>
+        {/if}
+      </div>
 
       {#if open}
         <!-- Not tracked: a list, not issues -->
@@ -256,6 +274,19 @@
           {/each}
         {/if}
 
+        <!-- Untagged images: they have their own page -->
+        {#if g.key === 'untagged' && report}
+          <div class="row">
+            <span class="stripe" style:background="var(--blue)"></span>
+            <div class="icon"><svg width="22" height="22" viewBox="0 0 16 16"><path d="M1.5 8.5 V2.5 H7.5 L14.5 9.5 L8.5 15.5 Z" fill="none" stroke="currentColor" stroke-width="1.4" /><rect x="4" y="5" width="2" height="2" fill="currentColor" /></svg></div>
+            <div class="info"><span class="title">{g.count} with no tags</span><span class="meta">{g.sample}</span></div>
+            <div class="btns">
+              <a class="rbtn" href={href('/health/untagged/grid')}>Open as grid</a>
+              <a class="rbtn pri" href={href('/health/untagged')}>Review ▸</a>
+            </div>
+          </div>
+        {/if}
+
         <!-- Thumbnail cleanup -->
         {#if g.key === 'thumbnails' && report}
           <div class="row">
@@ -274,27 +305,37 @@
             <div class="unclear">
               <span class="stripe" style:background={stripe}></span>
               <div class="uc-body">
-                <div class="cards">
-                  <div class="found">
-                    <div class="band">Found · {formatDate(i.detectedAt)}</div>
+                <!-- Side by side: the found image, then each history it could be, row by row -->
+                <div class="uc-top">
+                  <div class="uc-pic">
                     <div class="pic"><Thumb file={d.file.thumb ?? undefined} /></div>
-                    <span class="title">{d.file.path.split('/').at(-1)}</span>
-                    <span class="meta">{winPath(d.file.path.split('/').slice(0, -1).join('/'))}<br />identical to {plural(d.candidates.length, 'image')} the app is missing</span>
+                    <span class="meta">same pixels as {plural(d.candidates.length, 'missing image')}</span>
                   </div>
-                  {#each d.candidates as c, k (c.id)}
-                    {@const on = picks[i.id] === c.id}
-                    <button class="cand" class:on onclick={() => (picks = { ...picks, [i.id]: c.id })}>
-                      <div class="band" class:on>{on ? '● It’s this one' : `○ Candidate ${String.fromCharCode(65 + k)}`}</div>
-                      <span class="title">{c.path.split('/').at(-1)}</span>
-                      {@render plain('WAS', winPath(c.path.split('/').slice(0, -1).join('/')))}
-                      {#if c.tags.length}{@render tags(c.tags)}{:else}<span class="notags">NO TAGS</span>{/if}
-                      <div class="facts">
-                        <span>STAR</span><span>{c.favorited ? '★ starred' : '—'}</span>
-                        <span>COLLECTIONS</span><span>{c.collections ? plural(c.collections, 'list') : '—'}</span>
-                        <span>NOTE</span><span>{c.description ?? '—'}</span>
-                      </div>
-                    </button>
-                  {/each}
+                  <div class="cmp" style:--n={d.candidates.length + 1}>
+                    <div class="col labels"><div class="hd"></div><div>Name</div><div>Folder</div><div>Tags</div><div>Star</div><div>Collections</div><div>Note</div></div>
+                    <div class="col found">
+                      <div class="hd">Found · {formatDate(i.detectedAt)}</div>
+                      <div class="nm">{nameOf(d.file.path)}</div>
+                      <div><span class="lab">NOW</span> {winPath(dirOf(d.file.path)) || 'Images'}</div>
+                      <div class="mute">new · none yet</div>
+                      <div class="mute">—</div>
+                      <div class="mute">—</div>
+                      <div class="mute">—</div>
+                    </div>
+                    {#each d.candidates as c, k (c.id)}
+                      {@const on = picks[i.id] === c.id}
+                      {@const [was] = diff(dirOf(c.path), dirOf(d.file.path))}
+                      <button class="col cand" class:on onclick={() => (picks = { ...picks, [i.id]: c.id })}>
+                        <div class="hd" class:on>{on ? '● It’s this one' : `○ Candidate ${String.fromCharCode(65 + k)}`}</div>
+                        <div class="nm">{#if nameOf(c.path) === nameOf(d.file.path)}{nameOf(c.path)}{:else}<mark>{nameOf(c.path)}</mark>{/if}</div>
+                        <div><span class="lab">WAS</span> {was.pre}{#if was.hit}<mark>{was.hit}</mark>{/if}{was.post}</div>
+                        <div>{#if c.tags.length}{@render tags(c.tags)}{:else}<span class="mute">no tags</span>{/if}</div>
+                        <div class:mute={!c.favorited}>{c.favorited ? '★ starred' : '—'}</div>
+                        <div class:mute={!c.collections}>{c.collections ? plural(c.collections, 'list') : '—'}</div>
+                        <div class:mute={!c.description}>{c.description ?? '—'}</div>
+                      </button>
+                    {/each}
+                  </div>
                 </div>
                 <div class="uc-foot">
                   <span>Same pixels, {d.candidates.length} histories. Pick the one it really is: its tags, star and collection places come back. The others stay on Missing images.</span>
@@ -351,7 +392,8 @@
                       : lost.length ? `Keeping this copy loses ${lost.map((t) => t.name).join(', ')} — the tags only the other copies have.`
                       : 'Click another copy to keep that one instead.'}
                   </span>
-                  {#if mode}<button class="rbtn" onclick={() => (dupModes = { ...dupModes, [i.id]: undefined as never })}>Back</button>{/if}
+                  {#if mode}<button class="rbtn" onclick={() => (dupModes = { ...dupModes, [i.id]: undefined as never })}>Back</button>
+                  {:else}<button class="rbtn" disabled={busy} title={KEEP_ALL_TIP} onclick={() => fix(i, { action: 'keep-all' })}>Keep all copies</button>{/if}
                   <button class="rbtn pri" disabled={busy || starredOther} onclick={() => fix(i, { action: 'keep-one', keepId: pick })}>Keep copy {d.copies.findIndex((c) => c.id === pick) + 1} · recycle {others.length}</button>
                 {:else if mode === 'merge'}
                   {@const merged = mergedTags(d.copies)}
@@ -359,7 +401,8 @@
                   <button class="rbtn" onclick={() => (dupModes = { ...dupModes, [i.id]: undefined as never })}>Back</button>
                   <button class="rbtn pri" disabled={busy} onclick={() => fix(i, { action: 'merge', keepId: pick })}>Merge into copy {d.copies.findIndex((c) => c.id === pick) + 1}</button>
                 {:else}
-                  <span class:warn={stars >= 2}>{stars >= 2 ? 'Two copies are starred, and starred images can’t be recycled. Unstar one, or merge them into a single copy.' : 'The copies have different tags, so the app won’t pick one for you.'}</span>
+                  <span class:warn={stars >= 2}>{stars >= 2 ? 'Two copies are starred, and starred images can’t be recycled. Unstar one, merge them into a single copy, or keep them all.' : 'The copies have different tags, so the app won’t pick one for you.'}</span>
+                  <button class="rbtn" disabled={busy} title={KEEP_ALL_TIP} onclick={() => fix(i, { action: 'keep-all' })}>Keep all copies</button>
                   <button class="rbtn" disabled={stars >= 2} title={stars >= 2 ? 'Unstar one copy first' : ''} onclick={() => { dupModes = { ...dupModes, [i.id]: 'keep' }; picks = { ...picks, [i.id]: d.keepId ?? d.copies[0]!.id }; }}>Keep one…</button>
                   <button class="rbtn pri" onclick={() => { dupModes = { ...dupModes, [i.id]: 'merge' }; picks = { ...picks, [i.id]: d.keepId ?? d.copies[0]!.id }; }}>Merge into…</button>
                 {/if}
@@ -377,7 +420,7 @@
                   <KindIcon kind={d.kind === 'missing_folder' ? d.folderKind : d.kind === 'unmarked_folder' ? (kinds[i.id] ?? d.current) : 'subcategory'} size={22} />
                 </div>
               {:else if d.kind === 'loose_files' || d.kind === 'nested_in_album'}
-                <div class="icon"><KindIcon kind={d.kind === 'nested_in_album' ? 'album' : d.folderId === null ? 'category' : 'subcategory'} size={22} /></div>
+                <div class="icon" class:guess={looksLikeAlbum(i)}><KindIcon kind={d.kind === 'nested_in_album' || looksLikeAlbum(i) ? 'album' : d.folderId === null ? 'category' : 'subcategory'} size={22} /></div>
               {:else}
                 <div class="icon"><svg width="22" height="22" viewBox="0 0 16 16"><path d="M3 1.5 H10 L13 4.5 V14.5 H3 Z" fill="none" stroke="currentColor" stroke-width="1.4" /><rect x="5" y="8" width="6" height="1.4" fill="currentColor" /><rect x="5" y="10.8" width="4" height="1.4" fill="currentColor" /></svg></div>
               {/if}
@@ -408,18 +451,14 @@
                     <div class="strip">{#each d.files.slice(0, 5) as f (f.id)}<div><Thumb file={f.thumb ?? undefined} fit="cover" /></div>{/each}{#if d.files.length > 5}<span>+{d.files.length - 5}</span>{/if}</div>
                   {/if}
                   <span class="meta">{d.files.length > 1 ? `one item, because they moved together · Keep or Undo covers all ${d.files.length}` : `tags followed · seen ${formatDate(i.detectedAt)}`}</span>
+                {:else if d.kind === 'loose_files' && looksLikeAlbum(i)}
+                  <div class="t-row"><span class="title">{d.path}</span>{@render chip('Looks like an album', 'guess')}</div>
+                  {@render plain('IN', 'Images')}
+                  <span class="meta">{plural(d.count, 'image')}, no folders · a folder directly in Images is always a category, so its images are loose · <b>Move as album…</b> puts it inside a category, or keep it as a category and move its images into an album inside it</span>
                 {:else if d.kind === 'loose_files'}
                   <div class="t-row"><span class="title">{plural(d.count, 'loose image')} in {d.path ? d.path.split('/').at(-1) : 'Images'}</span>{@render chip(d.folderId === null ? 'Images' : 'Folder')}{@render chip('Loose images')}</div>
                   {@render plain('IN', winPath(d.path))}
-                  <span class="meta">racks and drawers hold folders, never loose images (§2.3)</span>
-                  {#if naming?.id === i.id}
-                    <div class="inline">
-                      <span>New album in {d.path.split('/').at(-1)}:</span>
-                      <input bind:value={naming.name} spellcheck="false" />
-                      <button class="rbtn pri" disabled={busy || !naming.name.trim()} onclick={() => { const n = naming!.name.trim(); naming = null; void fix(i, { action: 'new-album', name: n }); }}>Create &amp; move {d.count}</button>
-                      <button class="rbtn" onclick={() => (naming = null)}>Cancel</button>
-                    </div>
-                  {/if}
+                  <span class="meta">racks and drawers hold folders, never loose images (§2.3){#if d.folderId !== null && d.subfolders === 0} · it holds only images, so it can become an album itself{/if}</span>
                 {:else if d.kind === 'nested_in_album'}
                   {@const [, n] = diff(d.albumPath, d.path)}
                   <div class="t-row"><span class="title">A folder inside {d.albumPath.split('/').at(-1)}</span>{@render chip('Album')}{@render chip('Folder inside')}</div>
@@ -472,9 +511,13 @@
                 {:else if d.kind === 'external_move'}
                   <button class="rbtn pri" disabled={busy} onclick={() => fix(i, { action: 'keep' })}>Keep</button>
                   <button class="rbtn" disabled={busy} onclick={() => fix(i, { action: 'undo' })}>Undo</button>
-                {:else if d.kind === 'loose_files' && naming?.id !== i.id}
-                  {#if d.folderId !== null}<button class="rbtn pri" onclick={() => (naming = { id: i.id, name: 'Loose images' })}>Move into a new album…</button>{/if}
-                  <button class="rbtn" onclick={() => (picking = i)}>Into an existing album…</button>
+                {:else if d.kind === 'loose_files'}
+                  {@const solo = d.folderId !== null && d.subfolders === 0}
+                  {#if solo && !d.topLevel}<button class="rbtn pri" disabled={busy} title="It stays where it is; its images stop being loose" onclick={() => fix(i, { action: 'as-album', parentId: null })}>Make it an album</button>{/if}
+                  {#if solo}<button class="rbtn" class:pri={d.topLevel} disabled={busy} title="Pick a rack or drawer: the folder moves there and becomes an album" onclick={() => (moving = i)}>Move as album…</button>{/if}
+                  {#if d.folderId !== null}<button class="rbtn" class:pri={!solo} disabled={busy} onclick={() => (naming = i)}>Move into a new album…</button>{/if}
+                  <button class="rbtn" class:pri={d.folderId === null} disabled={busy} onclick={() => fix(i, { action: 'into-album', albumId: null })}>To the Inbox</button>
+                  <button class="rbtn" disabled={busy} onclick={() => (picking = i)}>Into an existing album…</button>
                 {:else if d.kind === 'nested_in_album' && converting?.id !== i.id}
                   <button class="rbtn pri" disabled={busy} onclick={() => fix(i, { action: 'move-out' })}>Move it out</button>
                   <button class="rbtn" onclick={() => (converting = { id: i.id, name: d.albumPath.split('/').at(-1) ?? 'Images' })}>Convert…</button>
@@ -502,8 +545,18 @@
   </div>
 </div>
 
+{#if naming && naming.details.kind === 'loose_files'}
+  {@const d = naming.details}
+  <NameDialog title="Move into a new album" sub="{plural(d.count, 'loose image')} · the album is made in {d.path.split('/').at(-1)}" label="Album name"
+    initial="Loose images" confirm="Create &amp; move {fmt(d.count)}" onsubmit={newAlbum} onclose={() => (naming = null)} />
+{/if}
 {#if picking}
-  <AlbumPickDialog title="Move the loose images" sub="pick an album or the Inbox · the images move on disk" onpick={intoAlbum} onclose={() => (picking = null)} />
+  <FolderPickDialog want="album" title="Move the loose images" sub="pick an album or the Inbox · the images move on disk" onpick={intoAlbum} onclose={() => (picking = null)} />
+{/if}
+{#if moving && moving.details.kind === 'loose_files' && moving.details.folderId !== null}
+  {@const d = moving.details}
+  <FolderPickDialog want="container" title="Move “{d.path.split('/').at(-1)}” as an album" sub="pick a rack or drawer · the folder moves on disk and becomes an album"
+    verb="Move as album" blocked={[d.folderId!]} onpick={asAlbum} onclose={() => (moving = null)} />
 {/if}
 
 <style>
@@ -524,7 +577,10 @@
   .sec-count { font: 700 13px var(--font-mono); }
   .sec-sub { font: 11px var(--font-mono); color: var(--text2); text-transform: uppercase; }
 
-  .g-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 32px 10px 20px; border: none; border-bottom: 1px solid var(--line); background: var(--bg2); color: var(--text); text-align: left; cursor: pointer; }
+  .g-head { display: flex; align-items: center; gap: 12px; padding-right: 32px; border-bottom: 1px solid var(--line); background: var(--bg2); }
+  .g-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 14px 0 10px 20px; border: none; background: none; color: var(--text); text-align: left; cursor: pointer; }
+  .g-acts { display: flex; gap: 6px; flex: none; }
+  .rbtn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
   .arrow { width: 14px; font: 13px var(--font-mono); color: var(--text2); }
   .g-name { font: 700 22px/1 var(--font-display); text-transform: uppercase; }
   .g-count { font: 700 12px var(--font-mono); }
@@ -575,16 +631,33 @@
   .unclear, .dup { display: grid; grid-template-columns: 4px minmax(0, 1fr); border-bottom: 1px solid var(--line); }
   .dup { display: flex; flex-direction: column; gap: 12px; padding: 14px 32px 16px 20px; }
   .uc-body { display: flex; flex-direction: column; gap: 12px; padding: 14px 32px 16px 16px; }
+  .uc-top { display: flex; gap: 16px; align-items: flex-start; }
+  .uc-pic { display: flex; flex-direction: column; gap: 6px; width: 160px; flex: none; }
+  .uc-pic .pic { width: 160px; height: 160px; }
+  .cmp { flex: 1; min-width: 0; display: grid; grid-template-columns: 92px repeat(var(--n), minmax(180px, 1fr)); grid-template-rows: repeat(7, auto); overflow-x: auto; outline: 1px solid var(--line); }
+  .col { grid-row: 1 / span 7; display: grid; grid-template-rows: subgrid; padding: 0; border: none; border-left: 1px solid var(--line); background: none; color: var(--text); text-align: left; font: inherit; }
+  .col.labels { border-left: none; }
+  .col > div { padding: 7px 12px; border-bottom: 1px solid var(--line); font: 11.5px/1.45 var(--font-mono); overflow-wrap: anywhere; }
+  .col > div:last-child { border-bottom: none; }
+  .col .hd { padding: 6px 12px; background: var(--surface2); color: var(--text2); font-weight: 700; font-size: 11px; text-transform: uppercase; }
+  .col .hd.on { background: var(--accent); color: var(--accent-ink); }
+  .labels > div { color: var(--text2); font-size: 10.5px; text-transform: uppercase; }
+  .col .nm { font: 700 16px/1.1 var(--font-display); }
+  .col .lab { color: var(--text2); }
+  .col .mute, .col.found .mute { color: var(--text2); }
+  .found { background: var(--bg2); }
+  .cand { cursor: pointer; }
+  .cand:hover { background: var(--surface); }
+  .cand.on { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--surface); }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-  .found, .cand, .copy { display: flex; flex-direction: column; gap: 8px; padding: 0 0 12px; border: none; outline: 1px solid var(--line); background: var(--bg2); color: var(--text); text-align: left; font: inherit; }
-  .found > :not(.band), .cand > :not(.band), .copy > :not(.band) { margin: 0 12px; }
-  .cand, .copy { cursor: pointer; }
-  .cand.on, .copy.keep { outline: 2px solid var(--accent); }
+  .copy { display: flex; flex-direction: column; gap: 8px; padding: 0 0 12px; border: none; outline: 1px solid var(--line); background: var(--bg2); color: var(--text); text-align: left; font: inherit; }
+  .copy > :not(.band) { margin: 0 12px; }
+  .copy { cursor: pointer; }
+  .copy.keep { outline: 2px solid var(--accent); }
   .copy.gone { opacity: 0.6; }
   .band { padding: 6px 12px; background: var(--surface2); color: var(--text2); font: 700 11px var(--font-mono); text-transform: uppercase; }
   .band.on, .band.keep { background: var(--accent); color: var(--accent-ink); }
   .band.star { background: var(--accent2); color: #111; }
-  .found .pic { width: auto; height: 120px; }
   .notags { font: 10.5px var(--font-mono); color: var(--text2); }
   .facts { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 3px 8px; font: 11px var(--font-mono); }
   .facts span:nth-child(odd) { color: var(--text2); }

@@ -8,6 +8,7 @@ import { log } from '../lib/log.ts';
 import { writeMarker } from '../lib/markers.ts';
 import { splitExt, uniqueName } from '../lib/names.ts';
 import { toAbsolute, underPrefix } from '../lib/paths.ts';
+import { renameWithRetry } from '../lib/rename.ts';
 import { assertCanHold, kindAt, liveFolder, refreshCategories, thumbRef } from './folders.ts';
 import { absPath, BIN_PREFIX, binDir, type OpenLibrary } from './library.ts';
 import { rewritePrefix } from './tree.ts';
@@ -34,7 +35,7 @@ const binRel = (recycleId: number, name: string) => `${BIN_PREFIX}/${recycleId}/
 function moveOnDisk(from: string, to: string): void {
   fs.mkdirSync(path.dirname(to), { recursive: true });
   expectChange(from, to);
-  fs.renameSync(from, to);
+  renameWithRetry(from, to);
 }
 
 // ─── Recycling ───────────────────────────────────────────────────────────────

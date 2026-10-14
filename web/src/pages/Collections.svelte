@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { CollectionCard as Card } from '@media-view/shared';
+  import { navItems } from '../kbd.svelte.ts';
   import { client, unwrap } from '../api.ts';
   import CollectionCard from '../components/CollectionCard.svelte';
   import ListIcon from '../components/ListIcon.svelte';
@@ -65,7 +66,7 @@
   const create = (name?: string) => openOps({ kind: 'collection-edit', id: null, name });
 </script>
 
-<div class="page">
+<div class="page" use:navItems={{ kind: 'cards' }}>
   <nav class="crumbs">
     <a href={href('/images')}>Images</a><span>/</span><span class="here"><ListIcon />Collections</span>
   </nav>

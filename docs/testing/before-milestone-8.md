@@ -141,42 +141,56 @@ Write your answer under each question. My suggestion is in *italics*.
 ### Formats
 1. **TIFF in the viewer** — browsers can't show TIFF, so the viewer needs a converted copy. Convert on demand and cache it next to the thumbnails, or convert once when the image is found? Max size of the converted copy (full size, or e.g. 4096 px)?
    *On demand, cached, full size up to 8192 px.*
+   **Answer:** Convert ahead of time, when the image is found — but never make you wait: in the background, with a progress line like a batch import; until a copy is ready the viewer converts it on demand.
 2. **BMP and ICO** — add them (needs a small decoder for thumbnails), yes/no?
    *Yes.*
+   **Answer:** Not answered — going with the suggestion (yes).
 3. Anything else from the "Not supported" list you'd like first (HEIC, PSD, RAW…)? Each needs its own decoder and some have licensing issues — the counters will tell us over time.
 
 ### Sort by format
 4. Order of formats when sorting: alphabetical by extension (AVIF, GIF, JPG, PNG…), or grouped (photos, graphics, animated)? And `jpg` / `jpeg` / `jfif` treated as one format?
    *Alphabetical, with jpg/jpeg/jfif/jpe as one "JPG".*
+   **Answer:** Grouped by type; jpg / jpeg / jfif / jpe are all one "JPG".
 5. Type label on every frame when sorted by format: same style as the GIF badge (accent colour), or a quieter label so GIF still stands out?
+   **Answer:** Not on every frame all the time: the label shows on hover, and quieter than the GIF badge.
 
 ### Keyboard navigation
 6. Scope for milestone 8: grids (arrows move a focus ring, Enter opens, Space selects, Shift+arrows extend), card pages (Library, racks, drawers, Collections), and Backspace = up one level everywhere? Anything else (dialogs, the index, the viewer panels)?
+   **Answer:** Yes to the scope. But dialogs and the viewer panels close with Esc, not Backspace; Backspace is only "up one level".
 7. Should the focus ring be visible only after the first key press (like Explorer), or always?
+   **Answer:** Only after the first key press — and it hides again as soon as the mouse hovers something new.
 8. Does this need a Claude Design pass (focus states for frames, cards, rows)? *A small one: a single board with the focus look on each component.*
 
 ### Drop files onto a collection page
 9. Dropped files go to the Inbox and are added to the end of the list — or should the drop position decide where they land in the list?
    *End of the list, like Add to collection.*
+   **Answer:** End of the list (suggestion accepted).
 
 ### Random, Settings, help
 10. **Random** in the top bar: from the whole library, or from the page you're on (album, tag, collection) when there is one?
     *The page you're on, else the whole library.*
+   **Answer:** The page you’re on, else the whole library (suggestion accepted).
 11. **Settings · Grid defaults**: default columns and sort for new pages — also a default for *Group by collection* and the index (shown/hidden)?
+   **Answer:** Yes: columns, sort, Group by collection and the index.
 12. **Settings · Slideshow**: default interval only, or also loop / shuffle?
+   **Answer:** Interval, plus loop and shuffle.
 13. Per-page help: anything you found unclear while testing? Note the page and what was missing.
 
 ### Performance (50k images)
 14. Test library for the performance pass: should I generate a synthetic 50,000-image library (small generated images, realistic folder tree, some tags and collections), or do you have a big real one to try?
+   **Answer:** A real library of about 10,000 items, being prepared — tested later.
 15. Targets — e.g. first scan of 50k under N minutes, an album of 5,000 opens in under 1 s, search/index under 300 ms. Any numbers you care about, or should I propose them after measuring?
 16. The web bundle is now ~520 KB (one file), just over the 500 KB the build warns about. Split it by page in milestone 8, or leave it (it's a local app)?
     *Split the biggest pages; it's cheap.*
+   **Answer:** Split (suggestion accepted).
 
 ### Packaging (`npm run package`)
 17. Zip name and where it's written (e.g. `release\media-view-<version>.zip`)? Should the version come from `package.json`, and should `start.bat` open the browser by itself?
     *`release\media-view-<version>-win-x64.zip`, version from package.json, browser opens by itself.*
+   **Answer:** As suggested.
 18. Bundle the `node.exe` download in the repo, or have the script download it once (it needs internet the first time, on your machine only)?
     *Download once into a cache folder; the zip itself never needs internet.*
+   **Answer:** As suggested.
 
 ### Anything else
 19. Anything from testing that should go into milestone 8 rather than be fixed right away?

@@ -1,17 +1,19 @@
 <script lang="ts">
   import type { HealthReport } from '@media-view/shared';
   import { client, unwrap } from '../api.ts';
-  import { fmt } from '../media.ts';
+  import { looksLikeAlbum } from '../health.ts';
+import { fmt } from '../media.ts';
   import { href } from '../router.svelte.ts';
-  import { ask } from '../stores/confirm.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
   import { report as reportResult, when } from '../stores/health.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
   import { toastError } from '../stores/toasts.svelte.ts';
+  import ApplyAllDialog, { type ApplyLine } from './ApplyAllDialog.svelte';
 
   /**
-   * The Library Health header (design M7 · 01): last scan, Rescan, and Apply to all — which covers
-   * red and amber only, asks first with what it will do, and skips what needs a choice.
+   * The Library Health header (design M7 · 01): last scan, Rescan, and Apply to all — which lists
+   * what it can do by severity (red and amber ticked, blue for you to tick), and skips what needs a
+   * choice.
    */
   let { report, compact = false, crumb }: { report: HealthReport | null; compact?: boolean; crumb?: string } = $props();
 
@@ -25,38 +27,32 @@
     }
   }
 
-  /** What Apply to all would do, in general terms (§7.4 defaults). */
+  /** What Apply to all can do (§7.4 defaults), by severity. */
   const plan = $derived.by(() => {
-    if (!report) return { lines: [] as { name: string; note: string }[], skipped: 0 };
+    if (!report) return { lines: [] as ApplyLine[], skipped: 0 };
     const n = (k: string) => report!.issues.filter((i) => i.kind === k).length;
-    const loose = report.issues.filter((i) => i.details.kind === 'loose_files' && i.details.folderId !== null).length;
-    const lines = [
-      n('missing_folder') && { name: `Recreate ${n('missing_folder')} missing ${n('missing_folder') === 1 ? 'folder' : 'folders'} and their markers`, note: 'never Forget' },
-      n('external_move') && { name: `Keep ${n('external_move')} ${n('external_move') === 1 ? 'change' : 'changes'} made outside the app`, note: 'nothing moves' },
-      n('nested_in_album') && { name: `Move ${n('nested_in_album')} ${n('nested_in_album') === 1 ? 'folder' : 'folders'} out of albums`, note: 'next to the album' },
-      n('unmarked_folder') && { name: `Confirm ${n('unmarked_folder')} guessed folder ${n('unmarked_folder') === 1 ? 'kind' : 'kinds'}`, note: 'markers written' },
-      loose && { name: `Put loose images into ${loose} new ${loose === 1 ? 'album' : 'albums'}`, note: '“Loose images”' },
-    ].filter((x): x is { name: string; note: string } => !!x);
+    const s = (x: number, one: string, many = `${one}s`) => `${fmt(x)} ${x === 1 ? one : many}`;
+    const loose = report.issues.filter((i) => i.details.kind === 'loose_files' && i.details.folderId !== null && !looksLikeAlbum(i)).length;
+    const clearDups = report.issues.filter((i) => i.details.kind === 'duplicate' && i.details.keepId !== null && i.details.reason !== 'different-tags' && i.details.reason !== 'two-starred').length;
+    const lines: (ApplyLine | 0)[] = [
+      n('missing_folder') && { section: 'red', kind: 'missing_folder', action: 'recreate', name: `Recreate ${s(n('missing_folder'), 'missing folder')} and their markers`, note: 'never Forget', on: true },
+      n('external_move') && { section: 'amber', kind: 'external_move', action: 'keep', name: `Keep ${s(n('external_move'), 'change')} made outside the app`, note: 'nothing moves', on: true },
+      n('nested_in_album') && { section: 'amber', kind: 'nested_in_album', action: 'move-out', name: `Move ${s(n('nested_in_album'), 'folder')} out of albums`, note: 'next to the album', on: true },
+      n('unmarked_folder') && { section: 'amber', kind: 'unmarked_folder', action: 'confirm', name: `Confirm ${s(n('unmarked_folder'), 'guessed folder kind')}`, note: 'markers written', on: true },
+      loose && { section: 'amber', kind: 'loose_files', action: 'new-album', name: `Put loose images into ${s(loose, 'new album')}`, note: 'named below', on: true },
+      clearDups && { section: 'blue', kind: 'duplicate', action: 'keep-one', name: `Keep the suggested copy in ${s(clearDups, 'duplicate group')}`, note: 'others → Recycle Bin', on: false },
+    ];
     const skipped = n('missing_file') + n('ambiguous_move') + n('unsupported') + n('wrong_type') + (n('loose_files') - loose);
-    return { lines, skipped };
+    return { lines: lines.filter((x): x is ApplyLine => !!x), skipped };
   });
 
-  async function applyAll() {
-    if (!report) return;
-    const p = plan;
-    const ok = await ask({
-      tone: 'normal',
-      title: 'Apply to all?',
-      sub: 'red and amber · each item’s default fix',
-      body: `${p.lines.length ? 'This will:' : 'Nothing here has a default fix.'}${p.skipped ? ` ${fmt(p.skipped)} ${p.skipped === 1 ? 'item needs' : 'items need'} your choice and will be skipped.` : ''} Blue items are left alone.`,
-      items: p.lines.map((l) => ({ name: l.name, note: l.note })),
-      button: p.lines.length ? 'Apply to all' : '',
-      refusal: p.lines.length === 0,
-      foot: 'No Undo for the whole batch · anything recycled is in the Recycle Bin',
-    });
-    if (!ok) return;
+  let applying = $state(false);
+
+  async function applyAll(steps: ApplyLine[], albumName: string | undefined) {
+    applying = false;
     try {
-      reportResult(await unwrap(client.api.health['fix-everything'].$post()));
+      const r = await unwrap(client.api.health['fix-everything'].$post({ json: { albumName, steps: steps.map((l) => ({ kind: l.kind, action: l.action as 'keep' })) } }));
+      reportResult(r, steps.some((l) => l.kind === 'duplicate'));
     } catch (err) {
       toastError(err);
     }
@@ -79,11 +75,14 @@
   </div>
   <div class="actions">
     <button class="btn" onclick={rescan} disabled={scanning}>{scanning ? 'Scanning…' : '↻ Rescan'}</button>
-    {#if report && (report.summary.error || report.summary.warning)}
-      <button class="btn primary" onclick={applyAll} disabled={scanning}>Apply to all…</button>
+    {#if report && (report.summary.error || report.summary.warning || plan.lines.length)}
+      <button class="btn primary" onclick={() => (applying = true)} disabled={scanning}>Apply to all…</button>
     {/if}
   </div>
 </header>
+{#if applying}
+  <ApplyAllDialog lines={plan.lines} skipped={plan.skipped} onapply={applyAll} onclose={() => (applying = false)} />
+{/if}
 {#if scanning}
   <div class="scanning">
     <div class="bar"><div></div></div>

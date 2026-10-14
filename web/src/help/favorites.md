@@ -6,3 +6,4 @@ Every starred image in your library, wherever it lives, in one grid — with the
 - Starring doesn't move or copy anything: the image stays in its album.
 - Starred images are protected — they can't be recycled until you unstar them.
 - **Group: Collection** splits the grid by the collections the images are on.
+- **Keyboard:** the arrows move a white ring between frames (it shows after the first key and hides when you move the mouse); Enter opens, Space selects, Shift + arrows extends the selection, Backspace goes up a level.

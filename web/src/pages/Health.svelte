@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { HealthReport } from '@media-view/shared';
+  import { navItems } from '../kbd.svelte.ts';
   import { client, unwrap } from '../api.ts';
   import HealthHeader from '../components/HealthHeader.svelte';
   import { groupsOf, reviewHref, SECTIONS, type Group, type Section } from '../health.ts';
@@ -7,7 +8,7 @@
   import { href, navigate } from '../router.svelte.ts';
   import { ask } from '../stores/confirm.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
-  import { applyToKind, when } from '../stores/health.svelte.ts';
+  import { runGroupFix, when } from '../stores/health.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
 
@@ -35,6 +36,7 @@
     red: groups.filter((g) => g.section === 'red').reduce((n, g) => n + g.issues.length, 0),
     amber: groups.filter((g) => g.section === 'amber').reduce((n, g) => n + g.issues.length, 0),
     blue: groups.filter((g) => g.section === 'blue').length,
+    white: groups.filter((g) => g.section === 'white').reduce((n, g) => n + (g.key === 'untracked' ? report?.untracked.length ?? 0 : g.issues.length), 0),
   });
   const allClear = $derived(report !== null && counts.red + counts.amber + counts.blue === 0);
   const sub = (s: Section) => {
@@ -48,12 +50,13 @@
     return gs.length ? gs.map(short).join(' · ') : '✓ all clear';
   };
 
+  /** The group's main fix (or its first other one), asked first. */
+  const mainFix = (g: Group) => g.fix ?? g.more?.[0] ?? null;
+
   async function groupFix(g: Group) {
     if (g.key === 'thumbnails') return cleanThumbs();
-    if (!g.fix) return;
-    const ok = await ask({ tone: 'normal', title: `${g.fix.label}?`, sub: g.title, body: `${g.fix.does}.`, button: g.fix.label, foot: 'Each fix is logged' });
-    if (!ok) return;
-    for (const step of g.fix.steps) await applyToKind(step.kind, step.action);
+    const f = mainFix(g);
+    if (f) await runGroupFix(f, g.title);
   }
 
   async function cleanThumbs() {
@@ -73,7 +76,8 @@
 
   async function openLogs() {
     try {
-      await unwrap(client.api.system['open-logs'].$post());
+      const r = await unwrap(client.api.system['open-logs'].$post());
+      if (!r.opened) toast('There’s no logs folder yet — it’s made with the first log line.');
     } catch (err) {
       toastError(err);
     }
@@ -93,7 +97,7 @@
   }
 </script>
 
-<div class="health-page">
+<div class="health-page" use:navItems={{ kind: 'rows' }}>
   <HealthHeader {report} />
 
   {#if report && allClear && !scanning}
@@ -103,19 +107,26 @@
         <p>Every folder and image on disk matches what the app remembers. Nothing is missing, nothing needs a decision, and the badge in the top bar is gone. Changes you make in Explorer show up here the next time the app looks.</p>
         <span class="mono-note">last scan {when(report.lastScan)}</span>
       </div>
-      <div class="tally">
-        <div><span class="sq" style:background="var(--red)"></span>Missing<span>0</span></div>
-        <div><span class="sq" style:background="var(--amber)"></span>Needs a decision<span>0</span></div>
-        <div><span class="sq" style:background="var(--blue)"></span>Just so you know<span>0</span></div>
-        <div><span class="sq" style:background="var(--surface2)"></span>Logs<span>{fmt(report.logs.files)} files · {formatSize(report.logs.bytes)}</span></div>
+      <div class="side">
+        <div class="tally">
+          <div><span class="sq" style:background="var(--red)"></span>Missing<span>0</span></div>
+          <div><span class="sq" style:background="var(--amber)"></span>Needs a decision<span>0</span></div>
+          <div><span class="sq" style:background="var(--blue)"></span>Just so you know<span>0</span></div>
+          <div><span class="sq" style:background="var(--surface2)"></span>Logs<span>{fmt(report.logs.files)} files · {formatSize(report.logs.bytes)}</span></div>
+        </div>
+        <div class="log-acts">
+          <button class="gbtn" onclick={openLogs}>Open logs folder</button>
+          <button class="gbtn red" onclick={clearLogs} disabled={report.logs.files === 0}>Clear logs</button>
+        </div>
       </div>
     </div>
   {:else if report}
     <div class="body" class:dim={scanning}>
       <div class="summary">
-        <div class="card" style:--c="var(--red)"><div class="n-row"><span class="n">{fmt(counts.red)}</span><span class="lbl">missing</span></div><span class="sub">{sub('red')}</span><span class="foot">counted in the badge</span></div>
-        <div class="card" style:--c="var(--amber)"><div class="n-row"><span class="n">{fmt(counts.amber)}</span><span class="lbl">need a decision</span></div><span class="sub">{sub('amber')}</span><span class="foot">counted in the badge</span></div>
-        <div class="card" style:--c="var(--blue)"><div class="n-row"><span class="n">{fmt(counts.blue)}</span><span class="lbl">just so you know</span></div><span class="sub">{sub('blue')}</span><span class="foot">not counted · a blue dot when only these are left</span></div>
+        <a class="card" href={href('/health/review/red')} title="Review the missing items" style:--c="var(--red)"><div class="n-row"><span class="n">{fmt(counts.red)}</span><span class="lbl">missing</span></div><span class="sub">{sub('red')}</span><span class="foot">counted in the badge</span></a>
+        <a class="card" href={href('/health/review/amber')} title="Review the decisions" style:--c="var(--amber)"><div class="n-row"><span class="n">{fmt(counts.amber)}</span><span class="lbl">need a decision</span></div><span class="sub">{sub('amber')}</span><span class="foot">counted in the badge</span></a>
+        <a class="card" href={href('/health/review/blue')} title="Review what’s for your information" style:--c="var(--blue)"><div class="n-row"><span class="n">{fmt(counts.blue)}</span><span class="lbl">just so you know</span></div><span class="sub">{sub('blue')}</span><span class="foot">not counted · a blue dot when only these are left</span></a>
+        <a class="card notices" href={href('/health/review/white')} title="Review the notices" style:--c="var(--text)"><span class="n">{fmt(counts.white)}</span><span class="lbl">notices</span><span class="foot">never counted</span></a>
       </div>
 
       {#each bySection as s (s.section)}
@@ -124,19 +135,23 @@
           <div class="sec-titles"><span class="sec-title">{s.title}</span><span class="sec-sub">{s.sub}</span></div>
         </div>
         {#each s.groups as g (g.key)}
-          <div class="group">
+          <div class="group" data-nav>
             <span class="stripe" style:background={s.color}></span>
-            <div class="g-title"><span class="g-name">{g.title}</span><span class="g-count" style:color={s.section === 'white' ? 'var(--text2)' : s.color}>{g.count}</span></div>
+            <div class="g-title">
+              {#if g.key === 'thumbnails'}<span class="g-name">{g.title}</span>
+              {:else}<a class="g-name" href={href(reviewHref(g))} title="Review {g.title.toLowerCase()}">{g.title}</a>{/if}
+              <span class="g-count" style:color={s.section === 'white' ? 'var(--text2)' : s.color}>{g.count}</span>
+            </div>
             <div class="g-sample"><span>{g.sample}</span>{#if g.need}<span class="need">needs your choice</span>{/if}</div>
             <div class="g-acts">
               {#if g.key === 'untagged'}
                 <button class="gbtn" onclick={() => navigate('/health/untagged/grid')}>Open as grid</button>
               {:else if g.key === 'thumbnails'}
                 <button class="gbtn pri" disabled={scanning} onclick={cleanThumbs}>Delete</button>
-              {:else if g.fix}
-                <button class="gbtn pri" disabled={scanning} onclick={() => groupFix(g)}>{g.fix.label}</button>
+              {:else if mainFix(g)}
+                <button class="gbtn pri" disabled={scanning} onclick={() => groupFix(g)}>{mainFix(g)!.label}</button>
               {/if}
-              {#if g.key !== 'thumbnails'}<a class="gbtn" href={href(reviewHref(g))}>Review ▸</a>{/if}
+              {#if g.key !== 'thumbnails'}<a class="gbtn" data-nav-open href={href(reviewHref(g))}>Review ▸</a>{/if}
             </div>
           </div>
         {/each}
@@ -175,8 +190,12 @@
   .body { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
   .body.dim { opacity: 0.4; pointer-events: none; }
 
-  .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--line); flex: none; }
-  .card { display: flex; flex-direction: column; gap: 6px; padding: 16px 24px 16px 40px; border-right: 1px solid var(--line); box-shadow: inset 0 4px 0 var(--c); }
+  .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; border-bottom: 1px solid var(--line); flex: none; }
+  .card { display: flex; flex-direction: column; gap: 6px; padding: 16px 24px 16px 40px; border-right: 1px solid var(--line); box-shadow: inset 0 4px 0 var(--c); color: var(--text); text-decoration: none; }
+  .card:hover { background: var(--surface); }
+  .card.notices { justify-content: space-between; min-width: 150px; padding: 16px 24px; border-right: none; }
+  .notices .n { color: var(--text); }
+  .notices .lbl { font-size: 16px; }
   .n-row { display: flex; align-items: baseline; gap: 12px; }
   .n { font: 700 56px/0.9 var(--font-display); color: var(--c); }
   .lbl { font: 700 20px/1 var(--font-display); text-transform: uppercase; }
@@ -194,7 +213,8 @@
   .group { display: grid; grid-template-columns: 4px 290px minmax(0, 1fr) auto; gap: 0 20px; align-items: center; min-height: 60px; padding-right: 40px; border-bottom: 1px solid var(--line); flex: none; }
   .stripe { align-self: stretch; }
   .g-title { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-  .g-name { font: 700 22px/1 var(--font-display); text-transform: uppercase; }
+  .g-name { font: 700 22px/1 var(--font-display); text-transform: uppercase; color: var(--text); text-decoration: none; }
+  a.g-name:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
   .g-count { font: 700 12px var(--font-mono); white-space: nowrap; }
   .g-sample { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .g-sample > span:first-child { font: 12px var(--font-mono); color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -202,6 +222,8 @@
   .g-acts { display: flex; gap: 6px; }
   .gbtn { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 14px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; text-decoration: none; cursor: pointer; }
   .gbtn:hover:not(:disabled) { border-color: var(--text); }
+  /* The focused group's Enter target (design M8 · 1D). */
+  :global([data-input='kbd']) .group:global(.is-focused) .gbtn[data-nav-open] { border-color: var(--text); }
   .gbtn.pri { border-color: transparent; background: var(--accent); color: var(--accent-ink); }
   .gbtn.red { border-color: var(--red); color: var(--red); }
   .gbtn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -218,6 +240,8 @@
   .big { font-size: clamp(72px, 9vw, 120px); line-height: 0.82; }
   .pitch p { margin: 0; max-width: 600px; font-size: 16px; line-height: 1.55; color: var(--text2); text-wrap: pretty; }
   .mono-note { font: 11.5px var(--font-mono); color: var(--text2); text-transform: uppercase; }
+  .side { display: flex; flex-direction: column; gap: 10px; }
+  .side .log-acts { justify-content: flex-end; padding-right: 0; }
   .tally { display: flex; flex-direction: column; border: 1px solid var(--line); font: 12px var(--font-mono); text-transform: uppercase; }
   .tally div { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
   .tally div:last-child { border-bottom: none; }

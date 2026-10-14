@@ -121,6 +121,8 @@ media-view/
 │       ├── stores/
 │       ├── themes/           # darkroom (v1); more per docs/styles.md
 │       └── public/styles/    # self-contained style mockups for Check styles
+├── scripts/
+│   └── package.mjs           # npm run package: the portable zip (§14.1) → release/
 └── docs/
     ├── user-guide/
     ├── technical/
@@ -496,13 +498,13 @@ Watcher events caused by the app's own operations are suppressed through a short
 | `missing_file`       | error    | file id                 | Locate… · Forget                                      |
 | `ambiguous_move`     | warning  | path                    | Pick the matching record (it inherits that record's metadata) · Keep as new file |
 | `external_move`      | warning  | folder id, or old→new folder pair for files | Keep (acknowledge) · Undo (move back on disk, if the old location is free) |
-| `loose_files`        | warning  | parent folder           | Move into a new album · Move into an existing album   |
+| `loose_files`        | warning  | parent folder           | Move into a new album (named) · into the Inbox · into an existing album · when the folder holds only images: Make it an album (in place) · Move as album (into a category / sub-category; the only way for a top-level folder) |
 | `nested_in_album`    | warning  | path                    | Move out to the album's parent · Convert album        |
 | `unmarked_folder`    | warning  | path                    | Mark as category / sub-category / album               |
 | `wrong_type`         | warning  | path                    | Recycle · Ignore (→ *Not tracked*). Videos, audio and texts never get here: the scan moves them to their module root by itself (see `moved_file`) |
 | `unsupported`        | warning  | path                    | Ignore (→ *Not tracked*) · Record (→ the hidden Invalid folder) |
 | `moved_file`         | notice   | path                    | OK (dismiss)                                          |
-| `duplicate`          | info     | hash                    | Keep one, recycle the others · Merge into one (see below) |
+| `duplicate`          | info     | hash                    | Keep one, recycle the others · Merge into one (see below) · Keep all copies (remembered in `duplicates_kept`, migration 006: the group stays quiet while it holds only those copies; a new copy raises it again; Undo forgets it) |
 | `orphan_thumbs`      | info     | —                       | Delete                                                |
 
 **Untagged images** (`untagged`, info) are not stored in `health_issues`: a library can hold tens of thousands of them, so the item is computed live — images that are not in the Inbox, not recycled or missing, have no tags, and haven't been set aside with *Leave untagged* — grouped by album on the page. It absorbs the old "New images" idea: images the **scan** found (not imported through the app) carry a **NEW** mark until they're tagged or marked as seen, and a chip filters the item to *New from outside*. Two separate actions, for one image or a selection: **Mark as seen** clears the NEW mark (the image stays on the untagged list); **Leave untagged** hides it from the item (tagging the image clears that, so if its tags are later all removed it shows up again). From the item: **Open as grid** (a pseudo album of exactly these images, with the usual grid, selection bar and bulk *Tags…*), or tag the listed images one by one on the Health page itself (each row has a tag field; a tagged image drops off). Migration 004 adds `files.origin` (`'app'` | `'scan'`), `files.seen` and `files.untagged_ok`.
@@ -535,7 +537,7 @@ The app's own disk changes are registered in `lib/expected.ts` (path prefixes, ~
 
 ### 8.1 Supported types
 
-Images: `jpg jpeg jfif png gif webp svg avif` (JFIF is JPEG; served as `image/jpeg`). Detected by extension, confirmed by `sharp` when the thumbnail is made (a `.png` that isn't an image becomes a `wrong_type` issue on `file:<id>`, which rescans leave alone). Windows' own `desktop.ini` and `Thumbs.db` are ignored.
+Images: `jpg jpeg jfif jpe png gif webp svg svgz avif bmp ico tif tiff` (milestone 8 added `.jpe`, `.svgz`, BMP, ICO and TIFF). JFIF and JPE are JPEG, served as `image/jpeg`; `.svgz` is a gzipped SVG, served as `image/svg+xml` with `Content-Encoding: gzip`. `formatOf(ext)` (shared) gives the format an image is sorted and labelled by: `jpg jpeg jfif jpe` → *JPG*, `tif` → *TIFF*, `svgz` → *SVG*. A file the user chose to ignore (*Not tracked*) in a format that became supported is tracked again by the next scan. Detected by extension, confirmed by `sharp` when the thumbnail is made (a `.png` that isn't an image becomes a `wrong_type` issue on `file:<id>`, which rescans leave alone). Windows' own `desktop.ini` and `Thumbs.db` are ignored.
 
 ### 8.2 Hashing
 
@@ -553,11 +555,11 @@ Two entry points, same result — files copied into the target album (or the Inb
 Each file is streamed to `.mediaview/tmp/`, hashed on the way, then:
 
 1. **Rejected** by name when it isn't a supported image, with a reason: video / audio ("will have their own module"), known unsupported image formats ("Unsupported format (PSD)…"), anything else ("Not an image.").
-2. **Skipped** when an identical image (same hash) is already **in the target album**. An identical image elsewhere is imported normally and shows up as a `duplicate`.
-3. **Rejected** when it can't be read (`sharp` metadata; SVGs must contain `<svg`): "Couldn't read the file — it may be damaged or still downloading." The panel offers *Retry unreadable*.
+2. **Skipped** when an identical image (same hash) is already **in the target album** — the result still carries that image's `fileId`, so a drop on a collection adds it. An identical image elsewhere is imported normally and shows up as a `duplicate`.
+3. **Rejected** when it can't be read (`sharp` metadata — BMP and ICO through the app's decoder, §9; SVGs must contain `<svg`, unzipped first for `.svgz`): "Couldn't read the file — it may be damaged or still downloading." The panel offers *Retry unreadable*.
 4. Moved into the album; a taken name becomes `name (1).ext` (**renamed**). The row gets the hash, dimensions and `added_at` = now.
 
-Where drops go: on an album page or album card → that album; on the Library page → the Inbox; on a category / sub-category page, loose images go to the Inbox and **each dropped folder becomes a new album there** with its images. Dropped folders are read recursively and flattened. The client logs a summary (`POST /api/files/import-done`).
+Where drops go: on an album page or album card → that album; on the Library page → the Inbox; on a category / sub-category page, loose images go to the Inbox and **each dropped folder becomes a new album there** with its images; on a **collection page** → the Inbox, and once the import ends (or is cancelled) the imported images are added to the end of the list (`POST /api/collections/:id/items`). Dropped folders are read recursively and flattened. The client logs a summary (`POST /api/files/import-done`).
 
 ### 8.4 Move / copy / rename
 
@@ -573,7 +575,7 @@ Where drops go: on an album page or album card → that album; on the Library pa
 
 ### 8.5 Media serving
 
-- `GET /media/file/:id` — the original, with `Range` support (required for videos later), `Cache-Control: private, max-age` and `ETag` from the hash.
+- `GET /media/file/:id` — the original, with `Range` support (required for videos later), `Cache-Control: private, max-age` and `ETag` from the hash. For TIFF it's the **viewer copy** instead (§9), made on the spot if it isn't ready. `.svgz` is sent without ranges (they'd count compressed bytes).
 - `GET /media/thumb/:id` — the thumbnail (§9); falls back to generating on demand.
 - SVGs are served with `Content-Security-Policy: sandbox` to neutralize embedded scripts.
 
@@ -592,7 +594,9 @@ Recycling moves the file or folder into `.mediaview/recycle-bin/<recycle id>/<na
 - Generated by `sharp`: longest side **400 px**, WebP quality 80. Animated GIF/WebP → first frame. SVG → served as-is, no thumbnail.
 - **Content-addressed:** `.mediaview/thumbnails/<hash[0..1]>/<hash>.webp`. Thumbnails survive moves and renames, and duplicates share one thumbnail. Until a file is hashed, a temporary thumbnail is keyed by file id and renamed once the hash is known.
 - A priority queue with concurrency `max(2, cpus - 2)`: items visible on screen are requested first (the grid reports visible ids), then the background backlog.
-- `orphan_thumbs` cleanup deletes thumbnails whose hash no longer belongs to any file.
+- `orphan_thumbs` cleanup deletes thumbnails — and viewer copies — whose hash no longer belongs to any file.
+- **BMP and ICO**: `sharp` reads neither, so `lib/bitmap.ts` decodes them to RGBA first (`lib/image.ts` → `openImage()` hands `sharp` the right input everywhere): BMP 1/2/4/8/16/24/32-bit, RLE4/RLE8, bit fields, bottom-up or top-down; an icon's largest image, with its AND mask (or the PNG it holds, as is). A file that isn't what its name says falls back to `sharp`.
+- **TIFF viewer copies** (`services/previews.ts`): browsers can't show TIFF, so the viewer gets a WebP (quality 90, longest side up to **8192 px**) at `.mediaview/previews/<hash[0..1]>/<hash>.webp`, content-addressed like thumbnails (keyed by id until hashed, then adopted). They're made **ahead of time**: after hashing, the hasher kicks a background pass that converts missing copies one at a time, reporting `{ type: 'converting', done, total }` events (at most one a second; `total: 0` when finished) and `scan.converting` in the library info — the top bar shows *TIFF 3 / 12*. Opening a TIFF before its copy exists makes it right away.
 
 ---
 
@@ -734,6 +738,7 @@ LIMIT :limit OFFSET :offset;
 - **Scope**: the same endpoint serves album pages, "View all images", Favorites, tag galleries and global search by adding a scope condition (folder subtree, favorited, collection membership).
 - **Paging**: server-side, 200 items per page. This replaces the MVP's "load everything and filter in the browser", which doesn't scale to the new target.
 - **Random order** must be stable across pages: `ORDER BY (f.id * :seed) % 2147483647`, with a new seed per visit.
+- **By format** (milestone 8): the extension folded as `formatOf` (`jpeg jfif jpe` → `jpg`, `tif` → `tiff`, `svgz` → `svg`), then the file name; both follow the direction.
 - **Counts per tag** for the tag sidebar come from the same filtered set (`GROUP BY tag_id` over the matching file ids), capped to the top 100.
 
 ### 11.2a Where searches run (milestone 4 decisions)
@@ -744,7 +749,11 @@ LIMIT :limit OFFSET :offset;
 - **Ctrl + click on a tag** opens its wiki page (milestone 5); middle-click opens it in a new tab.
 - **Deleting a tag** removes it from every image, after a plain confirmation showing how many images use it.
 
-### 11.3 Group by collection
+### 11.3 Group by collection (and by format)
+
+**By format** (milestone 8) is simpler: `byFormat=1` on any list query puts the format first in the order (`FORMAT_SQL` — the extension folded as `formatOf` — a→z, then the page's sort), and `GET /api/files/format-counts` gives the sections (`{ formats: [{ format, count }] }`). Each image appears once, so the list is one order: `ids`, `locate` and `random` take the same flag, and the viewer opened from the grid steps through it (`byFormat` travels in the viewer URL). The grid's Group setting is `none | collection | format` (`grid.group`; an old `true` reads as `collection`).
+
+**By collection:**
 
 With `group=collection`, the same filtered set is joined with collection membership, so an image in two collections yields two rows and images in none yield one row with a null collection:
 
@@ -797,7 +806,7 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 
 | Method | Path                           | Purpose                                                    |
 |--------|--------------------------------|------------------------------------------------------------|
-| GET    | `/api/files`                   | Query: `q, folder, recursive, favorites, name, collection, sort, order, group, seed, offset, limit` (≤ 500, default 200) → `{ items, total }` |
+| GET    | `/api/files`                   | Query: `q, folder, recursive, favorites, name, collection, sort, order, group, seed, offset, limit` (≤ 500, default 200) → `{ items, total }`. `sort`: `name modified added size format random position` |
 | GET    | `/api/files/ids`               | Same filters → every id in order (Select all)              |
 | GET    | `/api/files/locate`            | Same filters + `id` → `{ position: { index, total } }` (viewer prev / next) |
 | POST   | `/api/files/favorite`          | Bulk `{ ids, favorited }`                                  |
@@ -815,7 +824,7 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 | POST   | `/api/files/import-done`       | Import summary for the log                                 |
 | POST   | `/api/files/tags`              | Bulk `{ ids, add: [...], remove: [...] }`                  |
 | PUT    | `/api/files/:id/tags`          | Replace manual tags `{ tags: [...] }`                      |
-| GET    | `/api/files/random`            | Same filters as the list, plus `exclude`                   |
+| GET    | `/api/files/random`            | Same filters as the list, plus `exclude` — the viewer's Random and the top bar's (`stores/random.svelte.ts`: pages with a list register it; else the whole library) |
 
 ### 12.4 Tags
 
@@ -888,8 +897,9 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 | POST   | `/api/health/thumbnails/clean`     | Delete orphan thumbnails                        |
 | DELETE | `/api/health/logs`                 | Clear logs                                      |
 | POST   | `/api/health/:id/fix`              | Apply a fix `{ action, … }` (`FixAction` in `shared/types.ts`); dismissing fixes return a `reopen` token |
-| POST   | `/api/health/fix-all`              | `{ kind, action }`: the same fix on every issue of a kind; ones that need a choice are skipped and counted |
-| POST   | `/api/health/reopen`               | Undo a dismissing fix (Keep, Keep as new, Confirm) |
+| POST   | `/api/health/fix-all`              | `{ kind, action, albumName? }`: the same fix on every issue of a kind; ones that need a choice are skipped and counted. Duplicates: `keep-one` (clear groups only), `merge` (into the suggested copy, or the oldest), `keep-all` |
+| POST   | `/api/health/fix-everything`       | Apply to all `{ steps?: { kind, action }[], albumName? }`: the chosen steps (default: red and amber, each kind's default fix); `albumName` names new albums of loose images |
+| POST   | `/api/health/reopen`               | Undo a dismissing fix (Keep, Keep as new, Confirm, Keep all copies) |
 | GET    | `/api/recycle`                     | Recycled items                                  |
 | POST   | `/api/recycle/:id/restore`         | Restore `{ targetFolderId? }`                   |
 | POST   | `/api/recycle/delete`              | Delete permanently `{ ids }`                    |
@@ -951,7 +961,7 @@ Hash-based routing (`#/…`), so the same build works from `http://localhost` an
 
 ### 13.3 State
 
-Svelte 5 runes. Server data is fetched per page through the typed `hc` client; a small cache keyed by request avoids refetching on back-navigation. Global state is limited to: current library, tag types (with fields), theme, selection. Live updates (`/api/events`) invalidate the affected caches.
+Svelte 5 runes. Less-used pages and dialogs (Library Health, wiki, tag types, Recycle Bin, Settings, Welcome, Help, Check styles) load on first use in their own chunks (`components/Lazy.svelte`); the main bundle is about 300 KB. **Preferences** (`prefs.ts`, localStorage): `grid.cols / sort / order / group / index` — what grids open with, changed by the grids and by Settings → Grids — and `viewer.interval / loop / shuffle` for the slideshow (Settings → Slideshow, and the viewer's own controls). Shuffle shows each image once per round, in random order (`/api/files/ids`, shuffled client-side); with loop off the slideshow stops at the end. Server data is fetched per page through the typed `hc` client; a small cache keyed by request avoids refetching on back-navigation. Global state is limited to: current library, tag types (with fields), theme, selection. Live updates (`/api/events`) invalidate the affected caches.
 
 ### 13.4 Themes
 
@@ -966,6 +976,7 @@ Tag type colors come from the DB and are applied as inline custom properties so 
 ### 13.5 Help and shortcuts
 
 - **Keymap registry.** Every page registers its shortcuts in one place (`keymap.ts`: key, description, handler, scope). The same registry dispatches key events *and* produces the *Shortcuts* tab, so help can never drift from behaviour. `F1` and the `?` button open the dialog on every page.
+- **Keyboard cursor** (milestone 8; design `docs/Design/milestone-8-keyboard-focus/`). `kbd.svelte.ts` keeps `<html data-input="kbd|mouse">`: a navigation key (arrows, Home/End, PgUp/PgDn, Tab) sets `kbd`, a pointer move onto a different element (not a synthetic move from scrolling) or a click sets `mouse`. `base.css` draws the ring only under `kbd`: 2 px text colour with a 3 px bg2 gap (`.is-focused`, outset 3 px), a compact variant for buttons and `:focus-visible` (2 px), and an inset one for rows (`.kb-row`). The remembered place survives the ring hiding: grids keep a flat index (`ImageBrowser.svelte`, keyed by the list's query string, which the viewer also updates so *back* lands on the image), card pages and lists use the `use:navItems` action (`[data-nav]` items; `[data-nav-open]`, `[data-nav-select]`, `[data-nav-delete]` say what Enter, Space and Delete do), joined button rows use `use:segmented` (one Tab stop, ← → inside). Backspace = up one level: pages that know their parent set `up.path` (`useUp`), the rest follow `routeUp()` in the router. A one-time hint (`KeyHint.svelte`, `kbd.hinted.<context>` in localStorage) lists the keys the first time a key moves the ring in a grid, a card page or the viewer's strip.
 - **This page** content lives in `web/src/help/<page>.md` (one Markdown file per route), rendered with the same Markdown pipeline as the wiki. Its text is kept in sync with the corresponding user guide section.
 - **About** comes from `/api/system/about`: version from `package.json`, release date injected at build time, credits (*Felipe, with Claude*), and the supported formats per module.
 
@@ -980,6 +991,16 @@ The design keeps the door open:
 - `system/*` endpoints get Electron implementations (`dialog.showOpenDialog`, `shell.openPath`) behind the same service interface; the PowerShell versions remain for the browser mode.
 - The app config moves to Electron's `app.getPath('userData')`.
 
+### 14.1 Before Electron: the portable zip
+
+`npm run package` (`scripts/package.mjs`, Windows x64 only) writes `release\media-view-<version>-win-x64.zip`:
+
+- `node.exe` — the **same Node.js version the script runs on**, so the native modules copied from `node_modules` match its ABI. Downloaded once from nodejs.org into `release\.cache`, checked against `SHASUMS256.txt`; the zip itself never needs the internet. Its licence goes in as `node-LICENSE.txt`.
+- `app/server.mjs` — the server bundled by esbuild (ESM, `__BUNDLED__` and `NODE_ENV=production` defined; a `require` shim for CommonJS dependencies). `lib/app-dir.ts` finds the app's own files from there: `app/web/dist`, `app/migrations`, `app/package.json` (from source, the repo).
+- `app/node_modules` — only the native modules (`better-sqlite3` without its sources, `sharp` with `@img/sharp-win32-x64`) and what they need at run time.
+- `start.bat` sets `MEDIA_VIEW_OPEN=1` and runs the server in its own window (closing it stops the app; on an error it pauses so the message can be read). With `MEDIA_VIEW_OPEN` the server opens the browser once it listens; if the port is taken by a running media-view (`/api/system/about`) it opens that one and exits, else it says which setting to change.
+- About 43 MB zipped. Libraries and `%APPDATA%\media-view` stay outside it.
+
 ---
 
 ## 15. Security (local-only still matters)
@@ -987,7 +1008,7 @@ The design keeps the door open:
 - Bind to `127.0.0.1`; reject requests whose `Host` isn't `localhost`/`127.0.0.1` (DNS-rebinding protection) and whose `Origin` isn't the app's own.
 - Every path is derived from DB ids and checked to be inside the library root. The only client-supplied paths are library locations and file-picker results, validated before use.
 - Markdown is sanitized; SVGs are sandboxed (§8.5).
-- The `open-with` helper passes the path as an argument, never through string-built shell commands.
+- The `open-with` helper runs `rundll32` directly, never through a shell. `OpenAs_RunDLL` reads the rest of the command line as the path and fails silently on a quoted one, so the path is passed verbatim, unquoted (`windowsVerbatimArguments`; Windows paths can't contain quotes).
 
 ---
 
@@ -1016,7 +1037,7 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 5. **Wiki** *(done)* — tag pages, descriptions, custom fields, related tags. Editing moves onto the wiki page; the Edit tag dialog stays as a shortcut. Design: `docs/Design/darkroom-milestone-5-pages/`. Decisions: one **Edit page** mode for the whole page (description, fields, cover) with Save / Discard; descriptions up to 20,000 characters; changing a tag's type lists exactly which field values would be lost before confirming; Ctrl + click and middle-click on a tag open its wiki page; **Related tags** shows the top 12.
 6. **Collections** *(done)* — collection pages, viewer navigation, bulk add, group by collection. Design: `docs/Design/media-view-project-milestone-6/`. Decisions: Collections in the top bar (between Tags and Favorites) and on the Library page next to ★ Favorites; unique names (§6.6); cover = first image unless chosen; the collection page sorts by own order (default), name or size, and drag-to-reorder works only in own order with no filter on; adding duplicates is reported; deleting offers *Undo*; group by collection on every image grid (§11.3); `@name` in the search syntax (§11.1), with a Collections section at the top of the index that filters like the tag sections (↗ opens the page); index sections collapse; the tag wiki lists the collections holding the tag's images (under Images; *See all* expands in place). Removing an image from the collection the viewer is browsing shows the next one, like Move and Recycle. *Cover of ▸* lists the current collection in the viewer opened from it and on the collection page. Dropping files from Explorer onto a collection page is left for later.
 7. **Library Health** *(built; design `docs/Design/media-view-project-milestone-7/`)* — all issue kinds and fixes, severity indicator, external-move keep/undo, logs section, untagged images, duplicates (§7.4).
-8. **Polish** — favorites, random, settings, per-page help content, performance pass at 50k images. **More formats:** TIFF (the viewer shows a converted copy; browsers can't display TIFF), `.jpe`, `.svgz`, BMP and ICO (browsers show them; thumbnails need a small decoder). **Sort by format** (file type, then name), with a type label on every frame when sorted that way, like the GIF badge. **`npm run package`**: builds the web app and assembles a portable zip — the app, a portable `node.exe` (Node 24, Windows x64) and a `start.bat` that starts the server and opens the browser — so it runs on any Windows 10/11 64-bit PC with nothing installed, offline. Only what's needed to run goes in (no dev tools); libraries and `%APPDATA%\media-view` settings stay outside it. Also (from tester feedback): **keyboard navigation** through most of the app, Explorer-style (arrows move between cards and grid frames, Enter opens, Backspace goes up a level), and **dropping files from Explorer onto a collection page** (they go to the Inbox and are added to the list).
+8. **Polish** *(in progress — done: formats, sort by format, Random in the top bar, Settings · Grids and Slideshow, drop on a collection, bundle split, `npm run package`, keyboard navigation (design `docs/Design/milestone-8-keyboard-focus/`); to do: the performance pass on a real library of about 10,000 items)* — favorites, random, settings, per-page help content, performance pass at 50k images. **More formats:** TIFF (the viewer shows a converted copy; browsers can't display TIFF), `.jpe`, `.svgz`, BMP and ICO (browsers show them; thumbnails need a small decoder). **Sort by format** (file type, then name), with a type label on every frame when sorted that way, like the GIF badge. **`npm run package`**: builds the web app and assembles a portable zip — the app, a portable `node.exe` (Node 24, Windows x64) and a `start.bat` that starts the server and opens the browser — so it runs on any Windows 10/11 64-bit PC with nothing installed, offline. Only what's needed to run goes in (no dev tools); libraries and `%APPDATA%\media-view` settings stay outside it. Also (from tester feedback): **keyboard navigation** through most of the app, Explorer-style (arrows move between cards and grid frames, Enter opens, Backspace goes up a level), and **dropping files from Explorer onto a collection page** (they go to the Inbox and are added to the list).
 
 ---
 

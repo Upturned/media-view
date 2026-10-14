@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FileDetail, FileItem, TagRef } from '@media-view/shared';
+  import { formatOf, type FileDetail, type FileItem, type TagRef } from '@media-view/shared';
   import { onDestroy, tick, untrack } from 'svelte';
   import { ApiError, client, unwrap } from '../api.ts';
   import DescriptionEditor from '../components/DescriptionEditor.svelte';
@@ -7,7 +7,9 @@
   import TagInput from '../components/TagInput.svelte';
   import KindIcon from '../components/KindIcon.svelte';
   import Thumb from '../components/Thumb.svelte';
+  import { rememberFocus, showKeyHint } from '../kbd.svelte.ts';
   import { registerKeys } from '../keymap.svelte.ts';
+  import { INTERVALS, pref, store } from '../prefs.ts';
   import { fileUrl, fmt, formatDate, formatSize, fromParams, toParams, viewerHref, type ListQuery } from '../media.ts';
   import { folderHref, goBack, href, navigate, router } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
@@ -63,32 +65,68 @@
       });
   });
 
+  /**
+   * The image on screen left the list it was opened from (tagged while browsing Untagged, unstarred
+   * in Favorites…): it keeps its place in the strip, dimmed, so stepping carries on from there
+   * (like the dimmed images in the untagged grid). `index` is its place in the list as shown.
+   */
+  let left = $state<{ id: number; index: number; item: FileItem } | null>(null);
+  /** The last place the image on screen had in the list. */
+  let lastSeen: { id: number; index: number } | null = null;
+
   // Where the file sits in the list, and the film strip around it.
   $effect(() => {
     if (!file) return;
     const q = listQuery;
     const current = file.id;
+    const self: FileItem = file;
     void live.files;
     void (async () => {
       const pos = (await unwrap(client.api.files.locate.$get({ query: { ...toParams(q), id: String(current) } }))).position;
       if (current !== id) return;
-      position = pos;
-      if (!pos) {
+      if (pos) {
+        left = null;
+        lastSeen = { id: current, index: pos.index };
+        const start = Math.max(0, Math.min(pos.index - Math.floor(STRIP / 2), pos.total - STRIP));
+        const r = await unwrap(client.api.files.$get({ query: { ...toParams(q), offset: String(start), limit: String(STRIP) } }));
+        if (current !== id) return;
+        position = pos;
+        stripStart = start;
+        strip = r.items;
+        return;
+      }
+      if (lastSeen?.id !== current) {
+        // Never was in this list: nothing to step through.
+        left = null;
+        position = null;
         strip = [];
         return;
       }
-      const start = Math.max(0, Math.min(pos.index - Math.floor(STRIP / 2), pos.total - STRIP));
-      const r = await unwrap(client.api.files.$get({ query: { ...toParams(q), offset: String(start), limit: String(STRIP) } }));
+      // It left: the list as shown is the list now, with this image back at its old place.
+      const real = (await unwrap(client.api.files.$get({ query: { ...toParams(q), offset: '0', limit: '1' } }))).total;
+      const at = Math.min(lastSeen.index, real);
+      const total = real + 1;
+      const start = Math.max(0, Math.min(at - Math.floor(STRIP / 2), total - STRIP));
+      const r = real > 0 && STRIP > 1
+        ? await unwrap(client.api.files.$get({ query: { ...toParams(q), offset: String(start), limit: String(STRIP - 1) } }))
+        : { items: [] };
       if (current !== id) return;
+      const items = [...r.items];
+      items.splice(at - start, 0, self);
+      left = { id: current, index: at, item: self };
+      position = { index: at, total };
       stripStart = start;
-      strip = r.items;
+      strip = items;
     })().catch((err: Error) => toast(err.message, 'error'));
   });
 
   async function itemAt(index: number): Promise<FileItem | undefined> {
     const local = strip[index - stripStart];
     if (local) return local;
-    return (await unwrap(client.api.files.$get({ query: { ...toParams(listQuery), offset: String(index), limit: '1' } }))).items[0];
+    if (left && index === left.index) return left.item;
+    // Past the image that left, the list is one shorter than the one shown.
+    const real = left && index > left.index ? index - 1 : index;
+    return (await unwrap(client.api.files.$get({ query: { ...toParams(listQuery), offset: String(real), limit: '1' } }))).items[0];
   }
 
   function show(target: FileItem | { id: number }) {
@@ -107,8 +145,12 @@
   }
 
   async function random() {
-    const r = await unwrap(client.api.files.random.$get({ query: { ...toParams(listQuery), exclude: String(id) } }));
-    if (r.id) show({ id: r.id });
+    try {
+      const r = await unwrap(client.api.files.random.$get({ query: { ...toParams(listQuery), exclude: String(id) } }));
+      if (r.id) show({ id: r.id });
+    } catch (err) {
+      toastError(err);
+    }
   }
 
   async function toggleFavorite() {
@@ -138,6 +180,29 @@
       ...coverFolders.map((c) => ({ label: `${c.kind === 'album' ? 'Album' : c.kind === 'category' ? 'Category' : 'Sub-category'} · ${c.name}`, action: () => setCover(c.id, c.name, f.id) })),
       ...(list ? [{ label: `Collection · ${list.name}`, separated: coverFolders.length > 0, action: () => void setCollectionCover(list, f.id) }] : []),
       ...f.tags.map((t, i) => ({ label: `Tag · ${t.name}`, separated: i === 0, action: () => setTagCover(t, f.id) })),
+    ]);
+  }
+
+  /** Right-click on the image: the grid's image menu, without Open (it's open) or Select. */
+  function imageMenu(e: MouseEvent) {
+    // Fullscreen shows only the viewer, not the app's menu layer: no menu, and not the browser's either.
+    if (!file || fullscreen) return void e.preventDefault();
+    const f = file;
+    const list = fromList;
+    const where = f.folder.name;
+    openMenu(e, f.filename, [
+      { label: 'Open with…', action: () => openWith(f.id) },
+      { label: 'Tags…', separated: true, action: () => void focusTags() },
+      { label: 'Add to collection…', action: addToList },
+      ...(list ? [{ label: 'Remove from collection', action: () => void removeFromList(list) }] : []),
+      { label: 'Rename…', action: () => openOps({ kind: 'rename-file', file: f, where }) },
+      { label: 'Move…', action: move },
+      { label: 'Copy…', action: () => openOps({ kind: 'transfer', mode: 'copy', files: [f], from: where, currentFolderId: f.folder.id }) },
+      { label: f.favorited ? '☆ Unstar' : '★ Star', action: () => void toggleFavorite().catch(toastError) },
+      ...coverFolders.map((c, i) => ({ label: `Cover of ${c.name}`, separated: i === 0, action: () => setCover(c.id, c.name, f.id) })),
+      ...(list ? [{ label: `Cover of ${list.name}`, separated: coverFolders.length === 0, action: () => void setCollectionCover(list, f.id) }] : []),
+      ...f.tags.map((t, i) => ({ label: `Cover of tag ${t.name}`, separated: i === 0, action: () => void setTagCover(t, f.id) })),
+      { label: 'Recycle', danger: true, separated: true, action: () => void recycle() },
     ]);
   }
 
@@ -317,30 +382,57 @@
 
   // ─── Slideshow ─────────────────────────────────────────────────────────────
 
-  function storedInterval(): number {
-    try {
-      const v = Number(localStorage.getItem('viewer.interval'));
-      return v >= 1 && v <= 30 ? v : 5;
-    } catch {
-      return 5;
-    }
-  }
   // `play=1` (a collection's ▶ Slideshow) starts right away.
   let slideshow = $state(router.route.query.get('play') === '1');
-  let interval = $state(storedInterval());
+  let interval = $state(Math.min(30, Math.max(1, Number(pref('viewer.interval')) || 5)));
+  /** ‹ ›: the next interval of the Settings list (an old in-between value snaps to its neighbour). */
+  const stepInterval = (dir: 1 | -1) =>
+    (interval = (dir > 0 ? INTERVALS.find((s) => s > interval) : [...INTERVALS].reverse().find((s) => s < interval)) ?? interval);
+  let loop = $state(pref('viewer.loop'));
+  let shuffle = $state(pref('viewer.shuffle'));
+  $effect(() => store('viewer.interval', interval));
+  $effect(() => store('viewer.loop', loop));
+  $effect(() => store('viewer.shuffle', shuffle));
 
+  /** Shuffle: the images still to show, in random order (each once per round). */
+  let deck: number[] | null = null;
+  // A new round when the slideshow starts or shuffle is switched.
   $effect(() => {
-    try {
-      localStorage.setItem('viewer.interval', String(interval));
-    } catch {
-      // not remembered
-    }
+    void shuffle;
+    void slideshow;
+    deck = null;
   });
+
+  async function advance() {
+    if (!position) return;
+    if (!shuffle) {
+      if (position.index + 1 < position.total) return step(1);
+      if (loop) return step(1, true);
+      return endSlideshow();
+    }
+    if (!deck || deck.length === 0) {
+      if (deck && !loop) return endSlideshow();
+      const ids = (await unwrap(client.api.files.ids.$get({ query: toParams(listQuery) }))).ids.filter((n) => n !== id);
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+      }
+      deck = ids;
+      if (deck.length === 0) return endSlideshow();
+    }
+    show({ id: deck.shift()! });
+  }
+
+  function endSlideshow() {
+    slideshow = false;
+    deck = null;
+    toast('End of the slideshow — loop is off.');
+  }
 
   $effect(() => {
     if (!slideshow) return;
     void id;
-    const t = setTimeout(() => void step(1, true), interval * 1000);
+    const t = setTimeout(() => void advance().catch(toastError), interval * 1000);
     return () => clearTimeout(t);
   });
 
@@ -366,6 +458,35 @@
   }
 
   // ─── Keys (user guide §4.5) ────────────────────────────────────────────────
+
+  // The grid this came from lands on this image when you go back (design M8 · 1A).
+  $effect(() => rememberFocus(new URLSearchParams(toParams(query)).toString(), id));
+
+  /**
+   * The film strip after Tab moves into it (design M8 · 1H): ← → move the ring only, Enter shows
+   * that image (the button's click), Esc goes back to the image. The viewer's own keys wait.
+   */
+  function onStripKey(e: KeyboardEvent) {
+    const here = document.activeElement;
+    if (!(here instanceof HTMLButtonElement) || !here.classList.contains('frame')) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const all = [...(e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('button.frame')];
+      all[all.indexOf(here) + (e.key === 'ArrowLeft' ? -1 : 1)]?.focus();
+      showKeyHint('strip');
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      here.blur();
+    }
+  }
+
+  /** Esc inside the Info / Tags / Collections panel leaves it first (the tag field handles its own Esc). */
+  function onPanelKey(e: KeyboardEvent) {
+    const here = document.activeElement;
+    if (e.key !== 'Escape' || !(here instanceof HTMLElement) || /^(INPUT|TEXTAREA)$/.test(here.tagName) || here.isContentEditable) return;
+    e.preventDefault();
+    here.blur();
+  }
 
   $effect(() =>
     registerKeys('viewer', [
@@ -418,6 +539,15 @@
       : source === 'search' ? 'in the search'
       : file?.folder.kind === 'inbox' ? 'in the Inbox' : query.recursive ? 'in a folder' : 'in album',
   );
+  /** For Random's tooltip: the list it picks from (the one prev / next step through). */
+  const randomWhere = $derived(
+    source === 'collection' ? listName || 'this collection'
+      : source === 'untagged' ? 'the untagged images'
+      : source === 'favorites' ? 'Favorites'
+      : source === 'tag' ? 'this tag'
+      : source === 'search' ? 'this search'
+      : query.recursive && query.folder !== undefined ? 'all images here' : file?.folder.name ?? 'this list',
+  );
   const dims = $derived(file?.width && file.height ? `${fmt(file.width)} × ${fmt(file.height)}` : natW ? `${fmt(natW)} × ${fmt(natH)}` : '—');
 </script>
 
@@ -427,6 +557,7 @@
       <a class="logo" href={href('/')}><span class="mark"></span>MEDIA/VIEW</a>
       <button class="back" onclick={back}>← {backLabel}</button>
       <div class="spacer"></div>
+      <button class="bar-random" title="Random image from {randomWhere} (R)" onclick={() => void random()}>Random</button>
       <button class="help" title="Help (F1)" onclick={() => openDialog('help')}>?</button>
     </header>
   {/if}
@@ -434,13 +565,13 @@
   <div class="body">
     <div class="main">
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="stage" class:dragging bind:clientWidth={stageW} bind:clientHeight={stageH} onwheel={onWheel} onpointerdown={onPointerDown}>
+      <div class="stage" class:dragging bind:clientWidth={stageW} bind:clientHeight={stageH} onwheel={onWheel} onpointerdown={onPointerDown} oncontextmenu={imageMenu}>
         {#if missing}
           <div class="gone display">This image no longer exists.</div>
         {:else if file}
           <div class="position">
             <span class="display pos">{position ? `${position.index + 1} / ${position.total}` : '—'}</span>
-            <span class="ctx">{contextKind}{#if source === 'folder'}<br /><b>{file.folder.name}</b>{:else if source === 'collection' && listName}<br /><b>{listName}</b>{/if}</span>
+            <span class="ctx">{#if left?.id === file.id}<i>no longer {contextKind}</i>{:else}{contextKind}{/if}{#if source === 'folder'}<br /><b>{file.folder.name}</b>{:else if source === 'collection' && listName}<br /><b>{listName}</b>{/if}</span>
           </div>
           <img
             class="photo"
@@ -453,7 +584,7 @@
             style:transform="translate(calc(-50% + {panX}px), calc(-50% + {panY}px))"
             style:visibility={natW ? 'visible' : 'hidden'}
           />
-          <span class="caption">{file.ext.toUpperCase()} · {dims}{scale === 1 ? ' · natural size' : ''}</span>
+          <span class="caption">{formatOf(file.ext)} · {dims}{scale === 1 ? ' · natural size' : ''}</span>
         {/if}
 
         <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -464,9 +595,12 @@
           <button class="show" class:on={slideshow} onclick={() => (slideshow = !slideshow)} title="Slideshow (S)">{slideshow ? '❚❚ Stop' : '▶ Slideshow'}</button>
           {#if slideshow}
             <div class="interval">
-              <button onclick={() => (interval = Math.max(1, interval - 1))}>‹</button>
+              <button onclick={() => stepInterval(-1)} title="Shorter">‹</button>
               <span>{interval}s</span>
-              <button onclick={() => (interval = Math.min(30, interval + 1))}>›</button>
+              <button onclick={() => stepInterval(1)} title="Longer">›</button>
+              <span class="sep"></span>
+              <button class="opt" class:on={loop} onclick={() => (loop = !loop)} title={loop ? 'Loop: on — starts over at the end' : 'Loop: off — stops at the end'}>⟳</button>
+              <button class="opt" class:on={shuffle} onclick={() => (shuffle = !shuffle)} title={shuffle ? 'Shuffle: on — random order, each image once per round' : 'Shuffle: off — in the list’s order'}>⤨</button>
             </div>
           {/if}
           <button onclick={random} title="Random (R)">⚄ Random</button>
@@ -489,16 +623,18 @@
       {#if !fullscreen}
         <div class="filmstrip">
           <div class="holes"></div>
-          <div class="frames">
-            <button class="nav" onclick={() => step(-1)} title="Previous (←)" disabled={!position || position.index === 0}>◀</button>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="frames" onkeydown={onStripKey}>
+            <button class="nav" tabindex="-1" onclick={() => step(-1)} title="Previous (←)" disabled={!position || position.index === 0}>◀</button>
             {#each strip as s, k (s.id)}
               {@const n = stripStart + k + 1}
-              <button class="frame" class:on={s.id === id} onclick={() => show(s)} title={s.filename}>
+              <button class="frame" class:on={s.id === id} class:left={left?.id === s.id} tabindex={s.id === id ? 0 : -1} onclick={() => show(s)}
+                title={left?.id === s.id ? `${s.filename} · no longer ${contextKind}` : s.filename}>
                 <Thumb file={s} fit="cover" />
                 <span class="n">{source === 'collection' ? String(n).padStart(2, '0') : s.id === id ? `${n}A` : n}</span>
               </button>
             {/each}
-            <button class="nav" onclick={() => step(1)} title="Next (→)" disabled={!position || position.index >= position.total - 1}>▶</button>
+            <button class="nav" tabindex="-1" onclick={() => step(1)} title="Next (→)" disabled={!position || position.index >= position.total - 1}>▶</button>
           </div>
           <div class="holes"></div>
         </div>
@@ -506,7 +642,8 @@
     </div>
 
     {#if panels && !fullscreen && file}
-      <aside class="panel-col">
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <aside class="panel-col" onkeydown={onPanelKey}>
         <button class="section" onclick={() => (infoOpen = !infoOpen)}>01 · Info<span>{infoOpen ? '−' : '+'}</span></button>
         {#if infoOpen}
           <div class="info">
@@ -581,9 +718,12 @@
   .viewer { height: 100vh; display: flex; flex-direction: column; background: var(--bg2); }
   .viewer.full { background: #000; }
 
-  .bar { height: 48px; flex: none; display: flex; align-items: stretch; border-bottom: 1px solid var(--line); }
-  .logo { display: flex; align-items: center; gap: 8px; padding: 0 18px; border-right: 1px solid var(--line); font: 700 19px/1 var(--font-display); text-decoration: none; }
-  .mark { width: 10px; height: 10px; background: var(--accent); }
+  /* Same height and logo as the top bar, so nothing jumps when the viewer opens. */
+  .bar { height: 56px; flex: none; display: flex; align-items: stretch; background: var(--bg2); border-bottom: 1px solid var(--line); }
+  .logo { display: flex; align-items: center; gap: 8px; padding: 0 22px; border-right: 1px solid var(--line); font: 700 22px/1 var(--font-display); letter-spacing: 0.02em; text-decoration: none; }
+  .mark { width: 12px; height: 12px; background: var(--accent); }
+  .bar-random { padding: 0 14px; border: none; border-left: 1px solid var(--line); background: none; color: var(--text2); font: 600 13px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .bar-random:hover { color: var(--text); background: var(--surface); }
   .back {
     display: flex;
     align-items: center;
@@ -598,7 +738,7 @@
   }
   .back:hover { color: var(--text); background: var(--surface); }
   .spacer { flex: 1; }
-  .help { width: 48px; border: none; border-left: 1px solid var(--line); background: none; color: var(--text); font: 700 18px/1 var(--font-display); cursor: pointer; }
+  .help { width: 52px; border: none; border-left: 1px solid var(--line); background: none; color: var(--text); font: 700 18px/1 var(--font-display); cursor: pointer; }
 
   .body { flex: 1; min-height: 0; display: flex; }
   .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -622,6 +762,7 @@
   .pos { font-size: 56px; line-height: 0.8; color: var(--accent); }
   .ctx { font: 12px var(--font-mono); text-transform: uppercase; color: var(--text2); line-height: 1.4; }
   .ctx b { color: var(--text); font-weight: 400; }
+  .ctx i { font-style: normal; color: var(--amber); }
   .caption { position: absolute; left: 24px; bottom: 14px; z-index: 3; font: 10.5px var(--font-mono); color: #fff; background: rgba(0, 0, 0, 0.45); padding: 3px 6px; pointer-events: none; }
   .full .caption { display: none; }
 
@@ -648,6 +789,11 @@
   .interval { display: flex; align-items: stretch; border-left: 1px solid var(--line); }
   .interval button { min-width: 26px; padding: 0; border: none; }
   .interval span { display: flex; align-items: center; justify-content: center; min-width: 34px; }
+  /* Loop and shuffle (design M8 · 2D): 28 px squares; "on" is accent plus a bar, not colour alone. */
+  .interval .sep { width: 1px; min-width: 0; margin: 8px 6px; background: var(--line); }
+  .interval .opt { position: relative; width: 28px; min-width: 28px; color: var(--text2); font-size: 14px; }
+  .interval .opt.on { color: var(--accent); }
+  .interval .opt.on::after { content: ''; position: absolute; left: 7px; right: 7px; bottom: 4px; height: 2px; background: var(--accent); }
 
   .full-hint { position: absolute; left: 24px; bottom: 16px; z-index: 3; font: 11px var(--font-mono); color: var(--text2); text-transform: uppercase; pointer-events: none; }
   .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--line); z-index: 3; }
@@ -670,6 +816,8 @@
   .frame.on { height: 60px; opacity: 1; outline: 3px solid var(--accent); }
   .n { position: absolute; bottom: 0; left: 0; padding: 1px 4px; color: #ddd; font: 700 10px var(--font-mono); }
   .frame.on .n { background: var(--accent); color: var(--accent-ink); }
+  .frame.left :global(img) { filter: grayscale(1); opacity: 0.45; }
+  .frame.left .n { text-decoration: line-through; }
 
   .panel-col { width: 420px; flex: none; overflow-y: auto; background: var(--surface); border-left: 1px solid var(--line); }
   .section {

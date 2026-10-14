@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;background:#0b0b0b;color:#f3f2ec}
+a{color:#f3f2ec;text-decoration:underline;text-decoration-color:#ff4b2b}
+a:hover{color:#ff4b2b}
+*{box-sizing:border-box}
+</style>
+</helmet>
+<div style="max-width:1500px;margin:0 auto;padding:56px 40px 120px;font-family:'Bahnschrift','Barlow',sans-serif;color:#f3f2ec;display:flex;flex-direction:column;gap:64px">
+
+<header style="display:flex;flex-direction:column;gap:14px;border-bottom:1px solid #363631;padding-bottom:32px">
+  <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;color:#ff4b2b">MEDIA-VIEW · IMAGES · MILESTONE 8 · DARKROOM</div>
+  <h1 style="margin:0;font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:700;font-size:64px;line-height:.95;letter-spacing:.01em">KEYBOARD FOCUS<br><span style="color:#9a9990">+ THREE SMALL CHECKS</span></h1>
+  <p style="margin:0;max-width:760px;font-size:16px;line-height:1.5;color:#9a9990;text-wrap:pretty">One new state — the keyboard cursor — applied to every focusable component, then quick checks of Sort: Format, the TIFF progress pill, the Settings panels and the slideshow controls. Desktop, ~1500 px.</p>
+</header>
+
+<!-- ============ SECTION 1 ============ -->
+<section style="display:flex;flex-direction:column;gap:56px">
+  <div style="display:flex;align-items:baseline;gap:20px"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:700;font-size:44px">1 — KEYBOARD FOCUS</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#9a9990">MAIN REQUEST</span></div>
+
+  <!-- 1.0 spec -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1.0</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">The keyboard cursor</span></div>
+    <div style="background:#121212;border:1px solid #363631;padding:32px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px">
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px">
+          <div style="display:flex;flex-direction:column;gap:10px"><dc-import name="Frame" state="hover" code="12A" file="hover.jpg" tone="1" hint-size="100%,130px"></dc-import><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">HOVER<br><span style="color:#ff4b2b">1 PX ACCENT · FLUSH</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:10px"><dc-import name="Frame" code="12B" file="selected.jpg" selected="{{ true }}" tone="2" hint-size="100%,130px"></dc-import><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">SELECTED<br><span style="color:#f2e34b">ACCENT2 · HAND-DRAWN</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="padding:6px 6px 8px"><div style="position:relative;aspect-ratio:3/2;background:linear-gradient(160deg,#2d3a33,#19201c)"><div style="position:absolute;inset:0;box-shadow:inset 0 0 0 2px #ff4b2b"></div></div><div style="height:19px"></div></div>
+            <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">CURRENT · STRIP<br><span style="color:#ff4b2b">2 PX ACCENT · INSIDE</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:10px"><dc-import name="Frame" state="focus" code="12D" file="focused.jpg" tone="3" hint-size="100%,130px"></dc-import><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">FOCUS · NEW<br><span style="color:#f3f2ec">2 PX TEXT · OFFSET</span></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.5;color:#9a9990;text-wrap:pretty">
+          <div><span style="color:#f3f2ec">Why white.</span> Hover and current own the accent, selection owns accent2. The ring is the only state in <span style="color:#f3f2ec">text colour</span>, the only one that is <span style="color:#f3f2ec">2 px</span>, and the only one that stands <span style="color:#f3f2ec">off</span> the element. Three axes apart — colour, weight, position — so it never reads as hover or selection.</div>
+          <div><span style="color:#f3f2ec">Why the dark gap.</span> The 3 px bg2 band between element and ring keeps it readable on any content — a bright cover, a yellow selection ring, a white-filled segment, an accent button.</div>
+          <div><span style="color:#f3f2ec">No motion.</span> Appears and moves instantly; it's a cursor, not a highlight.</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <pre style="margin:0;background:#0b0b0b;border:1px solid #363631;padding:20px 22px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:12px;line-height:1.65;color:#f3f2ec;white-space:pre-wrap"><span style="color:#9a9990">/* root: data-input="kbd" on keydown,
+   data-input="mouse" on pointermove to a new target */</span>
+
+<span style="color:#ff4b2b">[data-input=kbd]</span> .is-focused {        <span style="color:#9a9990">/* frames, cards */</span>
+  outline: 2px solid #f3f2ec;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px #0b0b0b;      <span style="color:#9a9990">/* fills the gap */</span>
+}
+<span style="color:#ff4b2b">[data-input=kbd]</span> .is-focused.compact { <span style="color:#9a9990">/* nav, buttons, segments, strip */</span>
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #0b0b0b;
+  position: relative; z-index: 2;      <span style="color:#9a9990">/* over joined neighbours */</span>
+}
+<span style="color:#ff4b2b">[data-input=kbd]</span> .is-focused.row {     <span style="color:#9a9990">/* lists, sidebar, dialogs */</span>
+  outline-offset: -2px;               <span style="color:#9a9990">/* inset: lists clip */</span>
+  box-shadow: inset 0 0 0 3px #0b0b0b;
+}
+<span style="color:#ff4b2b">[data-input=mouse]</span> .frame:hover {
+  outline: 1px solid #ff4b2b; outline-offset: 0;
+}
+<span style="color:#9a9990">/* hover outline is suppressed while data-input=kbd.
+   grid gap ≥ 12px so a 5px ring never touches a neighbour. */</span></pre>
+        <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 18px;font-size:13px;line-height:1.45;color:#9a9990">
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#f3f2ec">APPEARS</span><span>On the first navigation key (arrows, Home/End, PgUp/PgDn, Tab). Never on click.</span>
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#f3f2ec">HIDES</span><span>The moment the pointer enters a different element. Focus position is kept.</span>
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#f3f2ec">RESUMES</span><span>Next key moves from the remembered item, not the hovered one (Explorer). Clicks and opening an image update the remembered item; hover never does. Back from the viewer: lands on the image you were on.</span>
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#f3f2ec">FIRST KEY</span><span>With nothing remembered yet, the first arrow lands on the first item instead of moving.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1a grid frame -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1A</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Grid frame</span><span style="font-size:14px;color:#9a9990">Live — click the grid once, then use the keys. Move the mouse over a frame to see the ring hide.</span></div>
+    <div tabIndex="0" onKeyDown="{{ onKey }}" style="position:relative;background:#121212;border:1px solid #363631;padding:28px 32px 32px;outline:none;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;color:#9a9990">
+        <span>IMAGES › FANTASY › ELVES › <span style="color:#f3f2ec">PORTRAITS</span></span>
+        <span style="display:flex;gap:16px"><span>INPUT: <span style="color:#f3f2ec">{{ inputMode }}</span></span><span>SELECTED: <span style="color:#f2e34b">{{ selCount }}</span></span></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 14px">
+        <sc-for list="{{ demo }}" as="f" hint-placeholder-count="12">
+          <div onMouseEnter="{{ f.enter }}" onMouseLeave="{{ f.leave }}" onClick="{{ f.click }}">
+            <dc-import name="Frame" state="{{ f.state }}" code="{{ f.code }}" file="{{ f.file }}" gif="{{ f.gif }}" star="{{ f.star }}" is-new="{{ f.isNew }}" selected="{{ f.selected }}" tone="{{ f.tone }}" hint-size="100%,150px"></dc-import>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:12px;color:#f3f2ec;min-height:18px">{{ msg }}</div>
+      <sc-if value="{{ hint }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:#0b0b0b;border:1px solid #363631;padding:9px 14px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9990;white-space:nowrap">
+          <span style="display:flex;gap:6px;align-items:center"><span style="border:1px solid #363631;padding:1px 5px;color:#f3f2ec">← → ↑ ↓</span>MOVE</span>
+          <span style="display:flex;gap:6px;align-items:center"><span style="border:1px solid #363631;padding:1px 5px;color:#f3f2ec">ENTER</span>OPEN</span>
+          <span style="display:flex;gap:6px;align-items:center"><span style="border:1px solid #363631;padding:1px 5px;color:#f3f2ec">SPACE</span>SELECT</span>
+          <span style="display:flex;gap:6px;align-items:center"><span style="border:1px solid #363631;padding:1px 5px;color:#f3f2ec">⌫</span>UP</span>
+          <span style="color:#363631">|</span><span>F1 ALL KEYS</span>
+        </div>
+      </sc-if>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:24px">
+      <div style="background:#121212;border:1px solid #363631;padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">COMBINED STATES</div>
+        <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px">
+          <sc-for list="{{ combos }}" as="f" hint-placeholder-count="6">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <dc-import name="Frame" state="{{ f.state }}" code="{{ f.code }}" file="{{ f.file }}" gif="{{ f.gif }}" star="{{ f.star }}" is-new="{{ f.isNew }}" selected="{{ f.selected }}" tone="{{ f.tone }}" hint-size="100%,110px"></dc-import>
+              <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:#9a9990;line-height:1.4">{{ f.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#121212;border:1px solid #363631;padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">FOCUSED + HOVER ELSEWHERE — NEVER BOTH AT ONCE</div>
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:120px repeat(3,minmax(0,1fr));gap:12px;align-items:center">
+            <div style="font-size:12px;line-height:1.35;color:#9a9990"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">{{ s.n }}</span> {{ s.t }}</div>
+            <sc-for list="{{ s.frames }}" as="f" hint-placeholder-count="3">
+              <dc-import name="Frame" state="{{ f.state }}" code="{{ f.code }}" file="{{ f.file }}" tone="{{ f.tone }}" hint-size="100%,80px"></dc-import>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;font-size:13px;line-height:1.5;color:#9a9990">
+      <div><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">← → ↑ ↓</span> move · <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">Home End PgUp PgDn</span> jump. Up/down at a row end stays put; no wrapping.</div>
+      <div><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">Space</span> toggles the focused frame · <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">Shift+arrows</span> extends from the anchor · <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">Ctrl+arrows</span> move without touching the selection.</div>
+      <div><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">Enter</span> opens (in selection mode: selects, as §3.4) · <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">Backspace</span> up one level.</div>
+      <div><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">Esc</span> closes menu/dialog first; with nothing open, clears the selection. Group-by-collection: arrows walk through section breaks as one list.</div>
+    </div>
+  </div>
+
+  <!-- 1b collection grid -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1B</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Collection grid frame</span><span style="font-size:14px;color:#9a9990">The number badge sits inside the frame; the ring sits outside — they never touch.</span></div>
+    <div style="background:#121212;border:1px solid #363631;padding:28px 32px;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:40px">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 14px">
+        <sc-for list="{{ coll }}" as="f" hint-placeholder-count="8">
+          <dc-import name="Frame" state="{{ f.state }}" code="{{ f.code }}" file="{{ f.file }}" gif="{{ f.gif }}" star="{{ f.star }}" num="{{ f.num }}" selected="{{ f.selected }}" tone="{{ f.tone }}" hint-size="100%,140px"></dc-import>
+        </sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 18px;align-content:start">
+        <sc-for list="{{ collCombos }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <dc-import name="Frame" state="{{ f.state }}" code="{{ f.code }}" file="{{ f.file }}" gif="{{ f.gif }}" num="{{ f.num }}" selected="{{ f.selected }}" tone="{{ f.tone }}" hint-size="100%,140px"></dc-import>
+            <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:#9a9990">{{ f.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1c cards -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1C</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Library cards</span><span style="font-size:14px;color:#9a9990">Same 3 px offset ring. Grid order follows reading order; Enter opens, Backspace goes up.</span></div>
+    <div style="background:#121212;border:1px solid #363631;padding:32px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:36px 32px">
+      <!-- inbox -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:#262625;height:212px;padding:18px;display:flex;flex-direction:column;justify-content:space-between">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">INBOX</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">TRAY</span></div>
+          <div><div style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:700;font-size:76px;line-height:.85;color:#ff4b2b">47</div><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990;margin-top:8px">WAITING TO BE SORTED</div></div>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">INBOX · REST</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:#262625;height:212px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;outline:2px solid #f3f2ec;outline-offset:3px;box-shadow:0 0 0 3px #0b0b0b">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">INBOX</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">TRAY</span></div>
+          <div><div style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:700;font-size:76px;line-height:.85;color:#ff4b2b">47</div><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990;margin-top:8px">WAITING TO BE SORTED</div></div>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">INBOX · FOCUS</div>
+      </div>
+      <!-- category -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:#1b1b1a;height:212px;display:flex;flex-direction:column">
+          <div style="flex:1;background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 6px,transparent 6px 12px),linear-gradient(160deg,#4a3b2c,#1f1b15);position:relative"><span style="position:absolute;top:10px;left:12px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990;background:#0b0b0b;padding:2px 6px">COVER</span></div>
+          <div style="padding:10px 14px 12px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">FANTASY</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">1,284</span></div>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">CATEGORY (RACK) · REST</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:#1b1b1a;height:212px;display:flex;flex-direction:column;outline:2px solid #f3f2ec;outline-offset:3px;box-shadow:0 0 0 3px #0b0b0b">
+          <div style="flex:1;background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 6px,transparent 6px 12px),linear-gradient(160deg,#4a3b2c,#1f1b15);position:relative"><span style="position:absolute;top:10px;left:12px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990;background:#0b0b0b;padding:2px 6px">COVER</span></div>
+          <div style="padding:10px 14px 12px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">FANTASY</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">1,284</span></div>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">CATEGORY · FOCUS</div>
+      </div>
+      <!-- drawer -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:#1b1b1a;border:1px solid #363631;height:200px;display:flex;flex-direction:column">
+          <div style="height:100px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 6px,transparent 6px 12px),linear-gradient(160deg,#2c3540,#1a1e24)"></div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">SUB-CATEGORY</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Elves</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">3 ALBUMS · 212</span></div>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">SUB-CATEGORY (DRAWER) · REST</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:#1b1b1a;border:1px solid #363631;height:200px;display:flex;flex-direction:column;outline:2px solid #f3f2ec;outline-offset:3px;box-shadow:0 0 0 3px #0b0b0b">
+          <div style="height:100px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 6px,transparent 6px 12px),linear-gradient(160deg,#2c3540,#1a1e24)"></div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">SUB-CATEGORY</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Elves</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">3 ALBUMS · 212</span></div>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">SUB-CATEGORY · FOCUS</div>
+      </div>
+      <!-- album -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="position:relative;height:200px;padding:10px 10px 0 0">
+          <div style="position:absolute;top:0;right:0;width:calc(100% - 10px);height:100px;border:1px solid #363631;background:#1b1b1a"></div>
+          <div style="position:absolute;top:5px;right:5px;width:calc(100% - 10px);height:100px;border:1px solid #363631;background:#1b1b1a"></div>
+          <div style="position:relative;background:#1b1b1a;border:1px solid #363631;height:190px;display:flex;flex-direction:column">
+            <div style="height:90px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 6px,transparent 6px 12px),linear-gradient(160deg,#40302e,#231b1a)"></div>
+            <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">ALBUM</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Portraits</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">64</span></div>
+          </div>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">ALBUM · REST</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="position:relative;height:200px;padding:10px 10px 0 0;outline:2px solid #f3f2ec;outline-offset:3px;box-shadow:0 0 0 3px #0b0b0b">
+          <div style="position:absolute;top:0;right:0;width:calc(100% - 10px);height:100px;border:1px solid #363631;background:#1b1b1a"></div>
+          <div style="position:absolute;top:5px;right:5px;width:calc(100% - 10px);height:100px;border:1px solid #363631;background:#1b1b1a"></div>
+          <div style="position:relative;background:#1b1b1a;border:1px solid #363631;height:190px;display:flex;flex-direction:column">
+            <div style="height:90px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 6px,transparent 6px 12px),linear-gradient(160deg,#40302e,#231b1a)"></div>
+            <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">ALBUM</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Portraits</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">64</span></div>
+          </div>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">ALBUM · FOCUS — RING WRAPS THE STACK</div>
+      </div>
+      <!-- collection -->
+      <sc-for list="{{ collCards }}" as="c" hint-placeholder-count="2">
+        <div style="grid-column:span 2;display:flex;flex-direction:column;gap:12px">
+          <div style="background:#1b1b1a;padding:14px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr);gap:16px;outline:{{ c.ol }};outline-offset:{{ c.oo }};box-shadow:{{ c.bs }}">
+            <div style="position:relative;aspect-ratio:3/2;background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 6px,transparent 6px 12px),linear-gradient(160deg,#33303d,#1c1a22)"><span style="position:absolute;top:0;left:0;background:#0b0b0b;font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:700;font-size:20px;line-height:1;padding:3px 6px 1px">01</span></div>
+            <div style="display:flex;flex-direction:column;justify-content:space-between;gap:10px">
+              <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+                <sc-for list="{{ stripNums }}" as="n" hint-placeholder-count="4"><div style="position:relative;aspect-ratio:3/2;background:linear-gradient(160deg,#2e2c28,#1a1918)"><span style="position:absolute;top:0;left:0;background:#0b0b0b;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:9px;color:#9a9990;padding:1px 3px">{{ n }}</span></div></sc-for>
+              </div>
+              <div><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:26px">Chapter 3 refs</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">12 IMAGES</span></div><div style="font-size:13px;color:#9a9990">Reference sheet for the river crossing chapter.</div></div>
+            </div>
+          </div>
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:{{ c.capColor }}">{{ c.label }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- 1d rows -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1D</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Rows</span><span style="font-size:14px;color:#9a9990">Inset ring (offset −2 px) — lists scroll and clip, an outside ring would be cut off.</span></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:24px;align-items:start">
+      <div style="background:#121212;border:1px solid #363631;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">TAGS DIRECTORY</div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ tagRows }}" as="r" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:16px 10px minmax(0,1fr) auto;gap:10px;align-items:center;height:40px;padding:0 12px;border-bottom:1px solid #262625;background:{{ r.bg }};outline:{{ r.ol }};outline-offset:{{ r.oo }};box-shadow:{{ r.bs }}">
+              <span style="width:14px;height:14px;border:1px solid {{ r.cbBorder }};background:{{ r.cbBg }};color:#0b0b0b;font-size:10px;line-height:12px;text-align:center">{{ r.cb }}</span>
+              <span style="width:8px;height:8px;background:{{ r.dot }}"></span>
+              <span style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }} <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;color:#9a9990">{{ r.type }}</span></span>
+              <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:12px;color:#9a9990">{{ r.count }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:12px;line-height:1.45;color:#9a9990">Row 2 focused · row 4 selected · row 5 focused + selected. Enter = open gallery, Space = select (for merge/delete).</div>
+      </div>
+      <div style="background:#121212;border:1px solid #363631;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">LIBRARY HEALTH · OVERVIEW</div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ healthRows }}" as="r" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;gap:12px;align-items:center;height:44px;padding:0 12px;border-bottom:1px solid #262625;outline:{{ r.ol }};outline-offset:{{ r.oo }};box-shadow:{{ r.bs }}">
+              <span style="width:8px;height:8px;background:{{ r.sev }}"></span>
+              <span style="font-size:15px">{{ r.name }}</span>
+              <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:12px;color:#9a9990">{{ r.n }}</span>
+              <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:{{ r.revColor }}">REVIEW ▸</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:12px;line-height:1.45;color:#9a9990">The whole row is the target: Enter = Review ▸ (which turns text-coloured to say so). Tab reaches the group's fix buttons.</div>
+      </div>
+      <div style="background:#121212;border:1px solid #363631;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">RECYCLE BIN</div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ binRows }}" as="r" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:16px 54px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid #262625;background:{{ r.bg }};outline:{{ r.ol }};outline-offset:{{ r.oo }};box-shadow:{{ r.bs }}">
+              <span style="width:14px;height:14px;border:1px solid {{ r.cbBorder }};background:{{ r.cbBg }};color:#0b0b0b;font-size:10px;line-height:12px;text-align:center">{{ r.cb }}</span>
+              <span style="aspect-ratio:3/2;background:linear-gradient(160deg,#3d352d,#221f1b)"></span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;color:#9a9990;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.from }}</span></span>
+              <span style="display:flex;gap:6px"><span style="border:1px solid #363631;padding:4px 8px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em">RESTORE</span><span style="border:1px solid #363631;padding:4px 8px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;color:#ff3d5a">DELETE</span></span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:12px;line-height:1.45;color:#9a9990">Space selects · Enter = Restore · Del = Delete permanently (asks) · Tab enters the row's buttons, which then take the compact ring.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1e top bar -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1E</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Top bar</span><span style="font-size:14px;color:#9a9990">Compact ring (2 px offset). Reached with Tab; ← → move along the bar.</span></div>
+    <div style="background:#121212;border:1px solid #363631;padding:28px 32px;display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;align-items:center;gap:22px;height:52px;padding:0 18px;background:#0b0b0b;border:1px solid #363631">
+        <span style="display:flex;align-items:center;gap:8px;font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em"><span style="width:10px;height:10px;background:#ff4b2b"></span>MEDIA-VIEW</span>
+        <span style="width:300px;height:30px;border:1px solid #363631;background:#1b1b1a;display:flex;align-items:center;gap:8px;padding:0 10px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990"><span style="border:1px solid #363631;padding:0 4px">/</span>SEARCH  #TAG  @COLLECTION</span>
+        <span style="display:flex;align-items:center;gap:7px;height:26px;padding:0 10px;border:1px solid #363631;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:#9a9990"><span style="width:6px;height:6px;background:#ff4b2b"></span>TIFF 3 / 12</span>
+        <span style="flex:1"></span>
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:{{ n.color }};padding:6px 2px;border-bottom:2px solid {{ n.under }}">{{ n.t }}</span>
+        </sc-for>
+        <span style="display:flex;align-items:center;gap:6px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#9a9990;padding:6px 2px">HEALTH<span style="background:#ff3d5a;color:#0b0b0b;font-weight:700;padding:1px 5px">4</span></span>
+        <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:12px;color:#9a9990;border:1px solid #363631;width:24px;height:24px;display:flex;align-items:center;justify-content:center">?</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px">
+        <div style="display:flex;flex-direction:column;gap:12px"><div style="background:#0b0b0b;height:64px;display:flex;align-items:center;justify-content:center;gap:22px">
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#9a9990;padding:6px 2px;border-bottom:2px solid transparent">IMAGES</span>
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#f3f2ec;padding:6px 2px;border-bottom:2px solid transparent;outline:2px solid #f3f2ec;outline-offset:2px;box-shadow:0 0 0 2px #0b0b0b">TAGS</span>
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#9a9990;padding:6px 2px;border-bottom:2px solid transparent">COLLECTIONS</span></div>
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">NAV LINK · FOCUS (TEXT BRIGHTENS TOO)</div></div>
+        <div style="display:flex;flex-direction:column;gap:12px"><div style="background:#0b0b0b;height:64px;display:flex;align-items:center;justify-content:center;gap:22px">
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#f3f2ec;padding:6px 2px;border-bottom:2px solid #ff4b2b;outline:2px solid #f3f2ec;outline-offset:2px;box-shadow:0 0 0 2px #0b0b0b">IMAGES</span>
+          <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#9a9990;padding:6px 2px;border-bottom:2px solid transparent">TAGS</span></div>
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">CURRENT PAGE + FOCUS · UNDERLINE STAYS INSIDE</div></div>
+        <div style="display:flex;flex-direction:column;gap:12px"><div style="background:#0b0b0b;height:64px;display:flex;align-items:center;justify-content:center">
+          <span style="display:flex;align-items:center;gap:6px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#f3f2ec;padding:6px 4px;outline:2px solid #f3f2ec;outline-offset:2px;box-shadow:0 0 0 2px #0b0b0b">HEALTH<span style="background:#ff3d5a;color:#0b0b0b;font-weight:700;padding:1px 5px">4</span></span></div>
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">HEALTH BADGE · FOCUS · RING HUGS LABEL + BADGE</div></div>
+        <div style="display:flex;flex-direction:column;gap:12px"><div style="background:#0b0b0b;height:64px;display:flex;align-items:center;justify-content:center">
+          <span style="width:240px;height:30px;border:1px solid #f3f2ec;background:#1b1b1a;display:flex;align-items:center;gap:2px;padding:0 10px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#f3f2ec;outline:2px solid #f3f2ec;outline-offset:2px;box-shadow:0 0 0 2px #0b0b0b">#elv<span style="width:1px;height:14px;background:#ff4b2b"></span></span></div>
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">SEARCH · FOCUS VIA / OR TAB · ESC LEAVES</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1f toolbar -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1F</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Toolbar · segmented controls</span><span style="font-size:14px;color:#9a9990">A segmented control is one Tab stop; ← → move the ring, Space/Enter picks. The ring lifts over joined borders (z-index).</span></div>
+    <div style="background:#121212;border:1px solid #363631;padding:28px 32px;display:flex;flex-direction:column;gap:22px">
+      <sc-for list="{{ toolbars }}" as="tb" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;align-items:center">
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:{{ tb.capColor }}">{{ tb.label }}</div>
+          <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap">
+            <span style="height:30px;display:flex;align-items:center;padding:0 12px;border:1px solid #363631;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;outline:{{ tb.sort.ol }};outline-offset:{{ tb.sort.oo }};box-shadow:{{ tb.sort.bs }}">SORT: NAME ↑</span>
+            <span style="display:flex;align-items:center;gap:10px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">GROUP</span><span style="display:flex">
+              <sc-for list="{{ tb.group }}" as="s" hint-placeholder-count="2"><span style="position:relative;z-index:{{ s.z }};height:30px;display:flex;align-items:center;padding:0 12px;border:1px solid #363631;margin-left:-1px;background:{{ s.bg }};color:{{ s.fg }};font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;outline:{{ s.ol }};outline-offset:{{ s.oo }};box-shadow:{{ s.bs }}">{{ s.t }}</span></sc-for>
+            </span></span>
+            <span style="display:flex;align-items:center;gap:10px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">COLS</span><span style="display:flex">
+              <sc-for list="{{ tb.cols }}" as="s" hint-placeholder-count="9"><span style="position:relative;z-index:{{ s.z }};width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid #363631;margin-left:-1px;background:{{ s.bg }};color:{{ s.fg }};font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;outline:{{ s.ol }};outline-offset:{{ s.oo }};box-shadow:{{ s.bs }}">{{ s.t }}</span></sc-for>
+            </span></span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- 1g index -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1G</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Index sidebar</span><span style="font-size:14px;color:#9a9990">↑ ↓ move · Space cycles must → never → off · Ctrl+Space toggles any-of · Enter on a section title collapses · → on a collection row reaches ↗.</span></div>
+    <div style="display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start">
+      <div style="background:#121212;border:1px solid #363631;padding:14px 0">
+        <sc-for list="{{ sidebar }}" as="r" hint-placeholder-count="9">
+          <sc-if value="{{ r.head }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px 6px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">▾ {{ r.t }}</div></sc-if>
+          <sc-if value="{{ r.row }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;height:32px;padding:0 16px;outline:{{ r.ol }};outline-offset:{{ r.oo }};box-shadow:{{ r.bs }}">
+              <span style="width:16px;height:16px;border:1px solid {{ r.indBorder }};background:{{ r.indBg }};color:{{ r.indFg }};font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;font-weight:700;line-height:14px;text-align:center">{{ r.glyph }}</span>
+              <span style="font-size:14px;color:{{ r.nameColor }};text-decoration:{{ r.deco }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="display:inline-block;width:6px;height:6px;background:{{ r.dot }};margin-right:8px;vertical-align:middle"></span>{{ r.t }}</span>
+              <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">{{ r.count }}</span>
+            </div>
+          </sc-if>
+        </sc-for>
+      </div>
+      <div style="background:#121212;border:1px solid #363631;padding:24px 28px;display:flex;flex-direction:column;gap:18px">
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">FOCUS × EVERY TOGGLE STATE</div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px">
+          <sc-for list="{{ toggleCombos }}" as="r" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;height:32px;padding:0 14px;outline:2px solid #f3f2ec;outline-offset:-2px;box-shadow:inset 0 0 0 3px #0b0b0b">
+                <span style="width:16px;height:16px;border:1px solid {{ r.indBorder }};background:{{ r.indBg }};color:{{ r.indFg }};font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;font-weight:700;line-height:14px;text-align:center">{{ r.glyph }}</span>
+                <span style="font-size:14px;color:{{ r.nameColor }};text-decoration:{{ r.deco }}">{{ r.t }}</span>
+                <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">{{ r.count }}</span>
+              </div>
+              <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">{{ r.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:13px;line-height:1.5;color:#9a9990;max-width:640px">The toggle state lives in the 16 px box on the left — must = filled text, never = red + struck name, any-of = blue outline. The ring is the only thing drawn around the row, so it can't be mistaken for a toggle state.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1h viewer -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1H</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Viewer</span><span style="font-size:14px;color:#9a9990">In the viewer ← → already change the image, so the strip only shows a ring after Tab moves into it.</span></div>
+    <div style="background:#0b0b0b;border:1px solid #363631;padding:28px 32px;display:flex;flex-direction:column;gap:26px">
+      <sc-for list="{{ strips }}" as="s" hint-placeholder-count="3">
+        <div style="display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;align-items:center">
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;line-height:1.5;color:#9a9990">{{ s.label }}</div>
+          <div style="display:flex;gap:10px">
+            <sc-for list="{{ s.frames }}" as="f" hint-placeholder-count="9">
+              <div style="width:96px;aspect-ratio:3/2;position:relative;background:{{ f.bg }};opacity:{{ f.op }};outline:{{ f.ol }};outline-offset:{{ f.oo }};box-shadow:{{ f.bs }}"><div style="position:absolute;inset:0;box-shadow:{{ f.cur }}"></div></div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+      <div style="height:1px;background:#262625"></div>
+      <sc-for list="{{ ctrlBars }}" as="b" hint-placeholder-count="3">
+        <div style="display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;align-items:center">
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">{{ b.label }}</div>
+          <div style="display:flex;gap:6px;align-items:center;background:#1b1b1a;padding:8px;width:max-content">
+            <sc-for list="{{ b.btns }}" as="x" hint-placeholder-count="8">
+              <span style="height:30px;display:flex;align-items:center;padding:0 11px;margin-left:{{ x.gapL }};background:{{ x.bg }};color:{{ x.fg }};font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;outline:{{ x.ol }};outline-offset:{{ x.oo }};box-shadow:{{ x.bs }}">{{ x.t }}</span>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+      <div style="font-size:13px;line-height:1.5;color:#9a9990;max-width:820px">Strip: Tab in → ring on the current image; ← → move the ring only; Enter shows that image (it becomes current); Esc returns to the image. <span style="color:#f3f2ec">Esc chain gains a first step:</span> focus inside Info/Tags panel → close panel → exit fullscreen → stop slideshow → back.</div>
+    </div>
+  </div>
+
+  <!-- 1i dialogs -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1I</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Dialogs</span><span style="font-size:14px;color:#9a9990">Opening a dialog by keyboard puts the ring on the first field; by mouse, no ring until a key. Esc closes, Enter confirms.</span></div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+      <sc-for list="{{ dialogs }}" as="d" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:#121212;border:1px solid #363631;padding:28px;display:flex;justify-content:center">
+            <div style="width:420px;background:#1b1b1a;border:1px solid #363631">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px 12px"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:22px">Add 5 images to collection</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;color:#9a9990;border:1px solid #363631;padding:2px 5px">ESC</span></div>
+              <div style="padding:0 20px 12px"><div style="height:30px;border:1px solid #363631;background:#121212;display:flex;align-items:center;padding:0 10px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">Filter or type a new name…</div></div>
+              <div style="padding:0 20px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990;margin-bottom:4px">RECENT</div>
+              <div style="display:flex;flex-direction:column;padding:0 8px">
+                <sc-for list="{{ d.rows }}" as="r" hint-placeholder-count="5">
+                  <div style="display:flex;justify-content:space-between;align-items:center;height:36px;padding:0 12px;outline:{{ r.ol }};outline-offset:{{ r.oo }};box-shadow:{{ r.bs }}"><span style="font-size:14px">{{ r.name }}</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#9a9990">{{ r.has }}</span></div>
+                </sc-for>
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid #363631;margin-top:10px">
+                <span style="height:32px;display:flex;align-items:center;padding:0 16px;border:1px solid #363631;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;outline:{{ d.cancel.ol }};outline-offset:{{ d.cancel.oo }};box-shadow:{{ d.cancel.bs }}">CANCEL</span>
+                <span style="height:32px;display:flex;align-items:center;padding:0 16px;background:#ff4b2b;color:#0b0b0b;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.12em;outline:{{ d.add.ol }};outline-offset:{{ d.add.oo }};box-shadow:{{ d.add.bs }}">ADD</span>
+              </div>
+            </div>
+          </div>
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">{{ d.label }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- hint toast -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#ff4b2b">1J</span><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:28px">Keyboard hint — yes, once</span></div>
+    <div style="background:#121212;border:1px solid #363631;padding:32px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center">
+      <div style="display:flex;justify-content:center;padding:40px 0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.02) 0 6px,transparent 6px 12px)">
+        <div style="display:flex;align-items:center;gap:14px;background:#0b0b0b;border:1px solid #363631;padding:9px 14px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9990;white-space:nowrap">
+          <span style="display:flex;gap:6px;align-items:center"><span style="border:1px solid #363631;padding:1px 5px;color:#f3f2ec">← → ↑ ↓</span>MOVE</span>
+          <span style="display:flex;gap:6px;align-items:center"><span style="border:1px solid #363631;padding:1px 5px;color:#f3f2ec">ENTER</span>OPEN</span>
+          <span style="display:flex;gap:6px;align-items:center"><span style="border:1px solid #363631;padding:1px 5px;color:#f3f2ec">SPACE</span>SELECT</span>
+          <span style="display:flex;gap:6px;align-items:center"><span style="border:1px solid #363631;padding:1px 5px;color:#f3f2ec">⌫</span>UP</span>
+          <span style="color:#363631">|</span><span>F1 ALL KEYS</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.5;color:#9a9990;text-wrap:pretty">
+        <div><span style="color:#f3f2ec">Worth it:</span> the ring tells you where you are, not what you can do — Space-to-select and Backspace-up aren't guessable.</div>
+        <div><span style="color:#f3f2ec">Quiet:</span> bottom-centre, bg2, mono 11 px, no accent, no close button. Shown the first time an arrow moves the ring on a grid page; leaves after 5 s or on the next pointer move. Once per browser (stored with the grid settings).</div>
+        <div><span style="color:#f3f2ec">Per context:</span> card pages drop SELECT; the viewer strip shows <span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;color:#f3f2ec">← → MOVE · ENTER SHOW · ESC BACK</span>. Try it live in 1A (first key only).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECTION 2 ============ -->
+<section style="display:flex;flex-direction:column;gap:40px;border-top:1px solid #363631;padding-top:48px">
+  <div style="display:flex;align-items:baseline;gap:20px"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:700;font-size:44px">2 — QUICK CHECKS</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:#9a9990">BEFORE / AFTER ONLY WHERE A CHANGE IS SUGGESTED</span></div>
+
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+    <!-- 2a -->
+    <div style="background:#121212;border:1px solid #363631;padding:24px 28px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:24px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#ff4b2b;margin-right:10px">2A</span>Sort: Format label</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">STYLE OK · ONE ADDITION</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px">
+        <div style="display:flex;flex-direction:column;gap:10px"><dc-import name="Frame" state="hover" code="14C" file="ember_loop.gif" gif="{{ true }}" fmt="GIF" tone="5" hint-size="100%,120px"></dc-import><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">HOVER · AS BUILT ✓</div></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><dc-import name="Frame" state="focus" code="14D" file="moonwell_map.tif" fmt="TIFF" tone="1" hint-size="100%,120px"></dc-import><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">BEFORE · FOCUS, NO LABEL</div></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><dc-import name="Frame" state="focus" code="14D" file="moonwell_map.tif" fmt="TIFF" fmt-on-focus="{{ true }}" tone="1" hint-size="100%,120px"></dc-import><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">AFTER · FOCUS SHOWS IT TOO</div></div>
+      </div>
+      <div style="font-size:13px;line-height:1.5;color:#9a9990">The quiet bg2 label works next to the accent GIF badge. Only change: hover-only info must also show on keyboard focus, or keyboard users never see it.</div>
+    </div>
+    <!-- 2b -->
+    <div style="background:#121212;border:1px solid #363631;padding:24px 28px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:24px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#ff4b2b;margin-right:10px">2B</span>TIFF progress pill</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">PILL IS ENOUGH · SMALL TOUCHES</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px">
+        <div style="display:flex;flex-direction:column;gap:10px"><div style="background:#0b0b0b;height:72px;display:flex;align-items:center;justify-content:center"><span style="display:flex;align-items:center;gap:7px;height:26px;padding:0 10px;border:1px solid #363631;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:#9a9990"><span style="width:6px;height:6px;background:#ff4b2b"></span>TIFF 3 / 12</span></div><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">BEFORE</div></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><div style="background:#0b0b0b;height:72px;display:flex;align-items:center;justify-content:center"><span style="position:relative;display:flex;align-items:center;gap:7px;height:26px;padding:0 10px;border:1px solid #363631;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:#9a9990"><span style="width:6px;height:6px;background:#ff4b2b"></span>TIFF 3 / 12<span style="position:absolute;left:-1px;bottom:-1px;height:2px;width:25%;background:#9a9990"></span></span></div><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">AFTER · 2 PX TEXT2 HAIRLINE</div></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><div style="background:#0b0b0b;height:72px;display:flex;align-items:center;justify-content:center"><span style="display:flex;align-items:center;gap:7px;height:26px;padding:0 10px;border:1px solid #363631;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:#9a9990"><span style="color:#f3f2ec">✓</span>TIFF 12</span></div><div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">AFTER · DONE, FADES IN 3 S</div></div>
+      </div>
+      <div style="font-size:13px;line-height:1.5;color:#9a9990">Don't use the import card — that one reports on something you started; this is housekeeping. A hairline gives a sense of "how long" without growing the pill; a brief ✓ confirms it ended. Tooltip: "Making viewer copies of TIFF images — you can keep working." Failures go to Library Health, not the pill.</div>
+    </div>
+  </div>
+
+  <!-- 2c settings -->
+  <div style="background:#121212;border:1px solid #363631;padding:24px 28px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:24px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#ff4b2b;margin-right:10px">2C</span>Settings · Grids &amp; Slideshow</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">LABEL COLUMN · JOINED SEGMENTS · DIRECTION APART</span></div>
+    <div style="display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.6fr);gap:28px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="background:#1b1b1a;padding:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">GRIDS</div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px">Sort</span><span style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ beforeSort }}" as="s" hint-placeholder-count="8"><span style="height:26px;display:flex;align-items:center;padding:0 8px;border:1px solid #363631;background:{{ s.bg }};color:{{ s.fg }};font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em">{{ s.t }}</span></sc-for>
+          </span></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px">Group</span><span style="display:flex;gap:6px"><span style="height:26px;display:flex;align-items:center;padding:0 8px;background:#f3f2ec;color:#0b0b0b;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px">NONE</span><span style="height:26px;display:flex;align-items:center;padding:0 8px;border:1px solid #363631;color:#9a9990;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px">BY COLLECTION</span></span></div>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">BEFORE · ↑ ↓ READ AS TWO MORE SORT OPTIONS</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+          <sc-for list="{{ panels }}" as="p" hint-placeholder-count="2">
+            <div style="background:#1b1b1a;padding:20px;display:flex;flex-direction:column;gap:2px">
+              <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990;margin-bottom:10px">{{ p.title }}</div>
+              <sc-for list="{{ p.rows }}" as="r" hint-placeholder-count="4">
+                <div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:start;padding:10px 0;border-top:1px solid #262625">
+                  <span style="font-size:14px;line-height:26px">{{ r.label }}</span>
+                  <span style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                    <span style="display:flex;flex-wrap:wrap">
+                      <sc-for list="{{ r.opts }}" as="s" hint-placeholder-count="3"><span style="height:26px;display:flex;align-items:center;padding:0 8px;border:1px solid #363631;margin:0 -1px -1px 0;background:{{ s.bg }};color:{{ s.fg }};font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.06em">{{ s.t }}</span></sc-for>
+                    </span>
+                    <sc-if value="{{ r.hasDir }}" hint-placeholder-val="{{ false }}"><span style="display:flex;margin-left:6px"><span style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:#f3f2ec;color:#0b0b0b;font-size:12px">↑</span><span style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid #363631;color:#9a9990;font-size:12px">↓</span></span></sc-if>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">AFTER · SAME PARTS, ALIGNED</div>
+      </div>
+    </div>
+    <div style="font-size:13px;line-height:1.5;color:#9a9990;max-width:980px">Labels in one 96 px column so the controls line up; segments joined (shared 1 px borders) so each row reads as one control; Sort's direction as its own ↑ ↓ pair, set apart. Each segmented row is one Tab stop with the compact ring (1F). <span style="color:#f3f2ec">Copy mismatch to fix:</span> the guide says the viewer interval is 1–30 s (§4.5) but Settings offers 2–30 s (§4.16).</div>
+  </div>
+
+  <!-- 2d slideshow -->
+  <div style="background:#121212;border:1px solid #363631;padding:24px 28px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Bahnschrift Condensed','Barlow Condensed',sans-serif;font-weight:600;font-size:24px"><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:11px;color:#ff4b2b;margin-right:10px">2D</span>Slideshow controls</span><span style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">ON-STATE SHOULDN'T BE COLOUR ONLY</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px">
+      <div style="display:flex;flex-direction:column;gap:10px"><div style="background:#0b0b0b;height:84px;display:flex;align-items:center;justify-content:center"><span style="display:flex;align-items:center;gap:6px;background:#1b1b1a;padding:8px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:12px">
+        <span style="padding:0 6px;color:#9a9990">‹</span><span style="color:#f3f2ec">5s</span><span style="padding:0 6px;color:#9a9990">›</span><span style="width:8px"></span><span style="padding:0 6px;color:#ff4b2b;font-size:14px">⟳</span><span style="padding:0 6px;color:#9a9990;font-size:14px">⤨</span></span></div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#9a9990">BEFORE · LOOP ON, SHUFFLE OFF</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px"><div style="background:#0b0b0b;height:84px;display:flex;align-items:center;justify-content:center"><span style="display:flex;align-items:center;gap:4px;background:#1b1b1a;padding:8px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:12px">
+        <span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#9a9990">‹</span><span style="width:34px;text-align:center;color:#f3f2ec">5s</span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#9a9990">›</span><span style="width:1px;height:18px;background:#363631;margin:0 6px"></span>
+        <span style="position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#ff4b2b;font-size:14px">⟳<span style="position:absolute;left:7px;right:7px;bottom:2px;height:2px;background:#ff4b2b"></span></span>
+        <span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#9a9990;font-size:14px">⤨</span></span></div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">AFTER · 2 PX BAR UNDER "ON"</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px"><div style="background:#0b0b0b;height:84px;display:flex;align-items:center;justify-content:center"><span style="display:flex;align-items:center;gap:4px;background:#1b1b1a;padding:8px;font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:12px">
+        <span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#9a9990">‹</span><span style="width:34px;text-align:center;color:#f3f2ec">5s</span><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#9a9990">›</span><span style="width:1px;height:18px;background:#363631;margin:0 6px"></span>
+        <span style="position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#ff4b2b;font-size:14px;outline:2px solid #f3f2ec;outline-offset:2px;box-shadow:0 0 0 2px #0b0b0b">⟳<span style="position:absolute;left:7px;right:7px;bottom:2px;height:2px;background:#ff4b2b"></span></span>
+        <span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#9a9990;font-size:14px">⤨</span></span></div>
+        <div style="font-family:'Cascadia Mono','JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#f3f2ec">AFTER · + FOCUS</div></div>
+    </div>
+    <div style="font-size:13px;line-height:1.5;color:#9a9990;max-width:980px">Accent alone also means "hovered" and "current" here, so add a 2 px accent bar under an "on" toggle and tooltips that say the state ("Loop: on — starts over at the end"). Fixed 28 px hit squares so the bar doesn't shift. ‹ › step through the Settings list (2 3 5 8 10 15 20 30 s), not 1 s at a time.</div>
+  </div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const R3 = { ol: '2px solid #f3f2ec', oo: '3px', bs: '0 0 0 3px #0b0b0b' };
+const R2 = { ol: '2px solid #f3f2ec', oo: '2px', bs: '0 0 0 2px #0b0b0b' };
+const RI = { ol: '2px solid #f3f2ec', oo: '-2px', bs: 'inset 0 0 0 3px #0b0b0b' };
+const NO = { ol: '0px solid transparent', oo: '0px', bs: 'none' };
+const fr = o => ({ state: 'rest', code: '12A', file: 'file_name.jpg', gif: false, star: false, isNew: false, num: '', selected: false, tone: 0, ...o });
+const NAMES = ['aerin_portrait.png','lathir.jpg','moonwell_map.tif','ember_loop.gif','forest_gate.jpg','court_outfit_02.png','court_outfit_03.png','sketch_hands.jpg','river_crossing.webp','night_market.jpg','ref_sheet_v4.png','tower_study.jpg'];
+const code = i => String(i + 7).padStart(2, '0') + 'A';
+const seg = (t, sel, foc) => ({ t, bg: sel ? '#f3f2ec' : 'transparent', fg: sel ? '#0b0b0b' : '#9a9990', z: foc ? 2 : 1, ...(foc ? R2 : NO) });
+const IND = {
+  off: { glyph: '', indBg: 'transparent', indFg: '#9a9990', indBorder: '#363631', nameColor: '#f3f2ec', deco: 'none' },
+  must: { glyph: '+', indBg: '#f3f2ec', indFg: '#0b0b0b', indBorder: '#f3f2ec', nameColor: '#f3f2ec', deco: 'none' },
+  never: { glyph: '−', indBg: '#ff3d5a', indFg: '#0b0b0b', indBorder: '#ff3d5a', nameColor: '#9a9990', deco: 'line-through' },
+  any: { glyph: '~', indBg: 'transparent', indFg: '#58a6ff', indBorder: '#58a6ff', nameColor: '#f3f2ec', deco: 'none' }
+};
+const TONES = [['#3d352d','#221f1b'],['#2c3540','#1a1e24'],['#3a3226','#1f1b15'],['#33303d','#1c1a22'],['#2d3a33','#19201c'],['#40302e','#231b1a']];
+
+class Component extends DCLogic {
+  state = { focus: 2, sel: [7, 8], anchor: null, kbd: true, hover: -1, msg: 'Click inside this panel once, then press keys.', hint: false, hintSeen: false };
+  componentWillUnmount() { clearTimeout(this.t); }
+  showHint() {
+    if (this.state.hintSeen) return;
+    this.setState({ hint: true, hintSeen: true });
+    clearTimeout(this.t);
+    this.t = setTimeout(() => this.setState({ hint: false }), 5000);
+  }
+  onKey = e => {
+    const k = e.key, n = 12, C = 6;
+    let { focus, sel, anchor } = this.state;
+    const mv = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -C, ArrowDown: C }[k];
+    if (mv !== undefined || k === 'Home' || k === 'End') {
+      e.preventDefault();
+      let nf = k === 'Home' ? 0 : k === 'End' ? n - 1 : focus + mv;
+      if (nf < 0 || nf >= n) nf = focus;
+      let msg = `${k.replace('Arrow', '')} → focus on ${code(nf)}`;
+      if (e.shiftKey) {
+        const a = anchor ?? focus, lo = Math.min(a, nf), hi = Math.max(a, nf);
+        sel = []; for (let i = lo; i <= hi; i++) sel.push(i);
+        anchor = a; msg = `Shift+${k.replace('Arrow', '')} → selection ${code(lo)}–${code(hi)}`;
+      } else if (!e.ctrlKey) anchor = null;
+      this.setState({ focus: nf, sel, anchor, kbd: true, hover: -1, msg });
+      this.showHint(); return;
+    }
+    if (k === ' ') {
+      e.preventDefault();
+      const on = sel.includes(focus);
+      sel = on ? sel.filter(x => x !== focus) : [...sel, focus];
+      this.setState({ sel, anchor: focus, kbd: true, hover: -1, msg: `Space → ${on ? 'deselected' : 'selected'} ${code(focus)}` });
+      this.showHint(); return;
+    }
+    if (k === 'Enter') { e.preventDefault(); this.setState({ kbd: true, msg: `Enter → opens ${NAMES[focus]} in the viewer` }); return; }
+    if (k === 'Backspace') { e.preventDefault(); this.setState({ kbd: true, msg: 'Backspace → up to Images › Fantasy › Elves' }); return; }
+    if (k === 'Escape') { e.preventDefault(); this.setState({ sel: [], anchor: null, kbd: true, msg: 'Esc → selection cleared' }); return; }
+  };
+  renderVals() {
+    const { focus, sel, kbd, hover } = this.state;
+    const demo = NAMES.map((file, i) => ({
+      code: code(i), file, tone: i, gif: i === 3, star: [0, 5, 8].includes(i), isNew: [9, 10].includes(i),
+      selected: sel.includes(i),
+      state: kbd && i === focus ? 'focus' : (!kbd && i === hover ? 'hover' : 'rest'),
+      enter: () => { if (this.state.hover !== i || this.state.kbd) this.setState({ hover: i, kbd: false, hint: false }); },
+      leave: () => this.setState({ hover: -1 }),
+      click: () => this.setState({ focus: i, kbd: false, msg: `Click → opens viewer; ${code(i)} is remembered, no ring` })
+    }));
+    const combos = [
+      fr({ label: 'REST', tone: 0 }),
+      fr({ label: 'HOVER · MOUSE', state: 'hover', tone: 1 }),
+      fr({ label: 'SELECTED', selected: true, tone: 2 }),
+      fr({ label: 'FOCUS', state: 'focus', tone: 3 }),
+      fr({ label: 'FOCUS + SELECTED', state: 'focus', selected: true, tone: 4 }),
+      fr({ label: 'FOCUS + ★ GIF NEW', state: 'focus', gif: true, star: true, isNew: true, tone: 5 })
+    ];
+    const tri = st => st.map((s, i) => fr({ state: s, code: ['03A','04A','05A'][i], file: ['lathir.jpg','map.tif','gate.jpg'][i], tone: i + 1 }));
+    const steps = [
+      { n: '1', t: 'Key pressed: ring on 03A.', frames: tri(['focus', 'rest', 'rest']) },
+      { n: '2', t: 'Mouse enters 05A: ring hides, hover shows.', frames: tri(['rest', 'rest', 'hover']) },
+      { n: '3', t: '→ pressed: ring returns from 03A to 04A.', frames: tri(['rest', 'focus', 'rest']) }
+    ];
+    const coll = Array.from({ length: 8 }, (_, i) => fr({ num: String(i + 1).padStart(2, '0'), code: code(i + 3), file: NAMES[(i + 3) % 12], tone: i, state: i === 2 ? 'focus' : 'rest', selected: i === 5 || i === 6, gif: i === 4, star: i === 1 }));
+    const collCombos = [
+      fr({ label: '03 · REST', num: '03', tone: 2 }),
+      fr({ label: '03 · FOCUS', num: '03', state: 'focus', tone: 2 }),
+      fr({ label: '03 · FOCUS + SELECTED', num: '03', state: 'focus', selected: true, tone: 2 }),
+      fr({ label: '04 · FOCUS + GIF', num: '04', state: 'focus', gif: true, tone: 5 })
+    ];
+    const collCards = [
+      { label: 'COLLECTION CARD · REST', capColor: '#9a9990', ...NO },
+      { label: 'COLLECTION CARD · FOCUS', capColor: '#f3f2ec', ...R3 }
+    ];
+    const cb = s => s ? { cb: '✓', cbBg: '#f2e34b', cbBorder: '#f2e34b', bg: '#1b1b1a' } : { cb: '', cbBg: 'transparent', cbBorder: '#363631', bg: 'transparent' };
+    const tagData = [['frodo','CHARACTER','#58a6ff','42'],['aerin','CHARACTER','#58a6ff','18'],['the lord of the rings','SOURCE','#ffb020','61'],['sunset','GENERAL','#9a9990','33'],['bob','ARTIST','#c08cff','7']];
+    const tagRows = tagData.map((d, i) => ({ name: d[0], type: d[1], dot: d[2], count: d[3], ...cb(i === 3 || i === 4), ...(i === 1 || i === 4 ? RI : NO) }));
+    const healthRows = [['#ff3d5a','Missing folders','3'],['#ffb020','Changed outside the app','5'],['#ffb020','Rule problems','2'],['#58a6ff','Untagged images','128'],['#58a6ff','Duplicates','14']]
+      .map((d, i) => ({ sev: d[0], name: d[1], n: d[2], revColor: i === 1 ? '#f3f2ec' : '#9a9990', ...(i === 1 ? RI : NO) }));
+    const binRows = [['court_outfit_01.png','FANTASY › ELVES › PORTRAITS · 2 DAYS AGO'],['Old sketches','ALBUM · ART › 2024 · 5 DAYS AGO'],['night_market_v2.jpg','PHOTOGRAPHY › 2025 › CITY · 1 WEEK AGO']]
+      .map((d, i) => ({ name: d[0], from: d[1], ...cb(i === 2), ...(i === 1 ? RI : NO) }));
+    const nav = ['IMAGES','TAGS','COLLECTIONS','FAVORITES','RANDOM','BIN','SETTINGS'].map((t, i) => ({ t, color: i === 0 ? '#f3f2ec' : '#9a9990', under: i === 0 ? '#ff4b2b' : 'transparent' }));
+    const tb = (label, f, capColor) => ({
+      label, capColor, sort: f === 'sort' ? R2 : NO,
+      group: [seg('NONE', true, false), seg('COLLECTION', false, f === 'group')],
+      cols: [2,3,4,5,6,7,8,9,10].map(c => seg(String(c), c === 6, f === 'cols' && c === 6))
+    });
+    const toolbars = [tb('REST', '', '#9a9990'), tb('FOCUS · BUTTON', 'sort', '#f3f2ec'), tb('FOCUS · UNPICKED SEGMENT', 'group', '#f3f2ec'), tb('FOCUS · PICKED (FILLED) SEGMENT', 'cols', '#f3f2ec')];
+    const row = (t, count, dot, ind, foc) => ({ row: true, head: false, t, count, dot, ...IND[ind], ...(foc ? RI : NO) });
+    const sidebar = [
+      { head: true, row: false, t: 'COLLECTIONS' },
+      row('Chapter 3 refs  ↗', '12', '#f3f2ec', 'off', false),
+      { head: true, row: false, t: 'CHARACTER' },
+      row('frodo', '42', '#58a6ff', 'must', false),
+      row('aerin', '18', '#58a6ff', 'off', true),
+      row('lathir', '9', '#58a6ff', 'never', false),
+      { head: true, row: false, t: 'SOURCE' },
+      row('the lord of the rings', '61', '#ffb020', 'any', false),
+      row('the silmarillion', '14', '#ffb020', 'any', false)
+    ];
+    const toggleCombos = [['off','FOCUS · OFF'],['must','FOCUS + MUST'],['never','FOCUS + NEVER'],['any','FOCUS + ANY OF']].map(([k, label]) => ({ t: 'frodo', count: '42', label, ...IND[k] }));
+    const strip = (label, foc) => ({ label, frames: Array.from({ length: 9 }, (_, i) => {
+      const t = TONES[i % 6];
+      return { bg: `linear-gradient(160deg,${t[0]},${t[1]})`, op: i === 4 || i === foc ? '1' : '0.6', cur: i === 4 ? 'inset 0 0 0 2px #ff4b2b' : 'none', ...(i === foc ? R2 : NO) };
+    }) });
+    const strips = [strip('REST · CURRENT = 5TH', -1), strip('CURRENT 5TH · FOCUS 7TH', 6), strip('FOCUS ON CURRENT · ACCENT INSIDE, RING OUTSIDE', 4)];
+    const btn = (foc) => ['−','FIT','+','▶ SLIDESHOW','⚄ RANDOM','⤢ FULL','INFO'].map((t, i) => ({
+      t, gapL: i === 3 || i === 6 ? '10px' : '0px',
+      bg: i === 6 ? '#262625' : 'transparent', fg: i === 6 || foc === i ? '#f3f2ec' : '#9a9990', ...(foc === i ? R2 : NO)
+    }));
+    const ctrlBars = [{ label: 'REST · INFO PANEL OPEN', btns: btn(-1) }, { label: 'FOCUS · ▶ SLIDESHOW', btns: btn(3) }, { label: 'FOCUS · INFO (ON)', btns: btn(6) }];
+    const dRows = foc => [['Chapter 3 refs','2 / 5 ALREADY'],['Wallpapers','—'],['Court outfits — final pass','5 / 5'],['Elf references','1 / 5']].map((d, i) => ({ name: d[0], has: d[1], ...(i === foc ? RI : NO) }));
+    const dialogs = [
+      { label: 'LIST ITEM FOCUSED · ↑ ↓ MOVE · ENTER ADDS', rows: dRows(0), cancel: NO, add: NO },
+      { label: 'PRIMARY FOCUSED · RING READS ON ACCENT FILL', rows: dRows(-1), cancel: NO, add: R2 }
+    ];
+    const opt = (list, pick) => list.map(t => ({ t, bg: t === pick ? '#f3f2ec' : 'transparent', fg: t === pick ? '#0b0b0b' : '#9a9990' }));
+    const beforeSort = opt(['NAME','DATE MODIFIED','DATE ADDED','FILE SIZE','FORMAT','RANDOM','↑','↓'], 'NAME').map(s => s.t === '↑' ? { ...s, bg: '#f3f2ec', fg: '#0b0b0b' } : s);
+    const panels = [
+      { title: 'GRIDS', rows: [
+        { label: 'Columns', opts: opt(['2','3','4','5','6','7','8','9','10'], '6'), hasDir: false },
+        { label: 'Sort', opts: opt(['NAME','DATE MODIFIED','DATE ADDED','FILE SIZE','FORMAT','RANDOM'], 'NAME'), hasDir: true },
+        { label: 'Group', opts: opt(['NONE','BY COLLECTION'], 'NONE'), hasDir: false },
+        { label: 'Index', opts: opt(['SHOWN','HIDDEN'], 'SHOWN'), hasDir: false }
+      ] },
+      { title: 'SLIDESHOW', rows: [
+        { label: 'Each image', opts: opt(['2s','3s','5s','8s','10s','15s','20s','30s'], '5s'), hasDir: false },
+        { label: 'At the end', opts: opt(['START OVER','STOP'], 'START OVER'), hasDir: false },
+        { label: 'Order', opts: opt(["THE LIST'S ORDER",'SHUFFLE'], "THE LIST'S ORDER"), hasDir: false }
+      ] }
+    ];
+    return {
+      onKey: this.onKey, demo, msg: this.state.msg, hint: this.state.hint,
+      inputMode: kbd ? 'KEYBOARD' : 'MOUSE', selCount: String(sel.length),
+      combos, steps, coll, collCombos, collCards, stripNums: ['02','03','04','05'],
+      tagRows, healthRows, binRows, nav, toolbars, sidebar, toggleCombos, strips, ctrlBars, dialogs, beforeSort, panels
+    };
+  }
+}
+</script>
+</body>
+</html>

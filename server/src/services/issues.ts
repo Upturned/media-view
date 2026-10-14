@@ -76,10 +76,33 @@ export function refreshDuplicates(db: DB): void {
      WHERE hash IS NOT NULL AND recycled = 0 AND missing_since IS NULL
      GROUP BY hash HAVING COUNT(*) > 1`,
   ).all() as { hash: string; ids: string }[];
+  // Groups kept as separate images stay quiet while they hold only the copies kept.
+  const kept = new Map((db.prepare('SELECT hash, file_ids FROM duplicates_kept').all() as { hash: string; file_ids: string }[])
+    .map((k) => [k.hash, new Set(k.file_ids.split(',').map(Number))]));
   db.transaction(() => {
     const sweep = new IssueSweep(db, ['duplicate']);
-    for (const g of groups) sweep.raise('duplicate', `hash:${g.hash}`, { fileIds: g.ids.split(',').map(Number) });
+    for (const g of groups) {
+      const ids = g.ids.split(',').map(Number);
+      const ok = kept.get(g.hash);
+      if (ok && ids.every((id) => ok.has(id))) continue;
+      sweep.raise('duplicate', `hash:${g.hash}`, { fileIds: ids });
+    }
     sweep.finish();
   })();
   emit({ type: 'health-changed' });
+}
+
+let dupTimer: NodeJS.Timeout | null = null;
+
+/**
+ * `refreshDuplicates` shortly after, once per burst: for hashes stored outside the hasher (imports,
+ * copies, move detection during a scan), which would otherwise wait for the next file it hashes.
+ */
+export function scheduleDuplicateRefresh(db: DB): void {
+  if (dupTimer) clearTimeout(dupTimer);
+  dupTimer = setTimeout(() => {
+    dupTimer = null;
+    if (db.open) refreshDuplicates(db);
+  }, 500);
+  dupTimer.unref();
 }

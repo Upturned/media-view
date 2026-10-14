@@ -1,14 +1,15 @@
 import {
-  parseQuery, type CollectionCount, type FileDetail, type FileItem, type GroupedFileItem, type SortKey, type TagRef,
+  formatOf, parseQuery, type CollectionCard, type CollectionCount, type FileDetail, type FileItem, type GroupedFileItem, type SortKey, type TagRef,
+  type TagSummary,
 } from '@media-view/shared';
 import { badRequest, notFound } from '../lib/errors.ts';
 import { emit } from '../lib/events.ts';
 import { log } from '../lib/log.ts';
 import { escapeLike, underPrefix } from '../lib/paths.ts';
-import { collectionsOfFile, folderPath, resolveCollection } from './collections.ts';
+import { collectionsOfFile, folderPath, listCollections, resolveCollection } from './collections.ts';
 import { folderDetail, thumbRef } from './folders.ts';
 import type { OpenLibrary } from './library.ts';
-import { resolveTerm, tagsOfFile } from './tags.ts';
+import { listTags, resolveTerm, tagsOfFile } from './tags.ts';
 
 /** Listing and querying image files with the search syntax (technical doc §11.2). */
 
@@ -34,7 +35,12 @@ export interface FileQuery {
   order: 'asc' | 'desc';
   /** Random order seed, stable across pages. */
   seed?: number;
+  /** Group by format: by format first (a→z, as `formatOf`), then by the sort. */
+  byFormat?: boolean;
 }
+
+/** An image's format in SQL, folded like `formatOf` (jpeg, jfif, jpe → jpg; tif → tiff; svgz → svg). */
+const FORMAT_SQL = "CASE f.ext WHEN 'jpeg' THEN 'jpg' WHEN 'jfif' THEN 'jpg' WHEN 'jpe' THEN 'jpg' WHEN 'tif' THEN 'tiff' WHEN 'svgz' THEN 'svg' ELSE f.ext END";
 
 export const PAGE_SIZE = 200;
 
@@ -180,6 +186,28 @@ function searchTerms(lib: OpenLibrary, query: string, parts: string[], params: u
 }
 
 /**
+ * The tags (`#elf`, `character:elf`) and collections (`@refs`) a search names, other than the ones it
+ * leaves out (`-#…`): the Search page pins them at the top of their tabs, so a tag search also
+ * leads to the tag itself. Tags in the order of the most images; collections by name.
+ */
+export function searchedItems(lib: OpenLibrary, query: string): { tags: TagSummary[]; collections: CollectionCard[] } {
+  const keys = lib.db.prepare('SELECT key FROM tag_types').pluck().all() as string[];
+  const tagIds = new Set<number>();
+  const collectionIds = new Set<number>();
+  for (const t of parseQuery(query, keys)) {
+    if (t.kind === 'text' || t.op === 'never' || !t.name) continue;
+    if (t.kind === 'collection') {
+      const cid = resolveCollection(lib.db, t.name);
+      if (cid !== null) collectionIds.add(cid);
+    } else resolveTerm(lib.db, t.type, t.name).forEach((id) => tagIds.add(id));
+  }
+  return {
+    tags: tagIds.size ? listTags(lib, { ids: [...tagIds], sort: 'count' }) : [],
+    collections: collectionIds.size ? listCollections(lib, { ids: [...collectionIds] }) : [],
+  };
+}
+
+/**
  * How many of the matching images each collection holds (the index's Collections section and the
  * group headers) — plus the collections the query names, so an excluded one stays switchable — and
  * how many are on none.
@@ -235,12 +263,18 @@ export function tagCounts(lib: OpenLibrary, q: FileQuery): (TagRef & { count: nu
 }
 
 function orderBy(q: FileQuery): string {
+  return (q.byFormat ? `${FORMAT_SQL} ASC, ` : '') + sortOrder(q);
+}
+
+function sortOrder(q: FileQuery): string {
   const dir = q.order === 'desc' ? 'DESC' : 'ASC';
   switch (q.sort) {
     case 'name': return `f.filename COLLATE NOCASE ${dir}, f.id ${dir}`;
     case 'modified': return `f.mtime ${dir}, f.id ${dir}`;
     case 'added': return `f.added_at ${dir}, f.id ${dir}`;
     case 'size': return `f.size ${dir}, f.id ${dir}`;
+    // By format (one JPG for jpg/jpeg/jfif/jpe, as formatOf), then name.
+    case 'format': return `${FORMAT_SQL} ${dir}, f.filename COLLATE NOCASE ${dir}, f.id ${dir}`;
     case 'random': {
       const seed = Math.trunc(q.seed ?? 1) % 2147483647 || 1;
       return `(f.id * ${seed}) % 2147483647, f.id`;
@@ -249,8 +283,16 @@ function orderBy(q: FileQuery): string {
       // A collection's own order; without a collection there's none, so by name.
       return q.collection !== undefined
         ? `(SELECT position FROM collection_items WHERE collection_id = ${Number(q.collection)} AND file_id = f.id) ${dir}, f.id ${dir}`
-        : orderBy({ ...q, sort: 'name' });
+        : sortOrder({ ...q, sort: 'name' });
   }
+}
+
+/** Group by format: how many of the matching images each format has, in the grid's order (a→z). */
+export function formatCounts(lib: OpenLibrary, q: FileQuery): { formats: { format: string; count: number }[] } {
+  const w = where(lib, q);
+  const rows = lib.db.prepare(`SELECT ${FORMAT_SQL} AS format, COUNT(*) AS count FROM files f WHERE ${w.sql} GROUP BY 1 ORDER BY 1`)
+    .all(...w.params) as { format: string; count: number }[];
+  return { formats: rows.map((r) => ({ format: formatOf(r.format), count: r.count })) };
 }
 
 /** SQL for an image's 1-based place in a collection's own order, counting live images only. */

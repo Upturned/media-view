@@ -1,4 +1,6 @@
+import type { CollectionRef } from '@media-view/shared';
 import { client, unwrap } from '../api.ts';
+import { addToCollection } from './collections.svelte.ts';
 import { toastError } from './toasts.svelte.ts';
 
 /**
@@ -12,6 +14,7 @@ export interface ImportResult {
   savedAs?: string;
   reason?: string;
   size?: number;
+  fileId?: number;
 }
 
 interface ImportItem {
@@ -30,6 +33,8 @@ export interface ImportJob {
   done: number;
   current: string;
   status: 'waiting' | 'running' | 'finished' | 'cancelled';
+  /** Dropped on a collection page: the images are added to the end of its list once imported. */
+  collection?: CollectionRef;
 }
 
 export const imports = $state({
@@ -40,7 +45,7 @@ export const imports = $state({
 let nextId = 1;
 let running = false;
 
-export function startImport(target: { id: number | null; label: string }, sources: (File | string)[]): void {
+export function startImport(target: { id: number | null; label: string }, sources: (File | string)[], collection?: CollectionRef): void {
   if (sources.length === 0) return;
   imports.jobs.push({
     id: nextId++,
@@ -52,6 +57,7 @@ export function startImport(target: { id: number | null; label: string }, source
     done: 0,
     current: '',
     status: 'waiting',
+    collection,
   });
   imports.minimized = false;
   void pump();
@@ -123,6 +129,9 @@ async function pump(): Promise<void> {
       unwrap(client.api.files['import-done'].$post({
         json: { target: job.targetLabel, copied: count('copied'), renamed: count('renamed'), skipped: count('skipped'), rejected: count('rejected'), cancelled },
       })).catch(toastError);
+      // Even when cancelled: what was imported joins the list (identical images already in the Inbox too).
+      const ids = job.items.map((i) => i.result?.fileId).filter((n): n is number => n !== undefined);
+      if (job.collection && ids.length) await addToCollection(job.collection, ids).catch(toastError);
     }
   } finally {
     running = false;
@@ -222,7 +231,7 @@ export function installDragTracking(): () => void {
 }
 
 /** Import what was dropped: files and folders' contents, all into one target. */
-export async function importDrop(dt: DataTransfer, target: { id: number | null; label: string }): Promise<void> {
+export async function importDrop(dt: DataTransfer, target: { id: number | null; label: string }, collection?: CollectionRef): Promise<void> {
   const { files, folders } = await readDrop(dt);
-  startImport(target, [...files, ...folders.flatMap((f) => f.files)]);
+  startImport(target, [...files, ...folders.flatMap((f) => f.files)], collection);
 }

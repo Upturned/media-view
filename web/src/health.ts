@@ -35,11 +35,20 @@ export interface Group {
   count: string;
   sample: string;
   fix: GroupFix | null;
+  /** Other fixes for the whole group (on its Review section; the overview shows the main one). */
+  more?: GroupFix[];
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${fmt(n)} ${n === 1 ? one : many}`;
 const last = (p: string) => p.split('/').filter(Boolean).at(-1) ?? 'Images';
 const list = (xs: string[], max = 3) => xs.slice(0, max).join(' · ') + (xs.length > max ? ` · +${xs.length - max}` : '');
+
+/**
+ * Loose images in a top-level folder with no folders inside: it looks like an album made in the
+ * wrong place, so it's shown with the unmarked folders (Move as album…) and Apply to all skips it.
+ */
+export const looksLikeAlbum = (i: HealthIssue) =>
+  i.details.kind === 'loose_files' && i.details.folderId !== null && i.details.topLevel && i.details.subfolders === 0;
 
 /** The groups with something in them, from a report. */
 export function groupsOf(r: HealthReport): Group[] {
@@ -68,7 +77,8 @@ export function groupsOf(r: HealthReport): Group[] {
     key: 'changed', section: 'amber', title: 'Changed outside the app', kinds: ['external_move'], issues: changes,
     hint: 'images moved together are one item',
     sample: list(changes.map((i) => i.details.kind === 'external_move'
-      ? i.details.entity === 'folder' ? `${last(i.details.from)} → ${last(i.details.to)}` : plural(i.details.files.length, 'image') + ' moved'
+      ? i.details.entity === 'folder' ? `${last(i.details.from)} → ${last(i.details.to)}`
+        : `${i.details.files.length === 1 ? i.details.files[0]!.filename : plural(i.details.files.length, 'image')} → ${last(i.details.toFolder)}`
       : '')),
     fix: changes.length ? { label: `Keep all ${changes.length}`, does: `Keep ${plural(changes.length, 'change')} made outside the app (nothing moves)`, steps: [{ kind: 'external_move', action: 'keep' }] } : null,
   });
@@ -77,7 +87,7 @@ export function groupsOf(r: HealthReport): Group[] {
     key: 'unclear', section: 'amber', title: 'Unclear moves', kinds: ['ambiguous_move'], issues: unclear, need: true, hint: 'one image, several histories',
     sample: list(unclear.map((i) => (i.details.kind === 'ambiguous_move' ? `${last(i.details.file.path)} matches ${plural(i.details.candidates.length, 'missing image')}` : ''))), fix: null,
   });
-  const rules = of('loose_files', 'nested_in_album');
+  const rules = of('loose_files', 'nested_in_album').filter((i) => !looksLikeAlbum(i));
   const loose = rules.filter((i) => i.details.kind === 'loose_files' && i.details.folderId !== null);
   const nested = rules.filter((i) => i.kind === 'nested_in_album');
   const looseImages = rules.reduce((n, i) => n + (i.details.kind === 'loose_files' ? i.details.count : 0), 0);
@@ -86,14 +96,19 @@ export function groupsOf(r: HealthReport): Group[] {
     sample: [looseImages && `${plural(looseImages, 'loose image')} in ${plural(rules.length - nested.length, 'folder')}`, nested.length && `${plural(nested.length, 'folder')} inside an album`].filter(Boolean).join(' · '),
     fix: loose.length + nested.length ? {
       label: `Fix all ${loose.length + nested.length}`,
-      does: [loose.length && `Put loose images into ${plural(loose.length, 'new album')} (“Loose images”)`, nested.length && `move ${plural(nested.length, 'folder')} out of albums`].filter(Boolean).join(' · '),
+      does: [loose.length && `Put loose images into ${plural(loose.length, 'new album')}, one per folder`, nested.length && `move ${plural(nested.length, 'folder')} out of albums`].filter(Boolean).join(' · '),
       steps: [...(loose.length ? [{ kind: 'loose_files' as const, action: 'new-album' as const }] : []), ...(nested.length ? [{ kind: 'nested_in_album' as const, action: 'move-out' as const }] : [])],
     } : null,
   });
   const unmarked = of('unmarked_folder');
+  const albumLike = of('loose_files').filter(looksLikeAlbum);
   add({
-    key: 'unmarked', section: 'amber', title: 'Unmarked folders', kinds: ['unmarked_folder'], issues: unmarked, hint: 'made outside the app · kind guessed',
-    sample: unmarked.length ? `${list(unmarked.map((i) => (i.details.kind === 'unmarked_folder' ? last(i.details.path) : '')))} — kinds guessed` : '',
+    key: 'unmarked', section: 'amber', title: 'Unmarked folders', kinds: ['unmarked_folder', 'loose_files'], issues: [...albumLike, ...unmarked],
+    hint: 'made outside the app · kind guessed', need: unmarked.length === 0,
+    sample: [
+      albumLike.length && `${list(albumLike.map((i) => (i.details.kind === 'loose_files' ? last(i.details.path) : '')))} — ${albumLike.length === 1 ? 'looks like an album' : 'look like albums'}`,
+      unmarked.length && `${list(unmarked.map((i) => (i.details.kind === 'unmarked_folder' ? last(i.details.path) : '')))} — kinds guessed`,
+    ].filter(Boolean).join(' · '),
     fix: unmarked.length ? { label: `Confirm ${unmarked.length}`, does: `Confirm ${plural(unmarked.length, 'guessed folder kind')} and write their markers`, steps: [{ kind: 'unmarked_folder', action: 'confirm' }] } : null,
   });
   const unsupported = of('unsupported');
@@ -118,10 +133,22 @@ export function groupsOf(r: HealthReport): Group[] {
   const dups = of('duplicate');
   const clear = dups.filter((i) => i.details.kind === 'duplicate' && i.details.keepId !== null && i.details.reason !== 'different-tags' && i.details.reason !== 'two-starred');
   add({
-    key: 'duplicates', section: 'blue', title: 'Duplicates', kinds: ['duplicate'], issues: dups, count: plural(dups.length, 'group'), hint: 'click a copy to keep it · keep one or merge',
+    key: 'duplicates', section: 'blue', title: 'Duplicates', kinds: ['duplicate'], issues: dups, count: dups.length ? plural(dups.length, 'group') : undefined, hint: 'click a copy to keep it · keep one, merge, or keep them all',
     need: clear.length === 0,
     sample: [clear.length && `${fmt(clear.length)} with a suggested copy`, dups.length - clear.length && `${fmt(dups.length - clear.length)} need your choice`].filter(Boolean).join(' · '),
     fix: clear.length ? { label: `Keep suggested (${clear.length})`, does: `Keep the suggested copy in ${plural(clear.length, 'group')} and send the other copies to the Recycle Bin`, steps: [{ kind: 'duplicate', action: 'keep-one' }] } : null,
+    more: dups.length ? [
+      {
+        label: `Merge all ${dups.length}`,
+        does: `Merge each of the ${plural(dups.length, 'group')} into its suggested copy (or the oldest): it gets every tag, the star, a description and every place in a collection, and the other copies go to the Recycle Bin`,
+        steps: [{ kind: 'duplicate', action: 'merge' }],
+      },
+      {
+        label: `Keep all copies (${dups.length})`,
+        does: `Keep every copy in ${plural(dups.length, 'group')} as separate images: nothing moves, and they stop showing here until a new copy turns up`,
+        steps: [{ kind: 'duplicate', action: 'keep-all' }],
+      },
+    ] : undefined,
   });
   if (r.thumbnails.count) {
     add({
@@ -143,6 +170,33 @@ export function groupsOf(r: HealthReport): Group[] {
     });
   }
   return out;
+}
+
+export interface PathPart {
+  /** Unchanged start, with its trailing `\`. */
+  pre: string;
+  /** The part that changed (highlighted); '' on the side where a folder was only added or removed. */
+  hit: string;
+  /** Unchanged end, with its leading `\`. */
+  post: string;
+}
+
+/** WAS / NOW of a move (Windows paths): each split into the shared start, the part that changed and the shared end. */
+export function pathDiff(was: string, now: string): [PathPart, PathPart] {
+  const A = was.split('\\');
+  const B = now.split('\\');
+  let i = 0;
+  while (i < A.length && i < B.length && A[i] === B[i]) i++;
+  let j = 0;
+  while (j < A.length - i && j < B.length - i && A[A.length - 1 - j] === B[B.length - 1 - j]) j++;
+  const part = (S: string[]): PathPart => {
+    const pre = S.slice(0, i).join('\\');
+    const hit = S.slice(i, S.length - j).join('\\');
+    const post = S.slice(S.length - j).join('\\');
+    // With an empty middle, pre and post still need the `\` between them.
+    return { pre: pre + (pre && (hit || post) ? '\\' : ''), hit, post: (post && hit ? '\\' : '') + post };
+  };
+  return [part(A), part(B)];
 }
 
 /** Where a group's Review ▸ goes. */

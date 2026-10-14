@@ -1,5 +1,7 @@
 import type { FixAction, FixResult, HealthSummary, IssueKind } from '@media-view/shared';
 import { client, unwrap } from '../api.ts';
+import type { GroupFix } from '../health.ts';
+import { ask, askText, type ConfirmRequest } from './confirm.svelte.ts';
 import { toast, toastError } from './toasts.svelte.ts';
 
 /**
@@ -42,14 +44,28 @@ export async function applyFix(issueId: number, fix: FixAction, fallback = 'Done
   }
 }
 
-/** The same fix on every item of a kind (after the caller asked first). */
-export async function applyToKind(kind: IssueKind, action: FixAction['action']): Promise<void> {
+/** The same fix on every item of a kind (after the caller asked first); `albumName` names new albums of loose images. */
+export async function applyToKind(kind: IssueKind, action: FixAction['action'], albumName?: string): Promise<void> {
   try {
-    const r = await unwrap(client.api.health['fix-all'].$post({ json: { kind, action: action as 'keep' } }));
-    report(r, kind === 'duplicate' || action === 'recycle');
+    const r = await unwrap(client.api.health['fix-all'].$post({ json: { kind, action: action as 'keep', albumName } }));
+    report(r, (kind === 'duplicate' && action !== 'keep-all') || action === 'recycle');
   } catch (err) {
     toastError(err);
   }
+}
+
+/**
+ * A fix for a whole group (overview or Review section), asked first. When loose images go into new
+ * albums, the confirmation asks for their name.
+ */
+export async function runGroupFix(fix: GroupFix, sub: string): Promise<void> {
+  const request: ConfirmRequest = { tone: 'normal', title: `${fix.label}?`, sub, body: `${fix.does}.`, button: fix.label, foot: 'Each fix is logged' };
+  const loose = fix.steps.some((s) => s.kind === 'loose_files' && s.action === 'new-album');
+  const albumName = loose
+    ? await askText({ ...request, field: { label: 'Name for the new albums (one per folder)', value: 'Loose images' } })
+    : (await ask(request)) ? undefined : null;
+  if (albumName === null) return;
+  for (const step of fix.steps) await applyToKind(step.kind, step.action, albumName);
 }
 
 export function report(r: { done: number; skipped: number; failed: { message: string }[] }, binLink = false): void {

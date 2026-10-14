@@ -157,10 +157,11 @@ function aliasesOf(db: DB, tagIds: number[]): Map<number, string[]> {
 }
 
 /** The tags directory: every tag (or those whose name or alias contains `q`), with counts and aliases. */
-export function listTags(lib: OpenLibrary, opts: { q?: string; typeId?: number; sort?: 'name' | 'count'; limit?: number } = {}): TagSummary[] {
+export function listTags(lib: OpenLibrary, opts: { q?: string; typeId?: number; sort?: 'name' | 'count'; limit?: number; ids?: number[] } = {}): TagSummary[] {
   const { db } = lib;
   const parts: string[] = [];
   const params: unknown[] = [];
+  if (opts.ids) parts.push(opts.ids.length ? `t.id IN (${opts.ids.map(Number).join(',')})` : '0');
   const q = opts.q ? normTagName(opts.q) : '';
   if (q) {
     parts.push(`(t.name_norm LIKE ? ESCAPE '\\' OR t.id IN (SELECT tag_id FROM tag_aliases WHERE alias_norm LIKE ? ESCAPE '\\'))`);

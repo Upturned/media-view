@@ -3,15 +3,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { isImageFile } from '@media-view/shared';
-import sharp from 'sharp';
+import { isImageFile, isVector } from '@media-view/shared';
+import zlib from 'node:zlib';
 import { badRequest } from '../lib/errors.ts';
 import { emit } from '../lib/events.ts';
 import { expectChange } from '../lib/expected.ts';
+import { openImage } from '../lib/image.ts';
 import { log } from '../lib/log.ts';
 import { sanitizeName, splitExt, uniqueName } from '../lib/names.ts';
 import { extension, toAbsolute } from '../lib/paths.ts';
 import { categoryIdOf, imageTarget } from './file-ops.ts';
+import { scheduleDuplicateRefresh } from './issues.ts';
 import { tempDir, type OpenLibrary } from './library.ts';
 
 /**
@@ -31,8 +33,8 @@ export interface ImportResult {
 
 const VIDEO = new Set(['mp4', 'mov', 'mkv', 'webm', 'avi', 'm4v', 'wmv', 'flv', 'mpg', 'mpeg']);
 const AUDIO = new Set(['mp3', 'wav', 'flac', 'ogg', 'm4a', 'aac', 'wma', 'opus']);
-const UNSUPPORTED_IMAGES = new Set(['psd', 'tif', 'tiff', 'bmp', 'heic', 'heif', 'ico', 'raw', 'cr2', 'nef', 'arw', 'dng', 'xcf', 'kra', 'clip']);
-const SUPPORTED = 'Supported: JPG, PNG, GIF, WebP, SVG, AVIF, JFIF.';
+const UNSUPPORTED_IMAGES = new Set(['psd', 'heic', 'heif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'xcf', 'kra', 'clip']);
+const SUPPORTED = 'Supported: JPG, PNG, GIF, WebP, SVG, AVIF, BMP, ICO, TIFF.';
 
 /** Why a file can't be imported, from its name alone; null if it can be tried. */
 export function rejectionByName(name: string): string | null {
@@ -84,20 +86,25 @@ async function place(lib: OpenLibrary, target: ReturnType<typeof imageTarget>, n
   };
 
   // The same image is already in this album: nothing to do (elsewhere, a copy is a normal duplicate).
-  const same = db.prepare('SELECT filename FROM files WHERE folder_id = ? AND hash = ? AND recycled = 0 AND missing_since IS NULL')
-    .pluck().get(target.id, hash) as string | undefined;
-  if (same) return done({ name, status: 'skipped', reason: `Identical image already in this album${same !== name ? ` (“${same}”)` : ''} — skipped.` });
+  // Its id comes back all the same: a drop on a collection adds it to the list.
+  const same = db.prepare('SELECT id, filename FROM files WHERE folder_id = ? AND hash = ? AND recycled = 0 AND missing_since IS NULL')
+    .get(target.id, hash) as { id: number; filename: string } | undefined;
+  if (same) {
+    const named = same.filename !== name ? ` (“${same.filename}”)` : '';
+    return done({ name, status: 'skipped', reason: `Identical image already in this album${named} — skipped.`, fileId: same.id });
+  }
 
   // It must really be an image.
   let width: number | null = null;
   let height: number | null = null;
   const ext = extension(name);
   try {
-    if (ext === 'svg') {
-      const head = fs.readFileSync(temp, 'utf8').slice(0, 4096);
+    if (isVector(ext)) {
+      const raw = fs.readFileSync(temp);
+      const head = (ext === 'svgz' ? zlib.gunzipSync(raw) : raw).toString('utf8', 0, 4096);
       if (!/<svg[\s>]/i.test(head)) throw new Error('not svg');
     } else {
-      const meta = await sharp(temp, { failOn: 'none' }).metadata();
+      const meta = await openImage(temp, ext).metadata();
       if (!meta.width || !meta.height) throw new Error('no size');
       const rotated = (meta.orientation ?? 1) >= 5;
       width = rotated ? meta.height : meta.width;
@@ -120,6 +127,7 @@ async function place(lib: OpenLibrary, target: ReturnType<typeof imageTarget>, n
      VALUES ('image', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(target.id, categoryIdOf(lib, target.rel_path), finalName, rel, ext, st.size, Math.floor(st.mtimeMs), hash, width, height, Date.now())
     .lastInsertRowid as number;
+  scheduleDuplicateRefresh(db); // already hashed: the hasher won't see it
 
   emit({ type: 'files-changed' });
   emit({ type: 'folders-changed' });

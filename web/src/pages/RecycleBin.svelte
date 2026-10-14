@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
+  import { navItems } from '../kbd.svelte.ts';
   import { client, unwrap } from '../api.ts';
   import KindIcon from '../components/KindIcon.svelte';
   import Thumb from '../components/Thumb.svelte';
@@ -110,7 +111,7 @@
   });
 </script>
 
-<div class="bin-page">
+<div class="bin-page" use:navItems={{ kind: 'rows' }}>
   <header class="head">
     <h1 class="display title">Recycle Bin</h1>
     <div class="stats">
@@ -136,9 +137,9 @@
   </div>
   <div class="rows">
     {#each shown as item (item.id)}
-      <div class="row" class:sel={selected.has(item.id)}>
+      <div class="row" data-nav class:sel={selected.has(item.id)}>
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <span class="box" class:on={selected.has(item.id)} onclick={() => (selected.has(item.id) ? selected.delete(item.id) : selected.add(item.id))}>{selected.has(item.id) ? '✓' : ''}</span>
+        <span class="box" data-nav-select class:on={selected.has(item.id)} onclick={() => (selected.has(item.id) ? selected.delete(item.id) : selected.add(item.id))}>{selected.has(item.id) ? '✓' : ''}</span>
         {#if item.entity !== 'folder'}
           <div class="thumb"><Thumb file={item.thumb ?? undefined} fit="cover" /></div>
         {:else}
@@ -159,9 +160,9 @@
         <span class="date">{formatDate(item.recycledAt)}</span>
         <span class="size">{formatSize(item.size)}</span>
         <div class="acts">
-          <button disabled={item.locationGone} onclick={() => restore([item])} title={item.locationGone ? 'The original location is gone — use Restore to…' : 'Put it back where it was'}>Restore</button>
+          <button data-nav-open disabled={item.locationGone} onclick={() => restore([item])} title={item.locationGone ? 'The original location is gone — use Restore to…' : 'Put it back where it was'}>Restore</button>
           {#if item.entity !== 'other'}<button class:hint={item.locationGone} onclick={() => restoreTo([item])}>Restore to…</button>{/if}
-          <button class="del" onclick={() => remove([item])} title="Delete permanently">Delete</button>
+          <button class="del" data-nav-delete onclick={() => remove([item])} title="Delete permanently">Delete</button>
         </div>
       </div>
     {:else}

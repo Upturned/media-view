@@ -8,6 +8,7 @@
   import DialogFrame from './DialogFrame.svelte';
   import FolderPicker, { type PickerNode } from './FolderPicker.svelte';
   import KindIcon from './KindIcon.svelte';
+  import PickerCreate from './PickerCreate.svelte';
 
   /** Move / Copy images, move a folder, or restore from the bin to a chosen place (design M3 · 01). */
   let { dialog }: { dialog: Extract<OpsDialog, { kind: 'transfer' | 'folder-move' | 'restore' }> } = $props();
@@ -20,7 +21,6 @@
   let policy = $state<ClashPolicy>('keep-both');
   let copyTags = $state(true);
   let busy = $state(false);
-  let newName = $state<string | null>(null);
 
   // What can be picked.
   const restoringFiles = $derived(dialog.kind === 'restore' && dialog.items.every((i) => i.entity === 'file'));
@@ -116,20 +116,10 @@
     return 'Albums hold only images. Pick a category or sub-category.';
   });
 
-  const canCreateAlbum = $derived(placingImages && !!node && (node.kind === 'category' || node.kind === 'subcategory'));
-
-  async function createAlbum() {
-    if (!node || !newName?.trim()) return;
-    try {
-      const card = await unwrap(client.api.folders.$post({ json: { parentId: node.id, kind: 'album', name: newName } }));
-      newName = null;
-      created = [...created, card.id];
-      await picker!.reload();
-      picker!.reveal(card.id);
-    } catch (err) {
-      toastError(err);
-    }
-  }
+  /** What can be created from here: racks, drawers — and albums when placing images. */
+  const createAllow = $derived<('category' | 'subcategory' | 'album')[]>(
+    placingImages ? ['category', 'subcategory', 'album'] : dialog.kind === 'restore' && !restoringFolders ? [] : ['category', 'subcategory'],
+  );
 
   async function go() {
     if (!valid || !node || busy) return;
@@ -177,6 +167,7 @@
 
   {#snippet footer()}
     <div class="foot">
+      <PickerCreate {node} {picker} allow={createAllow} oncreated={(id) => (created = [...created, id])} />
       {#if valid}
         <div class="dest">
           <span class="field-label">Destination</span>
@@ -196,17 +187,6 @@
       {:else}
         <div class="invalid">
           <span>{hint}</span>
-          {#if canCreateAlbum}
-            {#if newName === null}
-              <button onclick={() => (newName = '')}>+ New album in {node?.name}</button>
-            {:else}
-              <form onsubmit={(e) => { e.preventDefault(); void createAlbum(); }}>
-                <!-- svelte-ignore a11y_autofocus -->
-                <input bind:value={newName} placeholder="Album name" autofocus />
-                <button type="submit" disabled={!newName.trim()}>Create</button>
-              </form>
-            {/if}
-          {/if}
         </div>
       {/if}
       <div class="actions">
@@ -242,10 +222,6 @@
   .clash .what { flex: 1; min-width: 0; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .invalid { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px dashed var(--text2); font: 12px var(--font-mono); color: var(--text2); }
   .invalid > span { flex: 1; line-height: 1.45; }
-  .invalid button, .invalid input { height: 30px; padding: 0 12px; border: 1px solid var(--text); background: none; color: var(--text); font: inherit; text-transform: uppercase; cursor: pointer; }
-  .invalid form { display: flex; gap: 6px; }
-  .invalid input { text-transform: none; cursor: text; background: var(--bg2); outline: none; width: 180px; }
-  .invalid button:disabled { opacity: 0.5; cursor: default; }
   .actions { display: flex; align-items: center; gap: 8px; }
   .check { display: flex; align-items: center; gap: 6px; padding-right: 10px; font: 11px var(--font-mono); text-transform: uppercase; cursor: pointer; }
   .check input { accent-color: var(--accent); }

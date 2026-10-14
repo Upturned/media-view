@@ -2,6 +2,8 @@ import type { ScanStatus } from '@media-view/shared';
 import { emit } from '../lib/events.ts';
 import { log } from '../lib/log.ts';
 import { getLibrary, type OpenLibrary } from '../services/library.ts';
+import { scheduleDuplicateRefresh } from '../services/issues.ts';
+import { convertingStatus } from '../services/previews.ts';
 import { reconcile, type ReconcileResult } from '../services/reconcile.ts';
 import { kickHasher, pendingHashes } from './hasher.ts';
 
@@ -35,6 +37,7 @@ export function requestScan(lib: OpenLibrary): void {
         emit({ type: 'folders-changed' });
         emit({ type: 'files-changed' });
         emit({ type: 'health-changed' });
+        scheduleDuplicateRefresh(lib.db); // files hashed by move detection, and copies recycled or gone
         kickHasher();
       }
     }
@@ -48,7 +51,7 @@ export function resetScanner(): void {
 }
 
 export function scanStatus(lib: OpenLibrary): ScanStatus {
-  return { status: running ? 'scanning' : 'idle', lastScan, hashing: pendingHashes(lib) };
+  return { status: running ? 'scanning' : 'idle', lastScan, hashing: pendingHashes(lib), converting: convertingStatus() };
 }
 
 export function lastScanResult(): ReconcileResult | null {

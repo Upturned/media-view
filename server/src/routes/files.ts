@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { valid } from '../lib/validate.ts';
 import {
-  briefFiles, collectionCounts, fileDetail, folderFileNames, listFileIds, listFiles, listGrouped, locateFile, PAGE_SIZE, randomFile, setFavorite, tagCounts,
+  briefFiles, collectionCounts, formatCounts, fileDetail, folderFileNames, listFileIds, listFiles, listGrouped, locateFile, PAGE_SIZE, randomFile, searchedItems, setFavorite, tagCounts,
 } from '../services/files.ts';
 import { bulkRename, copyFiles, moveFiles, renameFile, setFileDescription, undoMove } from '../services/file-ops.ts';
 import { importPath, importStream, logImport } from '../services/import.ts';
@@ -24,9 +24,10 @@ const fileQuery = z.object({
   collection: z.coerce.number().int().positive().optional(),
   untagged: flag,
   fresh: flag,
-  sort: z.enum(['name', 'modified', 'added', 'size', 'random', 'position']).default('name'),
+  sort: z.enum(['name', 'modified', 'added', 'size', 'format', 'random', 'position']).default('name'),
   order: z.enum(['asc', 'desc']).default('asc'),
   seed: z.coerce.number().int().optional(),
+  byFormat: flag,
 });
 
 const id = z.object({ id: z.coerce.number().int().positive() });
@@ -51,6 +52,8 @@ export const fileRoutes = new Hono()
       return c.json(listFiles(requireLibrary(), q, offset, limit));
     },
   )
+  /** Group by format: how many of the matching images each format has (the group headers). */
+  .get('/format-counts', valid('query', fileQuery), (c) => c.json(formatCounts(requireLibrary(), c.req.valid('query'))))
   /** How many of the matching images each collection holds (the index, group headers). */
   .get('/collection-counts', valid('query', fileQuery.extend({ by: z.enum(['count', 'name']).default('count') })), (c) => {
     const { by, ...q } = c.req.valid('query');
@@ -69,6 +72,8 @@ export const fileRoutes = new Hono()
   .get('/names', valid('query', z.object({ folder: z.coerce.number().int().positive() })), (c) =>
     c.json({ names: folderFileNames(requireLibrary(), c.req.valid('query').folder) }))
   .get('/ids', valid('query', fileQuery), (c) => c.json({ ids: listFileIds(requireLibrary(), c.req.valid('query')) }))
+  /** The tags and collections a search names (the Search page pins them on its tabs). */
+  .get('/searched', valid('query', z.object({ q: z.string().max(2000) })), (c) => c.json(searchedItems(requireLibrary(), c.req.valid('query').q)))
   .get('/locate', valid('query', fileQuery.extend({ id: z.coerce.number().int().positive() })), (c) => {
     const { id: fileId, ...q } = c.req.valid('query');
     return c.json({ position: locateFile(requireLibrary(), q, fileId) });

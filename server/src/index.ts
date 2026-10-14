@@ -1,11 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { appDataDir, loadConfig } from './config.ts';
 import { createApp } from './app.ts';
+import { WEB_DIST } from './lib/app-dir.ts';
 import { applyRetention, flush, getLogDir, log, setLogDir } from './lib/log.ts';
+import { openUrl } from './lib/windows.ts';
 import { closeLibrary, openLibrary } from './services/library.ts';
 import { installWorkers } from './workers/index.ts';
 
@@ -32,13 +33,36 @@ if (process.env.NODE_ENV !== 'production') {
 const app = createApp(origins);
 
 // The built frontend (npm run build). In development Vite serves it instead.
-const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
-if (fs.existsSync(webDist)) {
-  app.use('/*', serveStatic({ root: path.relative(process.cwd(), webDist) }));
+if (fs.existsSync(WEB_DIST)) {
+  app.use('/*', serveStatic({ root: path.relative(process.cwd(), WEB_DIST) }));
 }
 
+// The packaged app's start.bat sets MEDIA_VIEW_OPEN: open the browser once the server listens.
+const openBrowser = process.env.MEDIA_VIEW_OPEN === '1';
+const url = `http://localhost:${port}`;
 const server = serve({ fetch: app.fetch, hostname: '127.0.0.1', port }, () => {
-  console.log(`media-view running at http://localhost:${port}`);
+  console.log(`media-view running at ${url}`);
+  if (openBrowser) {
+    console.log('Keep this window open while you use the app; close it to stop media-view.');
+    openUrl(url);
+  }
+});
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code !== 'EADDRINUSE' || !openBrowser) throw err;
+  // Started twice: show the copy that's running. Another program on the port: say so.
+  fetch(`${url}/api/system/about`)
+    .then((r) => r.json() as Promise<{ name?: string }>)
+    .catch(() => ({ name: undefined }))
+    .then((info) => {
+      if (info.name === 'media-view') {
+        console.log(`media-view is already running at ${url}`);
+        openUrl(url);
+        setTimeout(() => process.exit(0), 500);
+      } else {
+        console.error(`Port ${port} is used by another program. Change "port" in ${path.join(appDataDir(), 'config.json')} and start again.`);
+        process.exit(1);
+      }
+    });
 });
 
 setInterval(() => {

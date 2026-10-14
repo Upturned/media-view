@@ -135,7 +135,7 @@ Because your library is made of ordinary folders, you can still change things in
 
 ## 3. Getting around
 
-- The **top bar** is on every page: the media-view logo (back to the Hub), the search box, shortcuts to Tags, Collections, Favorites, Random and the Recycle Bin, the **Library Health** indicator, the theme picker, Settings and **Help** (`?`).
+- The **top bar** is on every page but the image viewer: the media-view logo (back to the Hub), the search box, shortcuts to Tags, Collections, Favorites, Random and the Recycle Bin, the **Library Health** indicator, the theme picker, Settings and **Help** (`?`). The viewer has its own bar, the same height, with the logo, the way back, **Random** and **Help** (§4.5).
 - A **breadcrumb trail** (e.g. *Images › Fantasy › Elves › Portraits*) shows where you are; click any part of it to jump back up.
 - **Right-click** almost anything — a card, an image, a tag — for the actions available on it.
 - **Drag and drop** images from Windows Explorer onto the app to add them: onto an album page or album card to add them there, anywhere else to send them to the Inbox. On a category or sub-category page, a dropped **folder** becomes a new album there, with its images.
@@ -181,14 +181,24 @@ The number counts only red and amber items. Blue items are listed on the Library
 
 ### 3.4 Keyboard
 
+You can use most of the app from the keyboard, the way you'd use Windows Explorer. The first arrow key shows a **white ring** — the keyboard cursor — on the first image, card or row; the arrows move it. It hides as soon as you move the mouse over something else, and the next key carries on from where it was. Clicking an image or card moves the ring's place too, without showing it, and when you come back from the viewer it's on the image you were looking at.
+
+- **Image grids:** ← → ↑ ↓ move between frames; `Home` / `End` jump to the first / last, `PgUp` / `PgDn` a screen at a time. `Space` selects or deselects the frame, `Shift` + arrows extends the selection, `Ctrl` + arrows moves without touching it. With *Group by collection*, the arrows walk through the sections as one list.
+- **Card pages** (the Library, racks, drawers, Collections) and **lists** (Tags, Library Health, Recycle Bin): the arrows move between cards or rows, `Enter` opens (on Library Health: *Review ▸*; in the Recycle Bin: *Restore*), `Space` selects a row, `Delete` deletes permanently in the Recycle Bin (it asks first).
+- **Buttons, toolbars and the top bar:** `Tab` moves between them; a row of joined buttons (like *Group* or *Cols*) is one stop, with ← → inside it and `Space` / `Enter` to pick.
+- The first time the arrows move the ring, a small bar at the bottom lists the keys for that page.
+
 These work on every page; the image viewer adds its own (see §4.5). Press `F1` on any page to see the shortcuts available there.
 
 | Key                  | Action                                                      |
 |----------------------|-------------------------------------------------------------|
 | `F1`                 | Help                                                        |
 | `/`                  | Jump to the search box                                      |
+| ← → ↑ ↓              | Move the keyboard cursor (see above)                        |
 | `Enter`              | Open the focused card or image (in selection mode: select it) |
-| `Esc`                | Close the open menu or dialog; on the Search page, put the cursor back in the search box |
+| `Space`              | Select or deselect the focused image or row                 |
+| `Backspace`          | Up one level: an album to its drawer or rack, a rack to the Library, a tag gallery to its wiki page, a review page to Library Health… |
+| `Esc`                | Close the open menu or dialog; with nothing open, clear the selection; on the Search page, put the cursor back in the search box |
 | `Enter` in a dialog  | Confirm                                                     |
 | `Enter` or `,` while tagging | Add the typed tag                                   |
 
@@ -199,6 +209,8 @@ These work on every page; the image viewer adds its own (see §4.5). Press `F1` 
 ### 4.1 Hub
 
 The starting page. It shows one card per module (Images, Videos, Audio, Text-Writer). For now, only **Images** is active; the others are shown as "coming soon". The name of the open library is shown at the top.
+
+Right-click a module card for **Open** (the same as clicking it), or anywhere else on the page for the list of modules, to go to one.
 
 ### 4.2 Library (Categories)
 
@@ -225,13 +237,15 @@ Opening a category or sub-category shows what's inside it: its sub-categories an
 The heart of the module: a grid of the images in one album. The Inbox uses this same page.
 
 **Viewing**
-- Thumbnail grid with adjustable size (2–10 columns); your choice is remembered.
+- Thumbnail grid with adjustable size (2–10 columns). Columns, sort, grouping and the index are remembered for every grid — **Settings → Grids** sets them too (§4.16).
 - Images load as you scroll, so even large albums open quickly.
 - A star (★) marks favorites.
 
-**Sorting** — by name, date modified, date added, file size or random; ascending or descending.
+**Sorting** — by name, date modified, date added, file size, format or random; ascending or descending. **By format**, images are grouped by type — JPG, JPEG, JFIF and JPE all count as *JPG* — then by name; hover a frame to see its format in a small label.
 
-**Group by collection** — the **Group: None / Collection** switch next to Sort splits the grid into one section per collection (collections in alphabetical order, images in each collection's own order, which you can reverse per section). Each section's header shows how many of these images the collection holds and opens it. An image in several collections appears in each of their sections (marked *2×*) — it's still one image, so selecting it in either section selects it once. Images in no collection come last, under *Not in a collection*. The switch is on every grid of images: albums, *All images*, Favorites, Search and tag galleries.
+**Group by format** — **Group: Format** splits the grid into one section per format, a→z (BMP, GIF, ICO, JPG, PNG, SVG, TIFF, WebP…; JPEG, JFIF and JPE count as JPG), each section in the page's sort, with the format and its count in the header. Every image is in exactly one section, so selecting a range with Shift and stepping through in the viewer follow the grid's order. It's on the same grids as *Group by collection*.
+
+**Group by collection** — the **Group: None / Collection / Format** switch next to Sort splits the grid into one section per collection (collections in alphabetical order, images in each collection's own order, which you can reverse per section). Each section's header shows how many of these images the collection holds and opens it. An image in several collections appears in each of their sections (marked *2×*) — it's still one image, so selecting it in either section selects it once. Images in no collection come last, under *Not in a collection*. The switch is on every grid of images: albums, *All images*, Favorites, Search and tag galleries.
 
 **Filtering** — all filters stack:
 - favorites only
@@ -246,11 +260,13 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 - favorite / unfavorite them
 - send them to the Recycle Bin
 
-**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album right there. When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move or copy, the message at the bottom offers **Go to** the destination album and, after a move, **Undo**, for a few seconds. When copying, **Copy tags** (on by default) gives the copies the same tags.
+**Moving and copying** — pick the destination album in the folder tree (filter it by typing; your recent albums are one click away). If you pick a category or sub-category, you can create a new album or sub-category right there (and a new category at the top level). When a name is already taken in the destination, choose **Keep both** (the new one becomes `name (1)`), **Replace** (the one already there goes to the Recycle Bin — starred images are never replaced) or **Skip**. After a move or copy, the message at the bottom offers **Go to** the destination album and, after a move, **Undo**, for a few seconds. When copying, **Copy tags** (on by default) gives the copies the same tags.
 
 **Renaming in bulk** — write a pattern: `#` is a number and `*` the original name, so `ref_#` gives *ref_01, ref_02…* and `*_#` keeps the names and numbers them. Choose where numbering starts and how many digits it has. Images are numbered in the grid's current order, extensions are kept, and a live preview shows every new name — names that would clash are flagged before anything changes.
 
 **Adding images** — **Add images** opens the Windows file picker, or drag files from Explorer onto the page. Either way, they're copied into this album and the originals are left untouched. A panel at the bottom right shows the progress (you can keep working) and, at the end, what wasn't imported and why: other file types, files that can't be read, or images already in this album (identical ones are skipped).
+
+**From the library** — **+ From library** picks images that are already in your library. The Inbox is listed first, newest first; type to filter it by file name, or to search the whole library (words, `#tags`, `@collections`). Click images to pick them, Shift-click to pick a range; your picks stay while you search. Images from the **Inbox** are **moved** here. Images from **other albums** are **copied** by default (the copy gets the same tags) — switch to **Move** in the side panel to take them out of their album instead. Images already in this album are shown dimmed, marked *Here*. Names that clash get a number.
 
 **Right-click an image** for: *Open*, *Open With…*, *Rename*, *Move*, *Copy*, *Add to collection…*, *Favorite*, *Recycle*, and **Set as cover of ▸** — the album, any sub-category or the category above it, the collection (on a collection page), or any of the image's tags (for example, as a character's portrait).
 
@@ -261,7 +277,8 @@ Opens when you click an image. Shows the image as large as possible with its det
 - **Fit to screen** by default; large images are scaled down, small ones shown at natural size.
 - **Zoom** from 0.1× to 10× with the mouse wheel; **pan** by clicking and dragging.
 - **Previous / Next** follow the order of the page you came from — an album, a search, a tag, a collection.
-- **Slideshow** with a configurable interval (1–30 s) and a progress bar.
+- **Slideshow** with a configurable interval (2–30 s) and a progress bar. Next to the interval: **⟳ loop** — start over at the end, or stop there — and **⤨ shuffle** — a random order that shows each image once per round. Their defaults are in Settings (§4.16).
+- **TIFF** images can't be shown by a browser, so the viewer shows a copy. Copies are made in the background as soon as the images are found (the top bar shows *TIFF 3 / 12* meanwhile); open one before its copy is ready and it's made right away, just a little slower.
 - **Info panel:** file name, full folder path (clickable), size, dimensions, dates.
 - **Tags panel:** the image's tags grouped by type (see §3.1 for clicking them).
   - Add tags by typing: suggestions appear with their type color and image count, and aliases are recognized.
@@ -270,6 +287,8 @@ Opens when you click an image. Shows the image as large as possible with its det
   - Tags added automatically by an implication (see §5.4) are marked as such and can't be removed on their own — the tooltip tells you which tag implies them.
 - **Collections panel** (below Tags): the collections the image is on — click one to open it, **×** takes the image off that list (never deletes it) — and **+ Add to collection**.
 - **Favorite**, **Open With…** (opens the file in another program), **Rename**, **Move**, **Set as cover of ▸**, **Recycle**. After a move, a recycle, or taking the image off the collection you're browsing, you stay on that list: if the image left it, the next one is shown.
+- **Right-click the image** for the same menu as in a grid: *Open With…*, *Tags…* (to the tag field), *Add to collection…* (and *Remove from collection* when you came from one), *Rename…*, *Move…*, *Copy…*, *Star*, *Cover of…* the album, the folders above it, the collection and the image's tags, and *Recycle*.
+- **Random** (in the bar at the top, in the controls, or `R`) shows another image from the same list.
 
 When opened from a collection, the viewer shows your position in it (e.g. *3 / 12 in collection "Chapter 3 refs"*), steps through it in the collection page's order (its own order unless you sorted by name or size), the back button names the collection, and **Cover of ▸** also offers the collection.
 
@@ -284,7 +303,8 @@ When opened from a collection, the viewer shows your position in it (e.g. *3 / 1
 | `R`              | Random image                                                           |
 | `S`              | Start / stop slideshow                                                 |
 | `T`              | Type a tag: puts the cursor in the Tags panel (`Esc` goes back to the images) |
-| `Esc`            | One step back, in this order: exit fullscreen → stop the slideshow → back to the previous page (in the tag field, `Esc` just leaves the field) |
+| `Esc`            | One step back, in this order: leave the film strip or the side panel you tabbed into → exit fullscreen → stop the slideshow → back to the previous page (in the tag field, `Esc` just leaves the field) |
+| `Tab` to the film strip | ← → move the ring along the strip without changing the image; `Enter` shows that image; `Esc` goes back to it |
 | `Backspace`      | Back to the previous page                                              |
 | `F1`             | Help                                                                   |
 
@@ -299,10 +319,10 @@ The Search page's first tab, **All**, shows the first few results of each kind, 
 - **Images** — matching images, with the same sorting, filtering, tag sidebar and bulk actions as an album.
 - **Albums** — albums whose names match.
 - **Categories & sub-categories** — those whose names match.
-- **Tags** — tags whose names or aliases match.
-- **Collections** — collections whose names match, as cards (its own tab, too).
+- **Tags** — tags whose names or aliases match. Tags you named in the search (`#elf`, `character:elf`, `~#cat`) come first, marked *in your search*, so a tag search also leads to the tag itself.
+- **Collections** — collections whose names match, as cards (its own tab, too). Collections you named with `@` come first, the same way.
 
-Images are found by the full search (words and tags); folders and tags by the words. Plain text and tag filters can be mixed in the same search; see §5.6, or the *Search* tab of the Help window.
+Images are found by the full search (words, tags and collections); folders, tags and collections by the words, plus the tags and collections the search names. The ones it leaves out (`-#cat`) aren't pinned. Plain text and tag filters can be mixed in the same search; see §5.6, or the *Search* tab of the Help window.
 
 ### 4.7 Tags
 
@@ -315,7 +335,7 @@ A directory of every tag in your library.
 - Select several tags to **merge** them (see §5.3) or delete them.
 - Click a tag to see its images; **Ctrl + click** opens its wiki page.
 - **Edit tag** (right-click any tag, or the button on its wiki page) changes its name and type, its aliases and main name, what it implies, merges it into another tag or deletes it. Adding or removing an implication that touches more than 30 images asks first.
-- To tag many images at once, select them and choose **Tags…** in the selection bar: it shows how many of them already have each tag, and nothing changes until you press *Apply*.
+- To tag many images at once, select them and choose **Tags…** in the selection bar: it shows how many of them already have each tag, and nothing changes until you press *Apply*. To tag every image of an album (or of any grid) without selecting, use **# Tag all…** in the toolbar — the name and starred-only filters apply.
 
 ### 4.8 Tag wiki page
 
@@ -361,14 +381,16 @@ All your collections, each as a numbered contact strip: its cover, the next few 
 
 - **Header** — cover, name, description and number of images, with **Edit**, **Delete**, **Random** and **▶ Slideshow** (in the page's order).
 - **Images** in the collection's own order, each numbered with its place in the list. **Drag** images to reorder them; drag a selection to move it together.
-- **Sort** by own order (the default), name or size, ascending or descending. Reordering works only in own order with no filter on — otherwise a quiet hint says so. The numbers always show the list's own order.
+- **Sort** by own order (the default), name, size or format, ascending or descending — the own order too: **↓** shows the list last to first. Reordering works only in own order, first to last, with no filter on — otherwise a quiet hint says so, with a button to go back. The numbers always show the list's own order.
 - Open any image to step through the collection in the viewer, in the page's order.
 - **Remove from collection** in the selection bar (never deletes the files), plus the usual bulk actions. The index works as on other grids.
 - **Edit** — name, description (up to 500 characters) and cover: *First image* (the default) or one you choose. If the chosen cover is taken off the list, the first image is used again.
 - **Delete** asks first; the images stay where they are, and the message after it offers **Undo** for a few seconds.
 - Names are unique: capitals, and spaces vs. `_`, don't count (*Chapter 3 refs* and *chapter_3_refs* are the same name).
 
-**Adding images** — select images in any grid and press **+ Collection**, or right-click one and choose **Add to collection…** (also in the viewer's Collections panel). Pick a list (type to filter; the three you added to most recently are at the top) or type a new name to create one on the spot; double-click adds right away. Each list shows how many of the chosen images it already has. Images are added at the end; ones already on the list stay where they are, and the message says so (*Added 2 · 3 were already in Chapter 3 refs*), with **Go to**.
+**Dropping files from Explorer** onto a collection page adds them too: they're copied into the Inbox (the originals stay untouched) and put at the end of the list. An image that's already in the Inbox isn't copied again — it's simply added to the list. Dropped folders are flattened.
+
+**Adding images** — on the collection page, **+ From library** picks images from anywhere in the library (the Inbox first, or search; see §4.4) and adds them at the end of the list — they stay where they are, and images already on the list are dimmed. Or select images in any grid and press **+ Collection**, or right-click one and choose **Add to collection…** (also in the viewer's Collections panel). Pick a list (type to filter; the three you added to most recently are at the top) or type a new name to create one on the spot; double-click adds right away. Each list shows how many of the chosen images it already has. Images are added at the end; ones already on the list stay where they are, and the message says so (*Added 2 · 3 were already in Chapter 3 refs*), with **Go to**.
 
 ### 4.12 Favorites
 
@@ -378,7 +400,7 @@ It's a view, not a folder: starring an image doesn't move or copy it — it stay
 
 ### 4.13 Random
 
-Show a random image — from the whole library, a category, sub-category or album, a tag, or a collection. The current image is never repeated immediately. Also available from the viewer with the `R` key.
+Show a random image. **Random** in the top bar picks from the page you're on — an album, *All images*, a tag, a collection, Favorites or a search — and from the whole library on any other page (or when the page has no images). Hover it to see where it will pick from. Collections and tag galleries have their own **⚄ Random** too, and in the viewer `R` picks another image from the same list. The current image is never repeated immediately.
 
 ### 4.14 Recycle Bin
 
@@ -391,7 +413,7 @@ Images and folders you delete go here first.
 
 ### 4.15 Library Health
 
-A maintenance page that compares your library folder with what the app remembers and lists anything that needs attention, grouped and colored by severity (see §3.3). Each item comes with suggested fixes you can apply one by one, or all at once with **Apply to all** — which always asks first, listing what it will do (e.g. *recreate 3 folders and their markers*). Items that need your choice (like duplicates with different tags) are skipped by Apply to all, and it says how many.
+A maintenance page that compares your library folder with what the app remembers and lists anything that needs attention, grouped and colored by severity (see §3.3). Click a summary card, or a group's name, to open its review; on the *Blue* review, *Untagged images* links to its own page. Each item comes with suggested fixes you can apply one by one, or all at once with **Apply to all** — which always asks first, listing what it will do (e.g. *recreate 3 folders and their markers*) by severity, each line with a checkbox: red and amber are ticked, blue ones (like keeping the suggested copy of duplicates) are yours to tick, and a severity’s heading ticks or unticks all of it. Items that need your choice (like duplicates with different tags) are skipped by Apply to all, and it says how many. On the Review page, each group also has its own fixes for the whole group.
 
 **Red — missing**
 - **Missing folders** — folders the app remembers but can't find. *Recreate* them, or *Forget* them.
@@ -401,14 +423,14 @@ A maintenance page that compares your library folder with what the app remembers
 **Amber — needs a decision**
 - **Changed outside the app** — folders or images that were moved or renamed in Windows Explorer. The app is already following them; *Keep* the change, or *Undo* it to put things back where they were. Images moved together are grouped into one item.
 - **Unclear moves** — an image reappeared that matches several identical missing images, each with its own tags. Pick which one it is, or keep it as a new image.
-- **Rule problems** — loose images in a category or sub-category, folders inside an album. *Fix: move the images into a new album; move the folder out.*
+- **Rule problems** — loose images in a category or sub-category, folders inside an album. *Fix: move the images into a new album (you name it — the group fix and Apply to all ask for one name, used in each folder), into the Inbox, or into an existing album (where you can also create the album, or a sub-category, on the spot). When the folder holds only images, it can become an album itself: **Make it an album** where it is, or **Move as album…** into a category or sub-category you pick — the only way for a top-level folder, since albums can’t sit there. For a folder inside an album: move the folder out.*
 - **Unmarked folders** — new folders created outside the app. They show up right away with the kind the app guessed (folders with images → album; folders with folders → sub-category; empty ones → album, marked as a guess), and you confirm or change it here.
-- **Wrong file types** — files among your images that no module takes (a `.zip`, an `.exe`…): *Recycle* or *Ignore*. Videos, audio and texts are moved to their own folders automatically (see the white notices below).
+- **Wrong file types** — files among your images that no module takes (a `.zip`, an `.exe`…): *Recycle* or *Ignore*. Videos, audio and texts are moved to their own folders automatically (see the white notices below). An image the app can't read is listed here too; a file still being copied in is read twice before it's reported, and the report goes away by itself once the image can be read, or leaves the library.
 - **Not supported** — image formats the app can't show yet (PSD, HEIC, RAW…). *Ignore* leaves the file where it is (it's then listed under *Not tracked*); *Record* moves it into the library's hidden Invalid folder, where you can still find it in Explorer. Both are counted, per format, in the table at the bottom of the page.
 
 **Blue — for your information**
 - **Untagged images** — images outside the Inbox that have no tags yet, grouped by album. Ones that arrived from outside the app (copied in with Explorer, a sync tool…) carry a **NEW** mark; a filter shows just those. Tag them right here, one by one — each row has a tag field, and a tagged image leaves the list — or **Open as grid** to see them all in one grid and tag them in bulk. **Mark as seen** clears the NEW mark (the image stays on the list); **Leave untagged** takes an image off the list, for pictures you never mean to tag (screenshots, scans, wallpapers). Both work on one image or a selection.
-- **Duplicates** — identical images stored in more than one place. The app suggests which copy to keep: the only tagged one, else the oldest; a starred copy is always kept. When the copies have different tags, choose: **Keep one** (the dialog shows which tags would be lost) or **Merge into…** one copy, which then gets all the tags, the star, a description and every place in a collection. The other copies go to the Recycle Bin.
+- **Duplicates** — identical images stored in more than one place. The app suggests which copy to keep: the only tagged one, else the oldest; a starred copy is always kept. When the copies have different tags, choose: **Keep one** (the dialog shows which tags would be lost) or **Merge into…** one copy, which then gets all the tags, the star, a description and every place in a collection. The other copies go to the Recycle Bin. Or **Keep all copies**: when the same image belongs in two places, with different tags, every copy stays as its own image and the group stops showing — until another copy turns up (the message offers **Undo**). The Review page can also merge or keep all copies of every group at once.
 - **Thumbnail cleanup** — remove cached thumbnails that no longer belong to any image.
 
 **White — notices**
@@ -417,7 +439,7 @@ A maintenance page that compares your library folder with what the app remembers
 
 **Unsupported formats** — at the bottom, how many files of each format were ignored or recorded so far, to show which formats are worth supporting next.
 
-**Logs** — the app keeps a log of errors, every fix applied on this page and every bulk operation (see §7). This section shows how much space the logs use, with **Open logs folder** and **Clear logs**.
+**Logs** — the app keeps a log of errors, every fix applied on this page and every bulk operation (see §7). This section shows how much space the logs use, with **Open logs folder** and **Clear logs** — also on the *All in order* page.
 
 **Rescan** checks the whole library again on demand.
 
@@ -425,8 +447,9 @@ A maintenance page that compares your library folder with what the app remembers
 
 - **Library** — see which library is open, **Open library…** to switch to another folder, or **New library…** to start one. Recent libraries are listed for quick switching.
 - **Theme** — see §4.18.
-- **Grid defaults** — default column count and sort order.
-- **Slideshow** — default interval.
+- **Grids** — what album, tag and search grids open with: columns (2–10), sort and direction, grouping (none, by collection or by format), and whether the index is shown. Changing them on a grid changes them here too.
+- **Slideshow** — how long each image stays (2–30 s), what happens at the end (*Start over* or *Stop*) and the order (*The list's order* or *Shuffle*). The viewer's own slideshow controls change them too.
+- Grid and slideshow settings are kept by the browser you use the app in.
 
 ### 4.17 Help
 
@@ -533,15 +556,18 @@ While you type, suggestions appear, colored by tag type and showing how many ima
 
 ## 6. Supported formats
 
-JPG, JPEG, JFIF, PNG, GIF (including animated), WebP, SVG and AVIF.
+JPG (also `.jpeg`, `.jfif` and `.jpe`), PNG, GIF (including animated), WebP, AVIF, SVG (also the compressed `.svgz`), BMP, ICO and TIFF (`.tif`, `.tiff`). For TIFF the viewer shows a copy, made in the background (§4.5); the original is never changed.
+
+Other image formats (PSD, HEIC, camera RAW files…) are listed under *Not supported* in Library Health, where you can leave them where they are or set them aside.
 
 ---
 
 ## 7. Good to know
 
+- **Running it.** Unzip `media-view-<version>-win-x64.zip` anywhere and double-click **start.bat**: the app opens in your browser. Keep the black window that opens with it while you use the app — closing it stops media-view. Double-clicking *start.bat* again while it runs just opens the browser. Nothing is installed; Windows 10 or 11, 64-bit.
 - **Offline and private.** The app never connects to the internet.
 - **Desktop only.** Designed for a computer screen with mouse and keyboard.
-- **Thumbnails** are generated in the background the first time images are seen, and kept so they only need to be made once.
+- **Thumbnails** are generated in the background the first time images are seen, and kept so they only need to be made once. So are the viewer copies of TIFF images.
 - **Logs** are kept in `.mediaview\logs\` inside your library: errors, Library Health fixes and bulk operations, one file per day. Old logs are deleted automatically (at most 100 log files and 50 MB are kept, oldest removed first), and you can clear them from Library Health.
 - **Back up the whole library folder**, including the hidden `.mediaview` folder — that's where your tags, collections and descriptions live.
 

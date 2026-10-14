@@ -21,7 +21,7 @@
   const firstLine = $derived(c.description?.split('\n')[0]?.trim() ?? '');
 </script>
 
-<a class="card" href={collectionHref(c.id)}>
+<a class="card" data-nav href={collectionHref(c.id)}>
   {#if c.count > 0}
     <div class="sheet" style:background={surface}>
       <div class="cover"><Thumb file={c.covers[0]} fit="cover" /><span class="n01">01</span></div>

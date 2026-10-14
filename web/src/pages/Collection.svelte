@@ -1,13 +1,17 @@
 <script lang="ts">
-  import type { CollectionDetail } from '@media-view/shared';
+  import type { CollectionDetail, SortKey } from '@media-view/shared';
   import { ApiError, client, unwrap } from '../api.ts';
+  import DropOverlay from '../components/DropOverlay.svelte';
   import ImageBrowser from '../components/ImageBrowser.svelte';
+  import LibraryPickerDialog from '../components/LibraryPickerDialog.svelte';
   import ListIcon from '../components/ListIcon.svelte';
   import Thumb from '../components/Thumb.svelte';
-  import { fmt, viewerHref } from '../media.ts';
+  import { fmt, toParams, viewerHref, type ListQuery } from '../media.ts';
+  import { stored } from '../prefs.ts';
   import { href, navigate, router } from '../router.svelte.ts';
   import { deleteCollection } from '../stores/collections.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
+  import { drag, importDrop } from '../stores/imports.svelte.ts';
   import { openOps } from '../stores/ops.svelte.ts';
   import { useSearchContext } from '../stores/search.svelte.ts';
   import { toastError } from '../stores/toasts.svelte.ts';
@@ -19,6 +23,8 @@
   const id = $derived(Number(router.route.params.id));
   let detail = $state<CollectionDetail | null>(null);
   let missing = $state(false);
+  /** "+ From library" is open. */
+  let picking = $state(false);
 
   $effect(() => {
     void live.files;
@@ -39,7 +45,18 @@
     if (detail) return useSearchContext(detail.name);
   });
 
-  const listQuery = $derived({ collection: id, sort: 'position' as const, order: 'asc' as const });
+  /**
+   * The order the grid shows (it remembers its sort and direction): Slideshow plays in it, and the
+   * viewer opened by Random steps through it.
+   */
+  function pageQuery(): ListQuery {
+    const sort = stored<SortKey>('list.sort', 'position');
+    return {
+      collection: id,
+      sort: (['position', 'name', 'size', 'format'] as SortKey[]).includes(sort) ? sort : 'position',
+      order: stored<'asc' | 'desc'>('list.order', 'asc') === 'desc' ? 'desc' : 'asc',
+    };
+  }
 
   /** "2D", "5W": how long since the list last changed. */
   const since = $derived.by(() => {
@@ -48,19 +65,32 @@
     return days < 1 ? 'Today' : days < 14 ? `${days}D` : days < 120 ? `${Math.round(days / 7)}W` : `${Math.round(days / 30)}M`;
   });
 
+  // Files dropped from Explorer go to the Inbox and join the end of the list (milestone 8).
+  function onDragOver(e: DragEvent) {
+    if (detail && e.dataTransfer?.types.includes('Files')) e.preventDefault();
+  }
+
+  function onDrop(e: DragEvent) {
+    if (!detail || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    void importDrop(e.dataTransfer, { id: null, label: `Inbox → ${detail.name}` }, { id: detail.id, name: detail.name });
+  }
+
   async function random() {
+    const q = pageQuery();
     try {
-      const r = await unwrap(client.api.files.random.$get({ query: { collection: String(id), sort: 'position', order: 'asc' } }));
-      if (r.id) navigate(viewerHref(r.id, listQuery).slice(1));
+      const r = await unwrap(client.api.files.random.$get({ query: toParams(q) }));
+      if (r.id) navigate(viewerHref(r.id, q).slice(1));
     } catch (err) {
       toastError(err);
     }
   }
 
   async function slideshow() {
+    const q = pageQuery();
     try {
-      const r = await unwrap(client.api.files.$get({ query: { collection: String(id), sort: 'position', order: 'asc', limit: '1' } }));
-      if (r.items[0]) navigate(`${viewerHref(r.items[0].id, listQuery).slice(1)}&play=1`);
+      const r = await unwrap(client.api.files.$get({ query: { ...toParams(q), limit: '1' } }));
+      if (r.items[0]) navigate(`${viewerHref(r.items[0].id, q).slice(1)}&play=1`);
     } catch (err) {
       toastError(err);
     }
@@ -78,7 +108,8 @@
   </div>
 {:else if detail}
   {@const d = detail}
-  <div class="coll-page">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="coll-page" ondragover={onDragOver} ondrop={onDrop}>
     <header class="head">
       <div class="cover">
         {#if d.covers[0]}<Thumb file={d.covers[0]} fit="cover" />{/if}
@@ -112,14 +143,21 @@
         scope={{ collection: d.id }}
         collection={{ id: d.id, name: d.name }}
         where={d.name}
-        emptyText="This list is empty — add images from any grid."
+        emptyText="This list is empty — add images from any grid, with + From library, or drop files here."
+        onaddfromlibrary={() => (picking = true)}
       />
     {/key}
+    {#if picking}
+      <LibraryPickerDialog target={{ kind: 'collection', id: d.id, name: d.name }} onclose={() => (picking = false)} />
+    {/if}
+    {#if drag.files}
+      <DropOverlay target={`INBOX → ${d.name}`} headline={'Drop to add\nthem to the list.'} body="Copied into the Inbox, originals untouched, and added at the end of this collection. Folders are flattened." />
+    {/if}
   </div>
 {/if}
 
 <style>
-  .coll-page { height: calc(100vh - 56px); display: flex; flex-direction: column; }
+  .coll-page { position: relative; height: calc(100vh - 56px); display: flex; flex-direction: column; }
   .gone { display: flex; flex-direction: column; gap: 12px; padding-top: 60px; }
   .gone .display { font-size: 48px; }
   .gone a { font: 12px var(--font-mono); color: var(--accent); text-transform: uppercase; text-decoration: none; }

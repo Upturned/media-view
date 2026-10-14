@@ -1,9 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { MIGRATIONS_DIR } from '../lib/app-dir.ts';
 import type { DB } from './connection.ts';
-
-const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
 
 /** Apply numbered `NNN_name.sql` files above `PRAGMA user_version`, each in its own transaction. */
 export function migrate(db: DB): number {

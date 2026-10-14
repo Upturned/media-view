@@ -7,7 +7,9 @@ export type AppEvent =
   | { type: 'folders-changed' }
   | { type: 'library-changed' }
   /** Library Health issues changed (the top-bar badge reloads). */
-  | { type: 'health-changed' };
+  | { type: 'health-changed' }
+  /** Viewer copies (TIFF) being made in the background; total 0 when finished. */
+  | { type: 'converting'; done: number; total: number };
 
 const bus = new EventEmitter();
 bus.setMaxListeners(50);

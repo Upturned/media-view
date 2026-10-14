@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import CheckStylesDialog from './components/CheckStylesDialog.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import ContextMenu from './components/ContextMenu.svelte';
-  import HelpDialog from './components/HelpDialog.svelte';
   import ImportPanel from './components/ImportPanel.svelte';
+  import KeyHint from './components/KeyHint.svelte';
+  import Lazy from './components/Lazy.svelte';
   import MoveDropBar from './components/MoveDropBar.svelte';
   import OpsDialogs from './components/OpsDialogs.svelte';
   import Toasts from './components/Toasts.svelte';
@@ -16,23 +16,14 @@
   import Collections from './pages/Collections.svelte';
   import Favorites from './pages/Favorites.svelte';
   import Folder from './pages/Folder.svelte';
-  import Health from './pages/Health.svelte';
-  import HealthGrid from './pages/HealthGrid.svelte';
-  import HealthReview from './pages/HealthReview.svelte';
-  import HealthUntagged from './pages/HealthUntagged.svelte';
   import Hub from './pages/Hub.svelte';
   import Library from './pages/Library.svelte';
   import NotFound from './pages/NotFound.svelte';
-  import RecycleBin from './pages/RecycleBin.svelte';
   import Search from './pages/Search.svelte';
   import TagGallery from './pages/TagGallery.svelte';
   import TagsDirectory from './pages/TagsDirectory.svelte';
-  import TagTypes from './pages/TagTypes.svelte';
-  import Settings from './pages/Settings.svelte';
   import Viewer from './pages/Viewer.svelte';
-  import Welcome from './pages/Welcome.svelte';
-  import Wiki from './pages/Wiki.svelte';
-  import { router } from './router.svelte.ts';
+  import { navigate, routeUp, router, up } from './router.svelte.ts';
   import { confirmState } from './stores/confirm.svelte.ts';
   import { connectEvents, live } from './stores/events.svelte.ts';
   import { installDragTracking } from './stores/imports.svelte.ts';
@@ -40,6 +31,21 @@
   import { loadTagTypes } from './stores/tags.svelte.ts';
   import { toast } from './stores/toasts.svelte.ts';
   import { openDialog, ui } from './stores/ui.svelte.ts';
+
+  /** Pages and dialogs used less often load on first use, in their own chunks. */
+  const pages = {
+    CheckStylesDialog: () => import('./components/CheckStylesDialog.svelte'),
+    HelpDialog: () => import('./components/HelpDialog.svelte'),
+    Health: () => import('./pages/Health.svelte'),
+    HealthGrid: () => import('./pages/HealthGrid.svelte'),
+    HealthReview: () => import('./pages/HealthReview.svelte'),
+    HealthUntagged: () => import('./pages/HealthUntagged.svelte'),
+    RecycleBin: () => import('./pages/RecycleBin.svelte'),
+    TagTypes: () => import('./pages/TagTypes.svelte'),
+    Settings: () => import('./pages/Settings.svelte'),
+    Welcome: () => import('./pages/Welcome.svelte'),
+    Wiki: () => import('./pages/Wiki.svelte'),
+  };
 
   onMount(() => {
     connectEvents();
@@ -63,6 +69,14 @@
   $effect(() => registerKeys('global', [
     { key: 'F1', description: 'Help', handler: () => openDialog('help'), inInputs: true },
     { key: '?', description: 'Help', handler: () => openDialog('help') },
+    {
+      key: 'Backspace',
+      description: 'Up one level',
+      handler: () => {
+        const to = up.path ?? routeUp(router.route);
+        if (to) navigate(to);
+      },
+    },
   ]));
 
   /** Without a library, every page except Settings shows the welcome screen. */
@@ -79,7 +93,7 @@
   {#if !library.loaded}
     <!-- first load -->
   {:else if page === 'welcome'}
-    <Welcome />
+    <Lazy load={pages.Welcome} />
   {:else if page === 'hub'}
     <Hub />
   {:else if page === 'images'}
@@ -97,11 +111,11 @@
   {:else if page === 'tags'}
     <TagsDirectory />
   {:else if page === 'tag-types'}
-    <TagTypes />
+    <Lazy load={pages.TagTypes} />
   {:else if page === 'tag'}
     {#key router.route.params.id}<TagGallery />{/key}
   {:else if page === 'wiki'}
-    {#key router.route.params.id}<Wiki />{/key}
+    {#key router.route.params.id}<Lazy load={pages.Wiki} />{/key}
   {:else if page === 'favorites'}
     <Favorites />
   {:else if page === 'collections'}
@@ -109,26 +123,26 @@
   {:else if page === 'collection'}
     {#key router.route.params.id}<Collection />{/key}
   {:else if page === 'health'}
-    <Health />
+    <Lazy load={pages.Health} />
   {:else if page === 'health-review'}
-    {#key router.route.params.section}<HealthReview />{/key}
+    {#key router.route.params.section}<Lazy load={pages.HealthReview} />{/key}
   {:else if page === 'health-untagged'}
-    <HealthUntagged />
+    <Lazy load={pages.HealthUntagged} />
   {:else if page === 'health-grid'}
-    <HealthGrid />
+    <Lazy load={pages.HealthGrid} />
   {:else if page === 'recycle'}
-    <RecycleBin />
+    <Lazy load={pages.RecycleBin} />
   {:else if page === 'settings'}
-    <Settings />
+    <Lazy load={pages.Settings} />
   {:else}
     <NotFound />
   {/if}
 </main>
 
 {#if ui.dialog === 'help'}
-  <HelpDialog page={page} />
+  <Lazy load={pages.HelpDialog} page={page} />
 {:else if ui.dialog === 'styles'}
-  <CheckStylesDialog />
+  <Lazy load={pages.CheckStylesDialog} />
 {/if}
 
 <OpsDialogs />
@@ -139,6 +153,7 @@
 <MoveDropBar />
 <ImportPanel />
 <TagTooltip />
+<KeyHint />
 <Toasts />
 
 <style>

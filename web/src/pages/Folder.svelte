@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { FolderCard, FolderDetail, FolderKind } from '@media-view/shared';
+  import { navItems } from '../kbd.svelte.ts';
   import { ApiError, client, unwrap } from '../api.ts';
   import Breadcrumbs from '../components/Breadcrumbs.svelte';
   import DescriptionEditor from '../components/DescriptionEditor.svelte';
@@ -10,7 +11,7 @@
   import NameDialog from '../components/NameDialog.svelte';
   import Thumb from '../components/Thumb.svelte';
   import { fmt } from '../media.ts';
-  import { folderHref, href, navigate, router } from '../router.svelte.ts';
+  import { folderHref, href, navigate, router, useUp } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
   import { drag, readDrop, startImport } from '../stores/imports.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
@@ -21,6 +22,11 @@
 
   const id = $derived(Number(router.route.params.id));
   let folder = $state<FolderDetail | null>(null);
+  // Backspace: the folder above, or the Library.
+  useUp(() => {
+    const parent = folder?.ancestors.at(-1);
+    return folder ? (parent ? folderHref(parent).slice(1) : '/images') : null;
+  });
   let children: FolderCard[] = $state([]);
   let notFound = $state(false);
   let creating = $state<FolderKind | null>(null);
@@ -107,7 +113,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="page" ondragover={onDragOver} ondrop={onDrop}>
+<div class="page" ondragover={onDragOver} ondrop={onDrop} use:navItems={{ kind: 'cards' }}>
   {#if notFound}
     <p class="missing">This folder no longer exists. <a href={href('/images')}>Back to the Library</a></p>
   {:else if folder}

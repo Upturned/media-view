@@ -23,6 +23,8 @@ export interface ListQuery {
   sort: SortKey;
   order: 'asc' | 'desc';
   seed?: number;
+  /** Group by format: by format first, then by the sort (the viewer steps through the same order). */
+  byFormat?: boolean;
 }
 
 export function toParams(q: ListQuery): Record<string, string> {
@@ -37,6 +39,7 @@ export function toParams(q: ListQuery): Record<string, string> {
   if (q.untagged) p.untagged = '1';
   if (q.untagged && q.fresh) p.fresh = '1';
   if (q.seed !== undefined) p.seed = String(q.seed);
+  if (q.byFormat) p.byFormat = '1';
   return p;
 }
 
@@ -53,9 +56,10 @@ export function fromParams(p: URLSearchParams): ListQuery {
     collection: num('collection'),
     untagged: p.get('untagged') === '1',
     fresh: p.get('fresh') === '1',
-    sort: sort && ['name', 'modified', 'added', 'size', 'random', 'position'].includes(sort) ? sort : 'name',
+    sort: sort && ['name', 'modified', 'added', 'size', 'format', 'random', 'position'].includes(sort) ? sort : 'name',
     order: p.get('order') === 'desc' ? 'desc' : 'asc',
     seed: num('seed'),
+    byFormat: p.get('byFormat') === '1' || undefined,
   };
 }
 
