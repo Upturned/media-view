@@ -7,6 +7,7 @@ import { expectChange } from '../lib/expected.ts';
 import { log } from '../lib/log.ts';
 import { splitExt, uniqueName, validateName } from '../lib/names.ts';
 import { toAbsolute } from '../lib/paths.ts';
+import { renameWithRetry } from '../lib/rename.ts';
 import { fileDetail } from './files.ts';
 import { liveFolder, MAX_DESCRIPTION } from './folders.ts';
 import { scheduleDuplicateRefresh } from './issues.ts';
@@ -134,7 +135,7 @@ export function moveFiles(lib: OpenLibrary, ids: number[], targetId: number | nu
     const from = toAbsolute(root, f.rel_path);
     const to = toAbsolute(root, `${target.rel_path}/${name}`);
     expectChange(from, to);
-    fs.renameSync(from, to);
+    renameWithRetry(from, to);
     try {
       update.run(`${target.rel_path}/${name}`, name, target.id, categoryId, f.id);
     } catch (err) {
@@ -227,7 +228,7 @@ export function renameFile(lib: OpenLibrary, id: number, rawBase: string): FileD
 
   const from = toAbsolute(root, f.rel_path);
   expectChange(from, to);
-  fs.renameSync(from, to);
+  renameWithRetry(from, to);
   lib.db.prepare('UPDATE files SET rel_path = ?, filename = ? WHERE id = ?').run(`${dirRel}/${name}`, name, id);
   emit({ type: 'files-changed' });
   return fileDetail(lib, id);
@@ -272,7 +273,7 @@ export function bulkRename(lib: OpenLibrary, ids: number[], pattern: string, sta
   const temp = (x: (typeof changing)[number]) => toAbsolute(root, `${x.dirRel}/~mv-rename-${x.f.id}${splitExt(x.f.filename).ext}`);
   for (const x of changing) {
     expectChange(toAbsolute(root, x.f.rel_path), temp(x), toAbsolute(root, `${x.dirRel}/${x.name}`));
-    fs.renameSync(toAbsolute(root, x.f.rel_path), temp(x));
+    renameWithRetry(toAbsolute(root, x.f.rel_path), temp(x));
   }
   const update = lib.db.prepare('UPDATE files SET rel_path = ?, filename = ? WHERE id = ?');
   lib.db.transaction(() => {

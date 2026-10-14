@@ -16,17 +16,21 @@ interface Scope {
   exclude?: number;
 }
 
-const state = $state<{ scope: Scope | null }>({ scope: null });
+/**
+ * Raw, not a deep proxy: a page leaving compares the scope it registered with the current one, and
+ * a proxied copy would never be the same object — the last list would stick after its page closed.
+ */
+let scope = $state.raw<Scope | null>(null);
 
-export const randomScope = () => state.scope;
+export const randomScope = () => scope;
 
 /** Register the page's list while it's shown (call from a component's script). */
 export function useRandomScope(get: () => Scope): void {
   $effect(() => {
-    const scope = get();
-    state.scope = scope;
+    const mine = get();
+    scope = mine;
     return () => {
-      if (state.scope === scope) state.scope = null;
+      if (scope === mine) scope = null;
     };
   });
 }
@@ -34,14 +38,14 @@ export function useRandomScope(get: () => Scope): void {
 const WHOLE_LIBRARY: ListQuery = { sort: 'name', order: 'asc' };
 
 export async function openRandom(): Promise<void> {
-  const scope = state.scope;
+  const current = scope;
   try {
     const pick = async (q: ListQuery, exclude?: number) =>
       (await unwrap(client.api.files.random.$get({ query: { ...toParams(q), ...(exclude ? { exclude: String(exclude) } : {}) } }))).id;
-    let q = scope?.query ?? WHOLE_LIBRARY;
-    let id = await pick(q, scope?.exclude);
+    let q = current?.query ?? WHOLE_LIBRARY;
+    let id = await pick(q, current?.exclude);
     // An empty page: the whole library instead.
-    if (!id && scope) id = await pick((q = WHOLE_LIBRARY));
+    if (!id && current) id = await pick((q = WHOLE_LIBRARY));
     if (id) navigate(viewerHref(id, q).slice(1));
   } catch (err) {
     toastError(err);

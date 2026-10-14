@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { isVector } from '@media-view/shared';
+import { emit } from '../lib/events.ts';
 import { openImage } from '../lib/image.ts';
 import { log } from '../lib/log.ts';
 import { DATA_DIR } from '../lib/paths.ts';
@@ -105,32 +106,78 @@ export function stopThumbnails(): void {
 
 // ─── Generation ──────────────────────────────────────────────────────────────
 
-async function generate(lib: OpenLibrary, file: ThumbSource, target: string): Promise<void> {
-  const source = absPath(lib, file.rel_path);
-  try {
-    const image = openImage(source, file.ext);
-    const meta = await image.metadata();
-    // EXIF orientations 5–8 are rotated by 90°: the displayed size is swapped.
-    const rotated = (meta.orientation ?? 1) >= 5;
-    lib.db.prepare('UPDATE files SET width = ?, height = ? WHERE id = ?')
-      .run(rotated ? meta.height : meta.width, rotated ? meta.width : meta.height, file.id);
+/** How long to wait before reading a file a second time, when the first read failed. */
+const RETRY_MS = 1500;
 
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    const tmp = `${target}.${process.pid}.part`;
-    await image
-      .rotate()
-      .resize({ width: THUMB_SIZE, height: THUMB_SIZE, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: QUALITY })
-      .toFile(tmp);
-    fs.renameSync(tmp, target);
-  } catch (err) {
-    if (fs.existsSync(source)) {
+async function render(lib: OpenLibrary, id: number, source: string, ext: string, target: string): Promise<void> {
+  const image = openImage(source, ext);
+  const meta = await image.metadata();
+  // EXIF orientations 5–8 are rotated by 90°: the displayed size is swapped.
+  const rotated = (meta.orientation ?? 1) >= 5;
+  lib.db.prepare('UPDATE files SET width = ?, height = ? WHERE id = ?')
+    .run(rotated ? meta.height : meta.width, rotated ? meta.width : meta.height, id);
+
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const tmp = `${target}.${process.pid}.part`;
+  await image
+    .rotate()
+    .resize({ width: THUMB_SIZE, height: THUMB_SIZE, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: QUALITY })
+    .toFile(tmp);
+  fs.renameSync(tmp, target);
+}
+
+async function generate(lib: OpenLibrary, file: ThumbSource, target: string): Promise<void> {
+  try {
+    await render(lib, file.id, absPath(lib, file.rel_path), file.ext, target);
+  } catch (first) {
+    // A file still being copied in, or locked for a moment, fails its first read: look again
+    // shortly, wherever it is by then. Only a second failure means it isn't a readable image.
+    await new Promise((res) => setTimeout(res, RETRY_MS));
+    if (queueOwner !== lib) throw first;
+    const now = lib.db.prepare('SELECT rel_path, ext FROM files WHERE id = ? AND recycled = 0 AND missing_since IS NULL').get(file.id) as
+      { rel_path: string; ext: string } | undefined;
+    const source = now ? absPath(lib, now.rel_path) : null;
+    if (!now || !source || !fs.existsSync(source)) throw first;
+    try {
+      await render(lib, file.id, source, now.ext, target);
+    } catch (err) {
       // Has an image extension but isn't a readable image (technical doc §8.1).
-      raiseIssue(lib.db, 'wrong_type', `file:${file.id}`, { fileId: file.id, path: file.rel_path, reason: 'unreadable' });
-      log('warn', 'thumbnails', 'not a readable image', { path: file.rel_path, message: (err as Error).message });
+      raiseIssue(lib.db, 'wrong_type', unreadable(file.id), { fileId: file.id, path: now.rel_path, reason: 'unreadable' });
+      log('warn', 'thumbnails', 'not a readable image', { path: now.rel_path, message: (err as Error).message });
+      throw err;
     }
-    throw err;
   }
+  // Readable after all (it was reported while half-copied, or its content was replaced since).
+  if (lib.db.prepare("DELETE FROM health_issues WHERE kind = 'wrong_type' AND subject = ?").run(unreadable(file.id)).changes > 0) {
+    emit({ type: 'health-changed' });
+  }
+}
+
+/** The subject of a "can't read this image" report: `wrong_type` on `file:<id>`. */
+const unreadable = (id: number) => `file:${id}`;
+
+/**
+ * Drop "can't read this image" reports that no longer apply: the image was recycled, forgotten or
+ * went missing, or a thumbnail of it exists now, so it was readable after all. The scan leaves these
+ * reports alone (the thumbnailer raises them), so this is what clears them. Returns how many went.
+ */
+export function pruneUnreadable(lib: OpenLibrary): number {
+  const rows = lib.db.prepare(
+    `SELECT h.id, f.id AS fileId, f.hash, f.recycled, f.missing_since AS missingSince
+     FROM health_issues h LEFT JOIN files f ON f.id = CAST(substr(h.subject, 6) AS INTEGER)
+     WHERE h.kind = 'wrong_type' AND h.subject LIKE 'file:%'`,
+  ).all() as { id: number; fileId: number | null; hash: string | null; recycled: number | null; missingSince: number | null }[];
+  const del = lib.db.prepare('DELETE FROM health_issues WHERE id = ?');
+  let n = 0;
+  for (const r of rows) {
+    const gone = r.fileId === null || r.recycled === 1 || r.missingSince !== null;
+    const readable = r.fileId !== null && (
+      (r.hash !== null && fs.existsSync(thumbPath(lib, { id: r.fileId, hash: r.hash })))
+      || fs.existsSync(thumbPath(lib, { id: r.fileId, hash: null })));
+    if (gone || readable) n += del.run(r.id).changes;
+  }
+  return n;
 }
 
 /** Path of the file's thumbnail, generating it now (high priority) if needed. */

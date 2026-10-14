@@ -135,7 +135,7 @@ Because your library is made of ordinary folders, you can still change things in
 
 ## 3. Getting around
 
-- The **top bar** is on every page: the media-view logo (back to the Hub), the search box, shortcuts to Tags, Collections, Favorites, Random and the Recycle Bin, the **Library Health** indicator, the theme picker, Settings and **Help** (`?`).
+- The **top bar** is on every page but the image viewer: the media-view logo (back to the Hub), the search box, shortcuts to Tags, Collections, Favorites, Random and the Recycle Bin, the **Library Health** indicator, the theme picker, Settings and **Help** (`?`). The viewer has its own bar, the same height, with the logo, the way back, **Random** and **Help** (§4.5).
 - A **breadcrumb trail** (e.g. *Images › Fantasy › Elves › Portraits*) shows where you are; click any part of it to jump back up.
 - **Right-click** almost anything — a card, an image, a tag — for the actions available on it.
 - **Drag and drop** images from Windows Explorer onto the app to add them: onto an album page or album card to add them there, anywhere else to send them to the Inbox. On a category or sub-category page, a dropped **folder** becomes a new album there, with its images.
@@ -210,6 +210,8 @@ These work on every page; the image viewer adds its own (see §4.5). Press `F1` 
 
 The starting page. It shows one card per module (Images, Videos, Audio, Text-Writer). For now, only **Images** is active; the others are shown as "coming soon". The name of the open library is shown at the top.
 
+Right-click a module card for **Open** (the same as clicking it), or anywhere else on the page for the list of modules, to go to one.
+
 ### 4.2 Library (Categories)
 
 The front page of the Images module: the **Inbox** first, then a grid of all your **categories**, each with its cover image, name and total number of images.
@@ -264,6 +266,8 @@ The heart of the module: a grid of the images in one album. The Inbox uses this 
 
 **Adding images** — **Add images** opens the Windows file picker, or drag files from Explorer onto the page. Either way, they're copied into this album and the originals are left untouched. A panel at the bottom right shows the progress (you can keep working) and, at the end, what wasn't imported and why: other file types, files that can't be read, or images already in this album (identical ones are skipped).
 
+**From the library** — **+ From library** picks images that are already in your library. The Inbox is listed first, newest first; type to filter it by file name, or to search the whole library (words, `#tags`, `@collections`). Click images to pick them, Shift-click to pick a range; your picks stay while you search. Images from the **Inbox** are **moved** here. Images from **other albums** are **copied** by default (the copy gets the same tags) — switch to **Move** in the side panel to take them out of their album instead. Images already in this album are shown dimmed, marked *Here*. Names that clash get a number.
+
 **Right-click an image** for: *Open*, *Open With…*, *Rename*, *Move*, *Copy*, *Add to collection…*, *Favorite*, *Recycle*, and **Set as cover of ▸** — the album, any sub-category or the category above it, the collection (on a collection page), or any of the image's tags (for example, as a character's portrait).
 
 ### 4.5 Image viewer
@@ -283,6 +287,8 @@ Opens when you click an image. Shows the image as large as possible with its det
   - Tags added automatically by an implication (see §5.4) are marked as such and can't be removed on their own — the tooltip tells you which tag implies them.
 - **Collections panel** (below Tags): the collections the image is on — click one to open it, **×** takes the image off that list (never deletes it) — and **+ Add to collection**.
 - **Favorite**, **Open With…** (opens the file in another program), **Rename**, **Move**, **Set as cover of ▸**, **Recycle**. After a move, a recycle, or taking the image off the collection you're browsing, you stay on that list: if the image left it, the next one is shown.
+- **Right-click the image** for the same menu as in a grid: *Open With…*, *Tags…* (to the tag field), *Add to collection…* (and *Remove from collection* when you came from one), *Rename…*, *Move…*, *Copy…*, *Star*, *Cover of…* the album, the folders above it, the collection and the image's tags, and *Recycle*.
+- **Random** (in the bar at the top, in the controls, or `R`) shows another image from the same list.
 
 When opened from a collection, the viewer shows your position in it (e.g. *3 / 12 in collection "Chapter 3 refs"*), steps through it in the collection page's order (its own order unless you sorted by name or size), the back button names the collection, and **Cover of ▸** also offers the collection.
 
@@ -313,10 +319,10 @@ The Search page's first tab, **All**, shows the first few results of each kind, 
 - **Images** — matching images, with the same sorting, filtering, tag sidebar and bulk actions as an album.
 - **Albums** — albums whose names match.
 - **Categories & sub-categories** — those whose names match.
-- **Tags** — tags whose names or aliases match.
-- **Collections** — collections whose names match, as cards (its own tab, too).
+- **Tags** — tags whose names or aliases match. Tags you named in the search (`#elf`, `character:elf`, `~#cat`) come first, marked *in your search*, so a tag search also leads to the tag itself.
+- **Collections** — collections whose names match, as cards (its own tab, too). Collections you named with `@` come first, the same way.
 
-Images are found by the full search (words and tags); folders and tags by the words. Plain text and tag filters can be mixed in the same search; see §5.6, or the *Search* tab of the Help window.
+Images are found by the full search (words, tags and collections); folders, tags and collections by the words, plus the tags and collections the search names. The ones it leaves out (`-#cat`) aren't pinned. Plain text and tag filters can be mixed in the same search; see §5.6, or the *Search* tab of the Help window.
 
 ### 4.7 Tags
 
@@ -375,7 +381,7 @@ All your collections, each as a numbered contact strip: its cover, the next few 
 
 - **Header** — cover, name, description and number of images, with **Edit**, **Delete**, **Random** and **▶ Slideshow** (in the page's order).
 - **Images** in the collection's own order, each numbered with its place in the list. **Drag** images to reorder them; drag a selection to move it together.
-- **Sort** by own order (the default), name, size or format, ascending or descending. Reordering works only in own order with no filter on — otherwise a quiet hint says so. The numbers always show the list's own order.
+- **Sort** by own order (the default), name, size or format, ascending or descending — the own order too: **↓** shows the list last to first. Reordering works only in own order, first to last, with no filter on — otherwise a quiet hint says so, with a button to go back. The numbers always show the list's own order.
 - Open any image to step through the collection in the viewer, in the page's order.
 - **Remove from collection** in the selection bar (never deletes the files), plus the usual bulk actions. The index works as on other grids.
 - **Edit** — name, description (up to 500 characters) and cover: *First image* (the default) or one you choose. If the chosen cover is taken off the list, the first image is used again.
@@ -384,7 +390,7 @@ All your collections, each as a numbered contact strip: its cover, the next few 
 
 **Dropping files from Explorer** onto a collection page adds them too: they're copied into the Inbox (the originals stay untouched) and put at the end of the list. An image that's already in the Inbox isn't copied again — it's simply added to the list. Dropped folders are flattened.
 
-**Adding images** — select images in any grid and press **+ Collection**, or right-click one and choose **Add to collection…** (also in the viewer's Collections panel). Pick a list (type to filter; the three you added to most recently are at the top) or type a new name to create one on the spot; double-click adds right away. Each list shows how many of the chosen images it already has. Images are added at the end; ones already on the list stay where they are, and the message says so (*Added 2 · 3 were already in Chapter 3 refs*), with **Go to**.
+**Adding images** — on the collection page, **+ From library** picks images from anywhere in the library (the Inbox first, or search; see §4.4) and adds them at the end of the list — they stay where they are, and images already on the list are dimmed. Or select images in any grid and press **+ Collection**, or right-click one and choose **Add to collection…** (also in the viewer's Collections panel). Pick a list (type to filter; the three you added to most recently are at the top) or type a new name to create one on the spot; double-click adds right away. Each list shows how many of the chosen images it already has. Images are added at the end; ones already on the list stay where they are, and the message says so (*Added 2 · 3 were already in Chapter 3 refs*), with **Go to**.
 
 ### 4.12 Favorites
 
@@ -407,7 +413,7 @@ Images and folders you delete go here first.
 
 ### 4.15 Library Health
 
-A maintenance page that compares your library folder with what the app remembers and lists anything that needs attention, grouped and colored by severity (see §3.3). Each item comes with suggested fixes you can apply one by one, or all at once with **Apply to all** — which always asks first, listing what it will do (e.g. *recreate 3 folders and their markers*) by severity, each line with a checkbox: red and amber are ticked, blue ones (like keeping the suggested copy of duplicates) are yours to tick, and a severity’s heading ticks or unticks all of it. Items that need your choice (like duplicates with different tags) are skipped by Apply to all, and it says how many. On the Review page, each group also has its own fixes for the whole group.
+A maintenance page that compares your library folder with what the app remembers and lists anything that needs attention, grouped and colored by severity (see §3.3). Click a summary card, or a group's name, to open its review; on the *Blue* review, *Untagged images* links to its own page. Each item comes with suggested fixes you can apply one by one, or all at once with **Apply to all** — which always asks first, listing what it will do (e.g. *recreate 3 folders and their markers*) by severity, each line with a checkbox: red and amber are ticked, blue ones (like keeping the suggested copy of duplicates) are yours to tick, and a severity’s heading ticks or unticks all of it. Items that need your choice (like duplicates with different tags) are skipped by Apply to all, and it says how many. On the Review page, each group also has its own fixes for the whole group.
 
 **Red — missing**
 - **Missing folders** — folders the app remembers but can't find. *Recreate* them, or *Forget* them.
@@ -419,7 +425,7 @@ A maintenance page that compares your library folder with what the app remembers
 - **Unclear moves** — an image reappeared that matches several identical missing images, each with its own tags. Pick which one it is, or keep it as a new image.
 - **Rule problems** — loose images in a category or sub-category, folders inside an album. *Fix: move the images into a new album (you name it — the group fix and Apply to all ask for one name, used in each folder), into the Inbox, or into an existing album (where you can also create the album, or a sub-category, on the spot). When the folder holds only images, it can become an album itself: **Make it an album** where it is, or **Move as album…** into a category or sub-category you pick — the only way for a top-level folder, since albums can’t sit there. For a folder inside an album: move the folder out.*
 - **Unmarked folders** — new folders created outside the app. They show up right away with the kind the app guessed (folders with images → album; folders with folders → sub-category; empty ones → album, marked as a guess), and you confirm or change it here.
-- **Wrong file types** — files among your images that no module takes (a `.zip`, an `.exe`…): *Recycle* or *Ignore*. Videos, audio and texts are moved to their own folders automatically (see the white notices below).
+- **Wrong file types** — files among your images that no module takes (a `.zip`, an `.exe`…): *Recycle* or *Ignore*. Videos, audio and texts are moved to their own folders automatically (see the white notices below). An image the app can't read is listed here too; a file still being copied in is read twice before it's reported, and the report goes away by itself once the image can be read, or leaves the library.
 - **Not supported** — image formats the app can't show yet (PSD, HEIC, RAW…). *Ignore* leaves the file where it is (it's then listed under *Not tracked*); *Record* moves it into the library's hidden Invalid folder, where you can still find it in Explorer. Both are counted, per format, in the table at the bottom of the page.
 
 **Blue — for your information**
@@ -433,7 +439,7 @@ A maintenance page that compares your library folder with what the app remembers
 
 **Unsupported formats** — at the bottom, how many files of each format were ignored or recorded so far, to show which formats are worth supporting next.
 
-**Logs** — the app keeps a log of errors, every fix applied on this page and every bulk operation (see §7). This section shows how much space the logs use, with **Open logs folder** and **Clear logs**.
+**Logs** — the app keeps a log of errors, every fix applied on this page and every bulk operation (see §7). This section shows how much space the logs use, with **Open logs folder** and **Clear logs** — also on the *All in order* page.
 
 **Rescan** checks the whole library again on demand.
 

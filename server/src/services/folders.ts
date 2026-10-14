@@ -8,6 +8,7 @@ import { writeMarker } from '../lib/markers.ts';
 import { expectChange } from '../lib/expected.ts';
 import { validateName } from '../lib/names.ts';
 import { toAbsolute, underPrefix } from '../lib/paths.ts';
+import { renameWithRetry } from '../lib/rename.ts';
 import type { OpenLibrary } from './library.ts';
 import { rewritePrefix } from './tree.ts';
 
@@ -246,7 +247,7 @@ export function relocate(lib: OpenLibrary, f: LiveFolder, relPath: string, paren
   assertFree(lib, relPath, to, baseNameOf(relPath), f.id);
 
   expectChange(from, to);
-  fs.renameSync(from, to);
+  renameWithRetry(from, to);
   try {
     db.transaction(() => {
       rewritePrefix(db, f.rel_path, relPath);

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { closeLibrary, createLibrary, type OpenLibrary } from '../src/services/library.ts';
 import { reconcile } from '../src/services/reconcile.ts';
+import { recycleFiles } from '../src/services/recycle.ts';
 import { startThumbnails, stopThumbnails, thumbPath } from '../src/services/thumbnails.ts';
 import { hashPending } from '../src/workers/hasher.ts';
 import { fileByPath, folderByPath, tempDir, tree } from './helpers.ts';
@@ -177,5 +178,29 @@ describe('media', () => {
     // A rescan doesn't drop it: the scan can't tell, only the thumbnailer can.
     await reconcile(lib);
     expect(lib.db.prepare("SELECT COUNT(*) FROM health_issues WHERE kind = 'wrong_type'").pluck().get()).toBe(1);
+  });
+
+  const unreadableCount = () => lib.db.prepare("SELECT COUNT(*) FROM health_issues WHERE kind = 'wrong_type'").pluck().get();
+
+  it('drops the unreadable report when the file turns out readable (it was half-copied)', async () => {
+    const world = fileByPath(lib, 'Fantasy/Maps/world.png')!;
+    expect((await get(`/media/thumb/${world.id}`)).status).toBe(404);
+    expect(unreadableCount()).toBe(1);
+
+    await png('Fantasy/Maps/world.png', 20, 20, '#00ff00');
+    await reconcile(lib);
+    expect((await get(`/media/thumb/${world.id}`)).status).toBe(200);
+    expect(unreadableCount()).toBe(0);
+  });
+
+  it('drops the unreadable report when the image leaves the library', async () => {
+    const world = fileByPath(lib, 'Fantasy/Maps/world.png')!;
+    expect((await get(`/media/thumb/${world.id}`)).status).toBe(404);
+    expect(unreadableCount()).toBe(1);
+
+    recycleFiles(lib, [world.id]);
+    const report = await getJson('/api/health');
+    expect(report.issues.filter((i: any) => i.kind === 'wrong_type')).toEqual([]);
+    expect(unreadableCount()).toBe(0);
   });
 });

@@ -145,8 +145,12 @@
   }
 
   async function random() {
-    const r = await unwrap(client.api.files.random.$get({ query: { ...toParams(listQuery), exclude: String(id) } }));
-    if (r.id) show({ id: r.id });
+    try {
+      const r = await unwrap(client.api.files.random.$get({ query: { ...toParams(listQuery), exclude: String(id) } }));
+      if (r.id) show({ id: r.id });
+    } catch (err) {
+      toastError(err);
+    }
   }
 
   async function toggleFavorite() {
@@ -176,6 +180,29 @@
       ...coverFolders.map((c) => ({ label: `${c.kind === 'album' ? 'Album' : c.kind === 'category' ? 'Category' : 'Sub-category'} · ${c.name}`, action: () => setCover(c.id, c.name, f.id) })),
       ...(list ? [{ label: `Collection · ${list.name}`, separated: coverFolders.length > 0, action: () => void setCollectionCover(list, f.id) }] : []),
       ...f.tags.map((t, i) => ({ label: `Tag · ${t.name}`, separated: i === 0, action: () => setTagCover(t, f.id) })),
+    ]);
+  }
+
+  /** Right-click on the image: the grid's image menu, without Open (it's open) or Select. */
+  function imageMenu(e: MouseEvent) {
+    // Fullscreen shows only the viewer, not the app's menu layer: no menu, and not the browser's either.
+    if (!file || fullscreen) return void e.preventDefault();
+    const f = file;
+    const list = fromList;
+    const where = f.folder.name;
+    openMenu(e, f.filename, [
+      { label: 'Open with…', action: () => openWith(f.id) },
+      { label: 'Tags…', separated: true, action: () => void focusTags() },
+      { label: 'Add to collection…', action: addToList },
+      ...(list ? [{ label: 'Remove from collection', action: () => void removeFromList(list) }] : []),
+      { label: 'Rename…', action: () => openOps({ kind: 'rename-file', file: f, where }) },
+      { label: 'Move…', action: move },
+      { label: 'Copy…', action: () => openOps({ kind: 'transfer', mode: 'copy', files: [f], from: where, currentFolderId: f.folder.id }) },
+      { label: f.favorited ? '☆ Unstar' : '★ Star', action: () => void toggleFavorite().catch(toastError) },
+      ...coverFolders.map((c, i) => ({ label: `Cover of ${c.name}`, separated: i === 0, action: () => setCover(c.id, c.name, f.id) })),
+      ...(list ? [{ label: `Cover of ${list.name}`, separated: coverFolders.length === 0, action: () => void setCollectionCover(list, f.id) }] : []),
+      ...f.tags.map((t, i) => ({ label: `Cover of tag ${t.name}`, separated: i === 0, action: () => void setTagCover(t, f.id) })),
+      { label: 'Recycle', danger: true, separated: true, action: () => void recycle() },
     ]);
   }
 
@@ -512,6 +539,15 @@
       : source === 'search' ? 'in the search'
       : file?.folder.kind === 'inbox' ? 'in the Inbox' : query.recursive ? 'in a folder' : 'in album',
   );
+  /** For Random's tooltip: the list it picks from (the one prev / next step through). */
+  const randomWhere = $derived(
+    source === 'collection' ? listName || 'this collection'
+      : source === 'untagged' ? 'the untagged images'
+      : source === 'favorites' ? 'Favorites'
+      : source === 'tag' ? 'this tag'
+      : source === 'search' ? 'this search'
+      : query.recursive && query.folder !== undefined ? 'all images here' : file?.folder.name ?? 'this list',
+  );
   const dims = $derived(file?.width && file.height ? `${fmt(file.width)} × ${fmt(file.height)}` : natW ? `${fmt(natW)} × ${fmt(natH)}` : '—');
 </script>
 
@@ -521,6 +557,7 @@
       <a class="logo" href={href('/')}><span class="mark"></span>MEDIA/VIEW</a>
       <button class="back" onclick={back}>← {backLabel}</button>
       <div class="spacer"></div>
+      <button class="bar-random" title="Random image from {randomWhere} (R)" onclick={() => void random()}>Random</button>
       <button class="help" title="Help (F1)" onclick={() => openDialog('help')}>?</button>
     </header>
   {/if}
@@ -528,7 +565,7 @@
   <div class="body">
     <div class="main">
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="stage" class:dragging bind:clientWidth={stageW} bind:clientHeight={stageH} onwheel={onWheel} onpointerdown={onPointerDown}>
+      <div class="stage" class:dragging bind:clientWidth={stageW} bind:clientHeight={stageH} onwheel={onWheel} onpointerdown={onPointerDown} oncontextmenu={imageMenu}>
         {#if missing}
           <div class="gone display">This image no longer exists.</div>
         {:else if file}
@@ -681,9 +718,12 @@
   .viewer { height: 100vh; display: flex; flex-direction: column; background: var(--bg2); }
   .viewer.full { background: #000; }
 
-  .bar { height: 48px; flex: none; display: flex; align-items: stretch; border-bottom: 1px solid var(--line); }
-  .logo { display: flex; align-items: center; gap: 8px; padding: 0 18px; border-right: 1px solid var(--line); font: 700 19px/1 var(--font-display); text-decoration: none; }
-  .mark { width: 10px; height: 10px; background: var(--accent); }
+  /* Same height and logo as the top bar, so nothing jumps when the viewer opens. */
+  .bar { height: 56px; flex: none; display: flex; align-items: stretch; background: var(--bg2); border-bottom: 1px solid var(--line); }
+  .logo { display: flex; align-items: center; gap: 8px; padding: 0 22px; border-right: 1px solid var(--line); font: 700 22px/1 var(--font-display); letter-spacing: 0.02em; text-decoration: none; }
+  .mark { width: 12px; height: 12px; background: var(--accent); }
+  .bar-random { padding: 0 14px; border: none; border-left: 1px solid var(--line); background: none; color: var(--text2); font: 600 13px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .bar-random:hover { color: var(--text); background: var(--surface); }
   .back {
     display: flex;
     align-items: center;
@@ -698,7 +738,7 @@
   }
   .back:hover { color: var(--text); background: var(--surface); }
   .spacer { flex: 1; }
-  .help { width: 48px; border: none; border-left: 1px solid var(--line); background: none; color: var(--text); font: 700 18px/1 var(--font-display); cursor: pointer; }
+  .help { width: 52px; border: none; border-left: 1px solid var(--line); background: none; color: var(--text); font: 700 18px/1 var(--font-display); cursor: pointer; }
 
   .body { flex: 1; min-height: 0; display: flex; }
   .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }

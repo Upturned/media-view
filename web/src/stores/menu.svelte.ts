@@ -4,6 +4,8 @@ export interface MenuItem {
   label: string;
   action: () => void;
   danger?: boolean;
+  /** Shown but can't be chosen (a module that isn't there yet). */
+  disabled?: boolean;
   /** Draw a separator above this item. */
   separated?: boolean;
 }

@@ -107,11 +107,17 @@
         <p>Every folder and image on disk matches what the app remembers. Nothing is missing, nothing needs a decision, and the badge in the top bar is gone. Changes you make in Explorer show up here the next time the app looks.</p>
         <span class="mono-note">last scan {when(report.lastScan)}</span>
       </div>
-      <div class="tally">
-        <div><span class="sq" style:background="var(--red)"></span>Missing<span>0</span></div>
-        <div><span class="sq" style:background="var(--amber)"></span>Needs a decision<span>0</span></div>
-        <div><span class="sq" style:background="var(--blue)"></span>Just so you know<span>0</span></div>
-        <div><span class="sq" style:background="var(--surface2)"></span>Logs<span>{fmt(report.logs.files)} files · {formatSize(report.logs.bytes)}</span></div>
+      <div class="side">
+        <div class="tally">
+          <div><span class="sq" style:background="var(--red)"></span>Missing<span>0</span></div>
+          <div><span class="sq" style:background="var(--amber)"></span>Needs a decision<span>0</span></div>
+          <div><span class="sq" style:background="var(--blue)"></span>Just so you know<span>0</span></div>
+          <div><span class="sq" style:background="var(--surface2)"></span>Logs<span>{fmt(report.logs.files)} files · {formatSize(report.logs.bytes)}</span></div>
+        </div>
+        <div class="log-acts">
+          <button class="gbtn" onclick={openLogs}>Open logs folder</button>
+          <button class="gbtn red" onclick={clearLogs} disabled={report.logs.files === 0}>Clear logs</button>
+        </div>
       </div>
     </div>
   {:else if report}
@@ -131,7 +137,11 @@
         {#each s.groups as g (g.key)}
           <div class="group" data-nav>
             <span class="stripe" style:background={s.color}></span>
-            <div class="g-title"><span class="g-name">{g.title}</span><span class="g-count" style:color={s.section === 'white' ? 'var(--text2)' : s.color}>{g.count}</span></div>
+            <div class="g-title">
+              {#if g.key === 'thumbnails'}<span class="g-name">{g.title}</span>
+              {:else}<a class="g-name" href={href(reviewHref(g))} title="Review {g.title.toLowerCase()}">{g.title}</a>{/if}
+              <span class="g-count" style:color={s.section === 'white' ? 'var(--text2)' : s.color}>{g.count}</span>
+            </div>
             <div class="g-sample"><span>{g.sample}</span>{#if g.need}<span class="need">needs your choice</span>{/if}</div>
             <div class="g-acts">
               {#if g.key === 'untagged'}
@@ -203,7 +213,8 @@
   .group { display: grid; grid-template-columns: 4px 290px minmax(0, 1fr) auto; gap: 0 20px; align-items: center; min-height: 60px; padding-right: 40px; border-bottom: 1px solid var(--line); flex: none; }
   .stripe { align-self: stretch; }
   .g-title { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-  .g-name { font: 700 22px/1 var(--font-display); text-transform: uppercase; }
+  .g-name { font: 700 22px/1 var(--font-display); text-transform: uppercase; color: var(--text); text-decoration: none; }
+  a.g-name:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
   .g-count { font: 700 12px var(--font-mono); white-space: nowrap; }
   .g-sample { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .g-sample > span:first-child { font: 12px var(--font-mono); color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -229,6 +240,8 @@
   .big { font-size: clamp(72px, 9vw, 120px); line-height: 0.82; }
   .pitch p { margin: 0; max-width: 600px; font-size: 16px; line-height: 1.55; color: var(--text2); text-wrap: pretty; }
   .mono-note { font: 11.5px var(--font-mono); color: var(--text2); text-transform: uppercase; }
+  .side { display: flex; flex-direction: column; gap: 10px; }
+  .side .log-acts { justify-content: flex-end; padding-right: 0; }
   .tally { display: flex; flex-direction: column; border: 1px solid var(--line); font: 12px var(--font-mono); text-transform: uppercase; }
   .tally div { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
   .tally div:last-child { border-bottom: none; }

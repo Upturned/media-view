@@ -7,7 +7,7 @@
   import KindIcon from '../components/KindIcon.svelte';
   import NameDialog from '../components/NameDialog.svelte';
   import Thumb from '../components/Thumb.svelte';
-  import { groupsOf, looksLikeAlbum, SECTIONS, type Group, type Section } from '../health.ts';
+  import { groupsOf, looksLikeAlbum, pathDiff, SECTIONS, type Group, type Section } from '../health.ts';
   import { fmt, formatDate } from '../media.ts';
   import { href, router } from '../router.svelte.ts';
   import { ask } from '../stores/confirm.svelte.ts';
@@ -47,9 +47,11 @@
   });
 
   const scanning = $derived(live.scanning || library.info?.scan.status === 'scanning');
-  const groups = $derived(report ? groupsOf(report).filter((g) => g.section === section && g.key !== 'untagged') : []);
+  const groups = $derived(report ? groupsOf(report).filter((g) => g.section === section) : []);
   const isOpen = (g: Group) => (closed[g.key] === undefined ? !focus || focus === g.key : !closed[g.key]);
-  const total = $derived(groups.reduce((n, g) => n + (g.issues.length || (g.key === 'untracked' ? report?.untracked.length ?? 0 : 0)), 0));
+  // Blue counts its groups, like its card on the overview (untagged images and duplicate groups don't add up).
+  const total = $derived(section === 'blue' ? groups.length
+    : groups.reduce((n, g) => n + (g.issues.length || (g.key === 'untracked' ? report?.untracked.length ?? 0 : 0)), 0));
   const TABS: [Section, string][] = [['red', 'Red · missing'], ['amber', 'Amber · decisions'], ['blue', 'Blue · for your info'], ['white', 'White · notices']];
 
   async function run(fn: () => Promise<unknown>) {
@@ -64,21 +66,7 @@
   const fix = (i: HealthIssue, f: Parameters<typeof applyFix>[1]) => run(() => applyFix(i.id, f));
 
   // ── Paths: WAS / NOW, with the part that changed highlighted ──
-  function diff(a: string, b: string): [{ pre: string; hit: string; post: string }, { pre: string; hit: string; post: string }] {
-    const A = winPath(a).split('\\');
-    const B = winPath(b).split('\\');
-    let i = 0;
-    while (i < A.length && i < B.length && A[i] === B[i]) i++;
-    let j = 0;
-    while (j < A.length - i && j < B.length - i && A[A.length - 1 - j] === B[B.length - 1 - j]) j++;
-    const part = (S: string[]) => {
-      const pre = S.slice(0, i).join('\\');
-      const hit = S.slice(i, S.length - j).join('\\');
-      const post = S.slice(S.length - j).join('\\');
-      return { pre: pre + (pre && hit ? '\\' : ''), hit, post: (post && hit ? '\\' : '') + post };
-    };
-    return [part(A), part(B)];
-  }
+  const diff = (a: string, b: string) => pathDiff(winPath(a), winPath(b));
 
   // ── Forget: the normal confirmation, then "Are you sure?" ──
   async function forget(i: HealthIssue) {
@@ -284,6 +272,19 @@
               </div>
             </div>
           {/each}
+        {/if}
+
+        <!-- Untagged images: they have their own page -->
+        {#if g.key === 'untagged' && report}
+          <div class="row">
+            <span class="stripe" style:background="var(--blue)"></span>
+            <div class="icon"><svg width="22" height="22" viewBox="0 0 16 16"><path d="M1.5 8.5 V2.5 H7.5 L14.5 9.5 L8.5 15.5 Z" fill="none" stroke="currentColor" stroke-width="1.4" /><rect x="4" y="5" width="2" height="2" fill="currentColor" /></svg></div>
+            <div class="info"><span class="title">{g.count} with no tags</span><span class="meta">{g.sample}</span></div>
+            <div class="btns">
+              <a class="rbtn" href={href('/health/untagged/grid')}>Open as grid</a>
+              <a class="rbtn pri" href={href('/health/untagged')}>Review ▸</a>
+            </div>
+          </div>
         {/if}
 
         <!-- Thumbnail cleanup -->

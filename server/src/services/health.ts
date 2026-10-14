@@ -14,6 +14,7 @@ import { clearLogs, log, logStats } from '../lib/log.ts';
 import { writeMarker } from '../lib/markers.ts';
 import { splitExt, uniqueName, validateName } from '../lib/names.ts';
 import { DATA_DIR, toAbsolute, toDbPath } from '../lib/paths.ts';
+import { renameWithRetry } from '../lib/rename.ts';
 import { requestScan, scanStatus } from '../workers/scanner.ts';
 import { folderPath, renumber } from './collections.ts';
 import { categoryIdOf, moveFiles } from './file-ops.ts';
@@ -23,8 +24,9 @@ import { clearIssue, raiseIssue, SEVERITY } from './issues.ts';
 import type { OpenLibrary } from './library.ts';
 import { recycleFiles, recycleStray } from './recycle.ts';
 import { recomputeImplied } from './tags.ts';
+import { rewritePrefix } from './tree.ts';
 import { previewDir } from './previews.ts';
-import { thumbDir } from './thumbnails.ts';
+import { pruneUnreadable, thumbDir } from './thumbnails.ts';
 
 /**
  * Library Health (technical doc §7.4, user guide §4.15, milestone 7): the report behind the page and
@@ -60,6 +62,7 @@ const issueRow = (db: DB, id: number): IssueRow => {
 
 export function healthSummary(lib: OpenLibrary): HealthSummary {
   const { db } = lib;
+  pruneUnreadable(lib);
   const counts = Object.fromEntries(
     (db.prepare('SELECT severity, COUNT(*) AS n FROM health_issues GROUP BY severity').all() as { severity: string; n: number }[])
       .map((r) => [r.severity, r.n]),
@@ -106,6 +109,7 @@ const ORDER: IssueKind[] = [
 
 export function healthReport(lib: OpenLibrary): HealthReport {
   const { db } = lib;
+  pruneUnreadable(lib);
   const rows = db.prepare('SELECT * FROM health_issues ORDER BY detected_at, id').all() as IssueRow[];
   const hidden = hiddenIssues(db).ids;
   const issues: HealthIssue[] = [];
@@ -810,7 +814,7 @@ function placeLoose(lib: OpenLibrary, subject: string, to: { name: string } | { 
       const { base, ext } = splitExt(n);
       const target = path.join(dest, uniqueName(dest, base, ext));
       expectChange(path.join(root, n), target);
-      fs.renameSync(path.join(root, n), target);
+      renameWithRetry(path.join(root, n), target);
     }
     requestScan(lib);
     return `Moved ${names.length} ${names.length === 1 ? 'image' : 'images'} into ${album.name}.`;
@@ -860,18 +864,30 @@ function makeAlbum(lib: OpenLibrary, folderId: number, parentId: number | null):
   return `${f.name} is now an album in ${parent.name}.`;
 }
 
-/** A folder inside an album goes up next to the album; the scan then registers it (to be confirmed). */
+/**
+ * A folder inside an album goes up next to the album; the scan then registers it (to be confirmed).
+ * The images in it are already known (filed under the album): their paths follow in the same step,
+ * so the scan finds them where it expects them instead of reporting a move made outside the app.
+ */
 function moveOutOfAlbum(lib: OpenLibrary, relPath: string, albumId: number): string {
   const album = liveFolder(lib, albumId);
   const root = lib.moduleRoot('images');
-  const parentRel = album.rel_path.slice(0, album.rel_path.lastIndexOf('/'));
+  // The Inbox sits at the top level: what leaves it lands directly in Images.
+  const parentRel = album.rel_path.includes('/') ? album.rel_path.slice(0, album.rel_path.lastIndexOf('/')) : '';
   const from = toAbsolute(root, relPath);
   if (!fs.existsSync(from)) throw notFound('FOLDER_NOT_FOUND', 'That folder isn’t there any more.');
   const parentAbs = toAbsolute(root, parentRel);
   const name = uniqueName(parentAbs, path.basename(from), '');
   const to = path.join(parentAbs, name);
+  const toRel = parentRel ? `${parentRel}/${name}` : name;
   expectChange(from, to);
-  fs.renameSync(from, to);
+  renameWithRetry(from, to);
+  try {
+    lib.db.transaction(() => rewritePrefix(lib.db, relPath, toRel))();
+  } catch (err) {
+    renameWithRetry(to, from); // undo the disk change
+    throw err;
+  }
   requestScan(lib);
   return `Moved ${path.basename(from)} out of ${album.name}${name !== path.basename(from) ? ` (as ${name})` : ''}.`;
 }
@@ -937,7 +953,7 @@ function recordFile(lib: OpenLibrary, relPath: string): string {
   const { base, ext } = splitExt(path.basename(from));
   const to = path.join(destDir, uniqueName(destDir, base, ext));
   expectChange(from, to);
-  fs.renameSync(from, to);
+  renameWithRetry(from, to);
   lib.db.prepare('DELETE FROM untracked_files WHERE rel_path = ?').run(relPath);
   countFormat(lib.db, ext.replace(/^\./, ''), 'recorded', relPath);
   return `Recorded ${path.basename(from)} — moved to the library's hidden Invalid folder.`;
@@ -969,7 +985,8 @@ function recycleWrongType(lib: OpenLibrary, subject: string, p: Record<string, u
   if (subject.startsWith('file:')) {
     const r = recycleFiles(lib, [Number(p.fileId)]);
     if (r.starred.length) throw conflict('STARRED', 'This image is starred — unstar it first.');
-    if (!r.recycled) throw notFound('FILE_NOT_FOUND', 'This image is no longer in the library.');
+    // Already recycled, forgotten or missing: nothing left to recycle, so the report just goes.
+    if (!r.recycled) return `${String(p.path).split('/').at(-1)} is no longer in the library — cleared.`;
   } else {
     recycleStray(lib, String(p.path));
   }
