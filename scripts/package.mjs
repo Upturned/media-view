@@ -3,7 +3,9 @@
 //   release/media-view-<version>-win-x64.zip
 //     node.exe            the Node.js this script runs on (same version: the native modules match it)
 //     start.bat           starts the server and opens the browser
+//     reset-password.bat  clears a forgotten profile password (docs/profiles.md §4.6)
 //     app/server.mjs      the server, bundled into one file
+//     app/reset-password.mjs  the reset-password command, bundled the same way
 //     app/web/dist/       the built web app
 //     app/migrations/     database migrations
 //     app/node_modules/   only the native modules (better-sqlite3, sharp) and what they need
@@ -44,9 +46,9 @@ execFileSync(process.execPath, [path.join(ROOT, 'node_modules', 'vite', 'bin', '
 fs.cpSync(path.join(ROOT, 'web', 'dist'), path.join(app, 'web', 'dist'), { recursive: true });
 
 step('Bundling the server');
-await build({
-  entryPoints: [path.join(ROOT, 'server', 'src', 'index.ts')],
-  outfile: path.join(app, 'server.mjs'),
+const bundle = (entry, outfile) => build({
+  entryPoints: [path.join(ROOT, 'server', 'src', entry)],
+  outfile: path.join(app, outfile),
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -58,6 +60,8 @@ await build({
   legalComments: 'linked',
   logLevel: 'warning',
 });
+await bundle('index.ts', 'server.mjs');
+await bundle(path.join('cli', 'reset-password.ts'), 'reset-password.mjs');
 fs.cpSync(path.join(ROOT, 'server', 'src', 'db', 'migrations'), path.join(app, 'migrations'), { recursive: true });
 fs.writeFileSync(path.join(app, 'package.json'), `${JSON.stringify({ name: 'media-view', version: pkg.version, releaseDate: pkg.releaseDate, private: true, type: 'module' }, null, 2)}\n`);
 
@@ -103,11 +107,22 @@ fs.writeFileSync(path.join(out, 'start.bat'), [
   'if errorlevel 1 pause',
   '',
 ].join('\r\n'));
+fs.writeFileSync(path.join(out, 'reset-password.bat'), [
+  '@echo off',
+  'title media-view: reset a password',
+  'rem Clears a forgotten profile password. Asks for the library folder and the profile.',
+  'cd /d "%~dp0"',
+  '"%~dp0node.exe" "%~dp0app\\reset-password.mjs" %*',
+  'pause',
+  '',
+].join('\r\n'));
 fs.writeFileSync(path.join(out, 'README.txt'), [
   `media-view ${pkg.version}`,
   '',
   'Double-click start.bat: the app opens in your browser. Keep its window open while you use it;',
   'closing the window stops media-view. Starting it again while it runs just opens the browser.',
+  '',
+  'Forgot a profile password? Double-click reset-password.bat.',
   '',
   'Nothing is installed. Your libraries stay where you made them, and the settings are in',
   '%APPDATA%\\media-view (delete that folder to start fresh).',

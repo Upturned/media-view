@@ -22,6 +22,7 @@ import { fileItems, UNTAGGED } from './files.ts';
 import { assertCanHold, createFolder, kindAt, liveFolder, relocate, thumbRef } from './folders.ts';
 import { clearIssue, raiseIssue, SEVERITY } from './issues.ts';
 import type { OpenLibrary } from './library.ts';
+import { isShared, namesList, STARRED_ANY, starredBy } from './profiles.ts';
 import { recycleFiles, recycleStray } from './recycle.ts';
 import { recomputeImplied } from './tags.ts';
 import { rewritePrefix } from './tree.ts';
@@ -155,8 +156,9 @@ function manualTags(db: DB, fileId: number): TagRef[] {
   ).all(fileId) as TagRef[];
 }
 
+/** `favorited`: starred by anyone (stars protect images, docs/profiles.md §3.1). */
 function fileBrief(db: DB, id: number) {
-  return db.prepare('SELECT id, filename, rel_path, hash, mtime, favorited, description, folder_id, added_at FROM files WHERE id = ?').get(id) as
+  return db.prepare(`SELECT f.id, f.filename, f.rel_path, f.hash, f.mtime, ${STARRED_ANY} AS favorited, f.description, f.folder_id, f.added_at FROM files f WHERE f.id = ?`).get(id) as
     | { id: number; filename: string; rel_path: string; hash: string | null; mtime: number; favorited: number; description: string | null; folder_id: number; added_at: number }
     | undefined;
 }
@@ -182,7 +184,7 @@ function describe(lib: OpenLibrary, r: IssueRow): IssueDetails | null {
       if (!f) return null;
       return {
         kind: 'missing_file', fileId: f.id, path: f.rel_path, filename: f.filename, thumb: thumbOf(f),
-        tags: manualTags(db, f.id), favorited: f.favorited === 1, collections: listCount(db, f.id),
+        tags: manualTags(db, f.id), favorited: f.favorited === 1, starredBy: starredBy(db, [f.id]).get(f.id) ?? [], collections: listCount(db, f.id),
       };
     }
     case 'external_move': {
@@ -203,7 +205,8 @@ function describe(lib: OpenLibrary, r: IssueRow): IssueDetails | null {
       const f = fileBrief(db, Number(p.fileId));
       if (!f) return null;
       const candidates = (p.candidates as { id: number }[]).map((c) => fileBrief(db, c.id)).filter((c) => !!c).map((c) => ({
-        id: c.id, path: c.rel_path, tags: manualTags(db, c.id), favorited: c.favorited === 1, collections: listCount(db, c.id), description: c.description,
+        id: c.id, path: c.rel_path, tags: manualTags(db, c.id), favorited: c.favorited === 1, starredBy: starredBy(db, [c.id]).get(c.id) ?? [],
+        collections: listCount(db, c.id), description: c.description,
       }));
       return { kind: 'ambiguous_move', file: { id: f.id, path: f.rel_path, thumb: thumbOf(f) }, candidates };
     }
@@ -254,15 +257,17 @@ function describe(lib: OpenLibrary, r: IssueRow): IssueDetails | null {
 
 function describeDuplicate(db: DB, hash: string): IssueDetails | null {
   const rows = db.prepare(
-    `SELECT id, rel_path, folder_id, favorited, description, added_at, mtime, hash FROM files f WHERE hash = ? AND ${LIVE} ORDER BY added_at, id`,
+    `SELECT id, rel_path, folder_id, ${STARRED_ANY} AS favorited, description, added_at, mtime, hash FROM files f WHERE hash = ? AND ${LIVE} ORDER BY added_at, id`,
   ).all(hash) as { id: number; rel_path: string; folder_id: number; favorited: number; description: string | null; added_at: number; mtime: number; hash: string }[];
   if (rows.length < 2) return null;
+  const stars = starredBy(db, rows.map((r) => r.id));
   const copies: DuplicateCopy[] = rows.map((r) => ({
     id: r.id,
     path: r.rel_path,
     folderId: r.folder_id,
     tags: manualTags(db, r.id),
     favorited: r.favorited === 1,
+    starredBy: stars.get(r.id) ?? [],
     collections: db.prepare('SELECT c.id, c.name FROM collection_items ci JOIN collections c ON c.id = ci.collection_id WHERE ci.file_id = ? ORDER BY c.name')
       .all(r.id) as { id: number; name: string }[],
     description: r.description,
@@ -295,7 +300,7 @@ export function suggestKeep(copies: DuplicateCopy[]): { keepId: number | null; r
 
 /** The untagged images for the Health page, album by album (or one album), newest arrivals marked. */
 export function untaggedImages(
-  lib: OpenLibrary, opts: { fresh?: boolean; left?: boolean; folder?: number; offset?: number; limit?: number },
+  lib: OpenLibrary, opts: { fresh?: boolean; left?: boolean; folder?: number; offset?: number; limit?: number; me?: number },
 ): { items: (FileItem & { where: string })[]; total: number } {
   // `left`: the ones set aside with "Leave untagged" instead (the "Left untagged (n)" list).
   const where = [LIVE, OUTSIDE_INBOX, opts.left ? 'f.untagged_ok = 1 AND NOT EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id)' : UNTAGGED];
@@ -311,7 +316,7 @@ export function untaggedImages(
     `SELECT f.id, fo.rel_path FROM ${from} ORDER BY fo.rel_path COLLATE NOCASE, f.filename COLLATE NOCASE LIMIT ? OFFSET ?`,
   ).all(...params, Math.min(500, opts.limit ?? 200), Math.max(0, opts.offset ?? 0)) as { id: number; rel_path: string }[];
   const folderOf = new Map(rows.map((x) => [x.id, x.rel_path]));
-  const items = fileItems(lib, rows.map((x) => x.id)).map((item) => ({ ...item, where: folderPath(folderOf.get(item.id) ?? '') }));
+  const items = fileItems(lib, rows.map((x) => x.id), opts.me).map((item) => ({ ...item, where: folderPath(folderOf.get(item.id) ?? '') }));
   return { items, total };
 }
 
@@ -699,7 +704,7 @@ async function locateFile(lib: OpenLibrary, id: number, picked: string): Promise
     const folder = db.prepare("SELECT id, kind FROM folders WHERE module = 'images' AND rel_path = ? AND recycled = 0 AND missing_since IS NULL").get(dir) as
       { id: number; kind: FolderKind } | undefined;
     if (!folder || (folder.kind !== 'album' && folder.kind !== 'inbox')) throw badRequest('NOT_IN_ALBUM', 'Images live in albums or the Inbox — move the file into one first.');
-    const other = db.prepare("SELECT id, favorited FROM files WHERE media_type = 'image' AND rel_path = ? AND recycled = 0").get(dbRel) as { id: number; favorited: number } | undefined;
+    const other = db.prepare(`SELECT f.id, ${STARRED_ANY} AS favorited FROM files f WHERE f.media_type = 'image' AND f.rel_path = ? AND f.recycled = 0`).get(dbRel) as { id: number; favorited: number } | undefined;
     if (other) {
       const own = (db.prepare('SELECT COUNT(*) FROM file_tags WHERE file_id = ?').pluck().get(other.id) as number) + listCount(db, other.id) + other.favorited;
       if (own > 0) throw conflict('IN_USE', 'That file is already another image in the library, with its own tags or places. Resolve it as a duplicate instead.');
@@ -782,9 +787,10 @@ function pickCandidate(lib: OpenLibrary, newId: number, candidateId: number, can
   const cand = fileBrief(db, candidateId);
   if (!fresh || !cand) throw notFound('FILE_NOT_FOUND', 'One of these images is no longer in the library.');
   db.transaction(() => {
-    // Anything given to the new record meanwhile moves over: manual tags and collection places.
+    // Anything given to the new record meanwhile moves over: manual tags, collection places and stars.
     db.prepare("INSERT OR IGNORE INTO file_tags (file_id, tag_id, source) SELECT ?, tag_id, 'manual' FROM file_tags WHERE file_id = ? AND source = 'manual'").run(candidateId, newId);
     db.prepare('UPDATE OR IGNORE collection_items SET file_id = ? WHERE file_id = ?').run(candidateId, newId);
+    db.prepare('INSERT OR IGNORE INTO profile_favorites (profile_id, file_id, added_at) SELECT profile_id, ?, added_at FROM profile_favorites WHERE file_id = ?').run(candidateId, newId);
     db.prepare('DELETE FROM files WHERE id = ?').run(newId);
     db.prepare(
       'UPDATE files SET rel_path = ?, filename = ?, ext = ?, folder_id = ?, category_id = ?, size = ?, mtime = ?, width = ?, height = ?, missing_since = NULL WHERE id = ?',
@@ -984,7 +990,7 @@ export function untrackedAction(lib: OpenLibrary, paths: string[], action: 'trac
 function recycleWrongType(lib: OpenLibrary, subject: string, p: Record<string, unknown>): string {
   if (subject.startsWith('file:')) {
     const r = recycleFiles(lib, [Number(p.fileId)]);
-    if (r.starred.length) throw conflict('STARRED', 'This image is starred — unstar it first.');
+    if (r.starred.length) throw conflict('STARRED', isShared(lib.db) ? `This image is starred by ${namesList(r.starredBy)} — only whoever starred it can unstar it.` : 'This image is starred — unstar it first.');
     // Already recycled, forgotten or missing: nothing left to recycle, so the report just goes.
     if (!r.recycled) return `${String(p.path).split('/').at(-1)} is no longer in the library — cleared.`;
   } else {
@@ -1017,15 +1023,21 @@ function resolveDuplicate(lib: OpenLibrary, hash: string, keepId: number, merge:
   const others = d.copies.filter((c) => c.id !== keepId);
 
   if (!merge) {
-    if (others.some((c) => c.favorited)) throw conflict('STARRED', 'Another copy is starred — keep that one, merge, or unstar it first.');
+    const starred = others.filter((c) => c.favorited);
+    if (starred.length) {
+      throw conflict('STARRED', isShared(db)
+        ? `Another copy is starred by ${namesList([...new Map(starred.flatMap((c) => c.starredBy).map((p) => [p.id, p])).values()])} — keep that one, or merge.`
+        : 'Another copy is starred — keep that one, merge, or unstar it first.');
+    }
   } else {
     db.transaction(() => {
       const addTag = db.prepare("INSERT INTO file_tags (file_id, tag_id, source) VALUES (?, ?, 'manual') ON CONFLICT (file_id, tag_id) DO UPDATE SET source = 'manual'");
       for (const c of others) for (const t of c.tags) addTag.run(keepId, t.id);
       recomputeImplied(db, [keepId]);
-      if (others.some((c) => c.favorited)) {
-        db.prepare('UPDATE files SET favorited = 1 WHERE id = ?').run(keepId);
-        for (const c of others) db.prepare('UPDATE files SET favorited = 0 WHERE id = ?').run(c.id);
+      // Every profile's stars land on the kept copy (docs/profiles.md §3.1); the others lose theirs, so they can be recycled.
+      for (const c of others) {
+        db.prepare('INSERT OR IGNORE INTO profile_favorites (profile_id, file_id, added_at) SELECT profile_id, ?, added_at FROM profile_favorites WHERE file_id = ?').run(keepId, c.id);
+        db.prepare('DELETE FROM profile_favorites WHERE file_id = ?').run(c.id);
       }
       if (!keep.description?.trim()) {
         const text = others.find((c) => c.description?.trim())?.description;

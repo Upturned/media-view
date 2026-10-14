@@ -53,3 +53,14 @@ export function issues(lib: OpenLibrary, kind?: string) {
     { kind: string; subject: string; payload: string }[];
   return rows.filter((r) => !kind || r.kind === kind).map((r) => ({ ...r, payload: JSON.parse(r.payload) as Record<string, unknown> }));
 }
+
+/** Star (or unstar) an image as the profile in use — each profile has its own stars (docs/profiles.md §3). */
+export function star(lib: OpenLibrary, fileId: number, on = true): void {
+  if (on) lib.db.prepare('INSERT OR IGNORE INTO profile_favorites (profile_id, file_id, added_at) VALUES (?, ?, 0)').run(lib.profileId, fileId);
+  else lib.db.prepare('DELETE FROM profile_favorites WHERE profile_id = ? AND file_id = ?').run(lib.profileId, fileId);
+}
+
+/** Starred by anyone. */
+export function starred(lib: OpenLibrary, fileId: number): boolean {
+  return !!lib.db.prepare('SELECT 1 FROM profile_favorites WHERE file_id = ?').get(fileId);
+}

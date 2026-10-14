@@ -3,8 +3,9 @@
   import { href } from '../router.svelte.ts';
   import { openMenu } from '../stores/menu.svelte.ts';
   import { openOps } from '../stores/ops.svelte.ts';
+  import { linkTag, profile, ROLE_LABEL } from '../stores/profile.svelte.ts';
   import { inkFor, typeColor } from '../stores/tags.svelte.ts';
-  import { toast } from '../stores/toasts.svelte.ts';
+  import { toast, toastError } from '../stores/toasts.svelte.ts';
   import { hideTagTip, releaseTagTip, showTagTip } from '../stores/tooltip.svelte.ts';
 
   /**
@@ -52,6 +53,12 @@
       { label: 'Show all images', action: () => (location.hash = `#/tags/${tag.id}/images`) },
       { label: 'Edit tag…', action: () => openOps({ kind: 'edit-tag', tagId: tag.id }) },
       { label: 'Copy name', action: () => navigator.clipboard.writeText(tag.name).then(() => toast(`Copied “${tag.name}”.`)) },
+      // This is me (docs/profiles.md §5): the tag's images show on your profile.
+      ...(profile.me ? (['creator', 'subject'] as const).map((role, i) => ({
+        label: `This is me · ${ROLE_LABEL[role]}`,
+        separated: i === 0,
+        action: () => void linkTag(tag.id, role).then(() => toast(`Linked “${tag.name}” to your profile · ${ROLE_LABEL[role]}.`)).catch(toastError),
+      })) : []),
       ...(onremove && !implied ? [{ label: 'Remove from this image', danger: true, separated: true, action: onremove }] : []),
     ]);
   }

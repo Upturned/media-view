@@ -11,10 +11,12 @@ import { log, setLogDir } from '../lib/log.ts';
 import { readMarker, writeMarker } from '../lib/markers.ts';
 import { DATA_DIR, MODULE_ROOTS, toAbsolute } from '../lib/paths.ts';
 import { hide } from '../lib/windows.ts';
+import { initialProfile } from './profiles.ts';
 
 /** One open library at a time (technical doc §3, §5.2). */
 
-const FORMAT_VERSION = 1;
+/** 2: profiles (migration 007 moved stars off `files`). */
+const FORMAT_VERSION = 2;
 const INBOX_NAME = 'Inbox';
 
 interface LibraryMeta {
@@ -27,6 +29,8 @@ export interface OpenLibrary {
   root: string;
   meta: LibraryMeta;
   db: DB;
+  /** The profile in use (docs/profiles.md §7.1); null while the app shows the profile picker. */
+  profileId: number | null;
   /** Absolute path of a module root, e.g. `<library>/Images`. */
   moduleRoot(module: keyof typeof MODULE_ROOTS): string;
 }
@@ -142,10 +146,17 @@ export function openLibrary(input: string): OpenLibrary {
     root,
     meta,
     db,
+    profileId: null,
     moduleRoot: (module) => path.join(root, MODULE_ROOTS[module]),
   };
 
   setLogDir(path.join(dataDir(root), 'logs'));
+  // Migration 007 drops a column older builds read: they must refuse the library from now on.
+  if (meta.formatVersion < FORMAT_VERSION) {
+    meta.formatVersion = FORMAT_VERSION;
+    fs.writeFileSync(metaFile(root), JSON.stringify(meta, null, 2));
+  }
+  current.profileId = initialProfile(current);
   fs.mkdirSync(current.moduleRoot('images'), { recursive: true });
   ensureInbox(current);
   rememberLibrary(root);

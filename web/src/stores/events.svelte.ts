@@ -12,12 +12,16 @@ export const live = $state({
   library: 0,
   /** Bumped when Library Health issues change (the badge, the Health page). */
   health: 0,
+  /** Bumped when a profile's name, picture or links change, or profiles come and go. */
+  profile: 0,
+  /** Bumped when some tab switched profile or locked the app (this tab reloads if it's no longer in use). */
+  switched: 0,
   /** Viewer copies (TIFF) being made in the background; undefined until the first news of it. */
   converting: undefined as { done: number; total: number } | null | undefined,
 });
 
 const COALESCE_MS = 250;
-type Counter = 'files' | 'folders' | 'library' | 'health';
+type Counter = 'files' | 'folders' | 'library' | 'health' | 'profile' | 'switched';
 const pending = new Set<Counter>();
 let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -42,6 +46,8 @@ export function connectEvents(): void {
   source.addEventListener('folders-changed', () => bump('folders'));
   source.addEventListener('library-changed', () => bump('library'));
   source.addEventListener('health-changed', () => bump('health'));
+  source.addEventListener('profile-updated', () => bump('profile'));
+  source.addEventListener('profile-changed', () => bump('switched'));
   source.addEventListener('converting', (e) => {
     const p = JSON.parse((e as MessageEvent<string>).data) as { done: number; total: number };
     live.converting = p.total ? { done: p.done, total: p.total } : null;

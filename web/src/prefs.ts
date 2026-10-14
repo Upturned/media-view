@@ -1,8 +1,10 @@
 import type { SortKey } from '@media-view/shared';
 
 /**
- * Preferences kept in this browser (localStorage): grids open with the grid ones — changing them on
- * a grid changes them here too — and the slideshow uses the viewer ones. Settings edits them all.
+ * Preferences: grids open with the grid ones — changing them on a grid changes them here too — and
+ * the slideshow uses the viewer ones. Settings edits them all. While a profile is in use they're the
+ * profile's (docs/profiles.md §3), saved with it; the rest (a collection list's sort…) stay in this
+ * browser (localStorage).
  */
 
 export const DEFAULTS = {
@@ -26,7 +28,32 @@ export const groupPref = (v: unknown): GroupKey => (v === true ? 'collection' : 
 /** The slideshow intervals, in seconds: Settings offers these, and the viewer's ‹ › step through them. */
 export const INTERVALS = [2, 3, 5, 8, 10, 15, 20, 30];
 
+/** Keys that belong to the profile; anything else stays in this browser. */
+const PROFILE_KEYS = new Set<string>([...Object.keys(DEFAULTS), 'theme']);
+
+/** The profile's preferences and how to save one (set by the profile store); null before a profile is in use. */
+let profile: { prefs: Record<string, unknown>; save: (key: string, value: unknown) => void } | null = null;
+
+export function useProfilePrefs(prefs: Record<string, unknown> | null, save: (key: string, value: unknown) => void): void {
+  profile = prefs ? { prefs, save } : null;
+}
+
+/** Everything this browser kept, for the one-time hand-over to the first profile (docs/profiles.md §6.1). */
+export function browserPrefs(): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(DEFAULTS)) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) out[key] = JSON.parse(raw);
+    } catch {
+      // unreadable: left out
+    }
+  }
+  return out;
+}
+
 export function stored<T>(key: string, fallback: T): T {
+  if (profile && PROFILE_KEYS.has(key)) return key in profile.prefs ? (profile.prefs[key] as T) : fallback;
   try {
     const raw = localStorage.getItem(key);
     return raw === null ? fallback : (JSON.parse(raw) as T);
@@ -36,6 +63,10 @@ export function stored<T>(key: string, fallback: T): T {
 }
 
 export function store(key: string, value: unknown): void {
+  if (profile && PROFILE_KEYS.has(key) && profile.prefs[key] !== value) {
+    profile.prefs[key] = value;
+    profile.save(key, value);
+  }
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {

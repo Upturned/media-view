@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { FolderKind, ThumbRef } from '@media-view/shared';
+import type { FolderKind, ProfileRef, ThumbRef } from '@media-view/shared';
 import { badRequest, conflict, notFound } from '../lib/errors.ts';
 import { emit } from '../lib/events.ts';
 import { expectChange } from '../lib/expected.ts';
@@ -11,12 +11,13 @@ import { toAbsolute, underPrefix } from '../lib/paths.ts';
 import { renameWithRetry } from '../lib/rename.ts';
 import { assertCanHold, kindAt, liveFolder, refreshCategories, thumbRef } from './folders.ts';
 import { absPath, BIN_PREFIX, binDir, type OpenLibrary } from './library.ts';
+import { joinAnd, STARRED_ANY, whoStarred } from './profiles.ts';
 import { rewritePrefix } from './tree.ts';
 
 /**
  * The Recycle Bin (technical doc §8.6; design M3 · 04). Recycling moves the item to
  * `.mediaview/recycle-bin/<id>/<name>` and keeps every row, so restoring is lossless.
- * Starred images are never recycled.
+ * Images starred by anyone are never recycled (docs/profiles.md §3.1).
  */
 
 interface RecycleRow {
@@ -40,16 +41,19 @@ function moveOnDisk(from: string, to: string): void {
 
 // ─── Recycling ───────────────────────────────────────────────────────────────
 
-/** Recycle images; starred ones are left alone and reported back. */
-export function recycleFiles(lib: OpenLibrary, ids: number[]): { recycled: number; starred: number[] } {
+/**
+ * Recycle images; ones starred by anyone are left alone and reported back, with who starred them
+ * (`me` among them means the user can unstar them; anyone else, only they can).
+ */
+export function recycleFiles(lib: OpenLibrary, ids: number[], me?: number): { recycled: number; starred: number[]; starredBy: ProfileRef[]; mine: boolean } {
   const { db } = lib;
-  const get = db.prepare('SELECT id, rel_path, filename, folder_id, favorited FROM files WHERE id = ? AND recycled = 0 AND missing_since IS NULL');
+  const get = db.prepare(`SELECT f.id, f.rel_path, f.filename, f.folder_id, ${STARRED_ANY} AS favorited FROM files f WHERE f.id = ? AND f.recycled = 0 AND f.missing_since IS NULL`);
   const insert = db.prepare(
     `INSERT INTO recycle_items (entity, entity_id, original_rel_path, original_parent_id, stored_name, recycled_at)
      VALUES ('file', ?, ?, ?, ?, ?)`,
   );
   const update = db.prepare('UPDATE files SET recycled = 1, rel_path = ? WHERE id = ?');
-  const result = { recycled: 0, starred: [] as number[] };
+  const result = { recycled: 0, starred: [] as number[], starredBy: [] as ProfileRef[], mine: false };
 
   for (const id of ids) {
     const f = get.get(id) as { id: number; rel_path: string; filename: string; folder_id: number; favorited: number } | undefined;
@@ -68,6 +72,8 @@ export function recycleFiles(lib: OpenLibrary, ids: number[]): { recycled: numbe
     result.recycled++;
   }
 
+  result.starredBy = whoStarred(db, result.starred);
+  result.mine = result.starredBy.some((p) => p.id === me);
   if (result.recycled > 0) {
     if (ids.length > 1) log('info', 'files', 'recycle', { ids, recycled: result.recycled, starred: result.starred });
     emit({ type: 'files-changed' });
@@ -92,16 +98,28 @@ export function recycleStray(lib: OpenLibrary, relPath: string): void {
   log('info', 'recycle', 'stray file recycled', { path: relPath });
 }
 
-/** Recycle a folder with everything in it. Refused while it holds starred images. */
-export function recycleFolder(lib: OpenLibrary, id: number): void {
+/** "“Memes” contains 3 starred images — unstar them first." or, with others' stars, who starred how many. */
+function starredInside(name: string, people: (ProfileRef & { n: number })[], me?: number): string {
+  const images = (n: number) => `${n} ${n === 1 ? 'image' : 'images'}`;
+  if (people.length === 1 && people[0]!.id === me) {
+    const n = people[0]!.n;
+    return `“${name}” contains ${n} starred ${n === 1 ? 'image' : 'images'} — unstar ${n === 1 ? 'it' : 'them'} first.`;
+  }
+  const parts = people.map((p, i) => (i === 0 ? `${images(p.n)} starred by ${p.name}` : `${p.n} by ${p.name}`));
+  return `“${name}” contains ${joinAnd(parts)} — only whoever starred them can unstar them.`;
+}
+
+/** Recycle a folder with everything in it. Refused while it holds images starred by anyone. */
+export function recycleFolder(lib: OpenLibrary, id: number, me?: number): void {
   const { db } = lib;
   const f = liveFolder(lib, id);
   if (f.kind === 'inbox') throw badRequest('INBOX_FIXED', "The Inbox can't be recycled.");
   const under = underPrefix('rel_path', f.rel_path);
-  const starred = db.prepare(`SELECT COUNT(*) FROM files WHERE favorited = 1 AND recycled = 0 AND ${under.sql}`).pluck().get(...under.params) as number;
-  if (starred > 0) {
-    throw conflict('STARRED_INSIDE', `“${f.name}” contains ${starred} starred ${starred === 1 ? 'image' : 'images'} — unstar ${starred === 1 ? 'it' : 'them'} first.`);
-  }
+  const starred = db.prepare(
+    `SELECT p.id, p.name, COUNT(*) AS n FROM files f JOIN profile_favorites pf ON pf.file_id = f.id JOIN profiles p ON p.id = pf.profile_id
+     WHERE f.recycled = 0 AND ${underPrefix('f.rel_path', f.rel_path).sql} GROUP BY p.id ORDER BY n DESC, p.name`,
+  ).all(...under.params) as (ProfileRef & { n: number })[];
+  if (starred.length > 0) throw conflict('STARRED_INSIDE', starredInside(f.name, starred, me));
 
   db.transaction(() => {
     const rid = db.prepare(

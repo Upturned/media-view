@@ -14,6 +14,7 @@
   import { live } from '../stores/events.svelte.ts';
   import { applyFix, runGroupFix, winPath } from '../stores/health.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
+  import { profile } from '../stores/profile.svelte.ts';
   import { inkFor, typeColor } from '../stores/tags.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
 
@@ -76,7 +77,7 @@
     const items = d.kind === 'missing_file'
       ? [
         { name: `${plural(d.tags.length, 'tag')}`, note: d.tags.map((t) => t.name).join(' · ') || '—' },
-        { name: 'Star', note: d.favorited ? '★ starred' : '—' },
+        { name: 'Star', note: starNote(d) },
         { name: 'Collections', note: d.collections ? `places in ${plural(d.collections, 'collection')}` : '—' },
       ]
       : d.kind === 'missing_folder'
@@ -189,6 +190,13 @@
   }
 
   const plural = (n: number, one: string, many = `${one}s`) => `${fmt(n)} ${n === 1 ? one : many}`;
+  /** Who starred it, once there's more than one profile (stars protect images for everybody, docs/profiles.md §3.1). */
+  const whoStarred = (c: { starredBy: { name: string }[] }) => {
+    const names = [...new Set(c.starredBy.map((p) => p.name))];
+    return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  };
+  const starNote = (c: { favorited: boolean; starredBy: { name: string }[] }) =>
+    !c.favorited ? '—' : profile.list.length > 1 && c.starredBy.length ? `★ starred by ${whoStarred(c)}` : '★ starred';
   const dirOf = (p: string) => p.split('/').slice(0, -1).join('/');
   const nameOf = (p: string) => p.split('/').at(-1) ?? '';
   const folderLabel = (k: FolderKind) => (k === 'subcategory' ? 'Sub-category' : k === 'category' ? 'Category' : k === 'inbox' ? 'Inbox' : 'Album');
@@ -330,7 +338,7 @@
                         <div class="nm">{#if nameOf(c.path) === nameOf(d.file.path)}{nameOf(c.path)}{:else}<mark>{nameOf(c.path)}</mark>{/if}</div>
                         <div><span class="lab">WAS</span> {was.pre}{#if was.hit}<mark>{was.hit}</mark>{/if}{was.post}</div>
                         <div>{#if c.tags.length}{@render tags(c.tags)}{:else}<span class="mute">no tags</span>{/if}</div>
-                        <div class:mute={!c.favorited}>{c.favorited ? '★ starred' : '—'}</div>
+                        <div class:mute={!c.favorited}>{starNote(c)}</div>
                         <div class:mute={!c.collections}>{c.collections ? plural(c.collections, 'list') : '—'}</div>
                         <div class:mute={!c.description}>{c.description ?? '—'}</div>
                       </button>
@@ -374,7 +382,7 @@
                     {#if c.tags.length}{@render tags(c.tags)}{:else}<span class="notags">NO TAGS</span>{/if}
                     {#if !clear && only.length}<span class="only">only on this copy: {only.map((t) => t.name).join(', ')}</span>{/if}
                     <div class="facts">
-                      <span>STAR</span><span>{c.favorited ? '★ starred' : '—'}</span>
+                      <span>STAR</span><span>{starNote(c)}</span>
                       <span>LISTS</span><span>{c.collections.map((l) => l.name).join(', ') || '—'}</span>
                       <span>NOTE</span><span>{c.description ?? '—'}</span>
                       <span>ADDED</span><span>{formatDate(c.addedAt)}</span>
@@ -388,7 +396,9 @@
                   {@const others = d.copies.filter((c) => c.id !== pick)}
                   {@const starredOther = others.some((c) => c.favorited)}
                   <span class:warn={lost.length || starredOther}>
-                    {starredOther ? 'Another copy is starred, and starred images can’t be recycled — keep that one, merge, or unstar it.'
+                    {starredOther ? (profile.list.length > 1
+                      ? `Another copy is starred by ${whoStarred({ starredBy: others.filter((c) => c.favorited).flatMap((c) => c.starredBy) })}, and starred images can’t be recycled — keep that one, or merge.`
+                      : 'Another copy is starred, and starred images can’t be recycled — keep that one, merge, or unstar it.')
                       : lost.length ? `Keeping this copy loses ${lost.map((t) => t.name).join(', ')} — the tags only the other copies have.`
                       : 'Click another copy to keep that one instead.'}
                   </span>
@@ -397,7 +407,7 @@
                   <button class="rbtn pri" disabled={busy || starredOther} onclick={() => fix(i, { action: 'keep-one', keepId: pick })}>Keep copy {d.copies.findIndex((c) => c.id === pick) + 1} · recycle {others.length}</button>
                 {:else if mode === 'merge'}
                   {@const merged = mergedTags(d.copies)}
-                  <span>The kept copy gets every tag ({merged.map((t) => t.name).join(', ') || 'none'}){d.copies.some((c) => c.favorited) ? ', the star' : ''}, a description and every place in a collection. The other copies go to the Recycle Bin{d.copies.filter((c) => c.favorited).length > 1 ? ', unstarred' : ''}.</span>
+                  <span>The kept copy gets every tag ({merged.map((t) => t.name).join(', ') || 'none'}){d.copies.some((c) => c.favorited) ? ', every star' : ''}, a description and every place in a collection. The other copies go to the Recycle Bin{d.copies.filter((c) => c.favorited).length > 1 ? ', unstarred' : ''}.</span>
                   <button class="rbtn" onclick={() => (dupModes = { ...dupModes, [i.id]: undefined as never })}>Back</button>
                   <button class="rbtn pri" disabled={busy} onclick={() => fix(i, { action: 'merge', keepId: pick })}>Merge into copy {d.copies.findIndex((c) => c.id === pick) + 1}</button>
                 {:else}
@@ -434,7 +444,7 @@
                   <div class="t-row"><span class="title">{d.filename}</span>{@render chip('Image')}</div>
                   {@render path('WAS', { pre: winPath(d.path), hit: '', post: '' }, true)}
                   {@render tags(d.tags)}
-                  <span class="meta">{[d.favorited && '★ starred', d.collections && `in ${plural(d.collections, 'collection')}`, !d.thumb && 'no cached thumbnail'].filter(Boolean).join(' · ') || `missing since ${formatDate(i.detectedAt)}`}</span>
+                  <span class="meta">{[d.favorited && starNote(d), d.collections && `in ${plural(d.collections, 'collection')}`, !d.thumb && 'no cached thumbnail'].filter(Boolean).join(' · ') || `missing since ${formatDate(i.detectedAt)}`}</span>
                 {:else if d.kind === 'external_move' && d.entity === 'folder'}
                   {@const [w, n] = diff(d.from, d.to)}
                   {@const renamed = d.from.split('/').slice(0, -1).join('/') === d.to.split('/').slice(0, -1).join('/')}

@@ -14,7 +14,7 @@
 - **Scale target:** ~50,000 images per library with instant-feeling browsing (the MVP target was 15,000).
 - **Desktop app later.** Nothing in the design may depend on being served from a browser tab; the same code must run inside Electron (§14).
 
-Out of scope for v2: multi-user, network access from other devices, cloud sync.
+Out of scope for v2: accounts, network access from other devices, cloud sync. Several people can share a library on one computer through **local profiles** (`docs/profiles.md`), one at a time.
 
 ---
 
@@ -141,12 +141,13 @@ Stored outside any library, in `%APPDATA%\media-view\config.json`:
 {
   "lastLibrary": "D:\\MyLibrary",
   "recentLibraries": ["D:\\MyLibrary", "E:\\Work Library"],
+  "lastProfiles": { "<library id>": "<profile uuid>" },
   "port": 4321,
   "ui": { "theme": "darkroom" }
 }
 ```
 
-UI preferences that are per-machine (theme, grid columns) live here or in `localStorage`; anything describing the library's content lives in the library DB.
+Anything describing the library's content lives in the library DB. Since profiles (`docs/profiles.md` §3), grid and slideshow preferences and the theme belong to the profile, in the library DB; `ui.theme` here is the last theme used on this computer (the profile picker wears it), and `lastProfiles` which profile a library opens with.
 
 ### 5.2 Library layout
 
@@ -259,6 +260,7 @@ CREATE INDEX files_fav      ON files(favorited) WHERE favorited = 1;
 
 - **Every file on disk has a row**, created by reconciliation — not lazily as in the MVP. This is what makes counts, search and Library Health possible.
 - A file belongs to exactly one album (`folder_id`). `category_id` is redundant with the path but kept for cheap per-category queries; the folder service keeps it correct on moves.
+- **Stars** were `files.favorited` until migration 007; they're per profile now, in `profile_favorites` (`docs/profiles.md` §6). The column and its index are gone; `favorited` in API responses is the active profile's star, and the rules stars enforce (never recycled, never replaced, the kept duplicate) use *starred by anyone*.
 - Files are **never deleted from the DB because they went missing** — only `missing_since` is set. Rows are deleted only when the user deletes permanently or chooses *Forget* on Library Health.
 
 ### 6.4 Tags
@@ -376,6 +378,8 @@ CREATE INDEX collection_items_file  ON collection_items(file_id);
 ```
 
 Positions are rewritten densely (0..n-1) in one transaction on reorder; collections are small enough that this is cheaper than fractional indexing's complexity.
+
+Migration 007 adds `collections.created_by` (the profile that made it, `ON DELETE SET NULL`); collections stay shared by every profile (`docs/profiles.md` §3).
 
 Milestone 6 decisions (`server/src/services/collections.ts`):
 
@@ -885,6 +889,10 @@ JSON over HTTP, all under `/api`. Ids everywhere. Errors are `{ "error": { "code
 
 `/api/files` also takes `collection=` (scope), `sort=position` (a collection's own order), and `group=collection` with `rev=` (§11.3); `GET /api/files/collection-counts` counts collections over any list. `GET /api/files/:id` includes the image's `collections`.
 
+### 12.6a Profiles
+
+`/api/profiles`: list, create, switch, lock, the active profile (`/me`: name, picture, color, password, preferences, tag links) and deleting another profile. Every change is made as the active profile. Until one is chosen, every other route answers `401 PROFILE_REQUIRED`. Full table: `docs/profiles.md` §7.2.
+
 ### 12.7 Health, recycle, system
 
 | Method | Path                               | Purpose                                         |
@@ -961,7 +969,7 @@ Hash-based routing (`#/…`), so the same build works from `http://localhost` an
 
 ### 13.3 State
 
-Svelte 5 runes. Less-used pages and dialogs (Library Health, wiki, tag types, Recycle Bin, Settings, Welcome, Help, Check styles) load on first use in their own chunks (`components/Lazy.svelte`); the main bundle is about 300 KB. **Preferences** (`prefs.ts`, localStorage): `grid.cols / sort / order / group / index` — what grids open with, changed by the grids and by Settings → Grids — and `viewer.interval / loop / shuffle` for the slideshow (Settings → Slideshow, and the viewer's own controls). Shuffle shows each image once per round, in random order (`/api/files/ids`, shuffled client-side); with loop off the slideshow stops at the end. Server data is fetched per page through the typed `hc` client; a small cache keyed by request avoids refetching on back-navigation. Global state is limited to: current library, tag types (with fields), theme, selection. Live updates (`/api/events`) invalidate the affected caches.
+Svelte 5 runes. Less-used pages and dialogs (Library Health, wiki, tag types, Recycle Bin, Settings, Welcome, Help, Check styles) load on first use in their own chunks (`components/Lazy.svelte`); the main bundle is about 300 KB. **Preferences** (`prefs.ts`; the active profile's own, saved with it through `PATCH /api/profiles/me/prefs` — `docs/profiles.md` §7.3 — with a few browser-only ones in localStorage): `grid.cols / sort / order / group / index` — what grids open with, changed by the grids and by Settings → Grids — and `viewer.interval / loop / shuffle` for the slideshow (Settings → Slideshow, and the viewer's own controls). Shuffle shows each image once per round, in random order (`/api/files/ids`, shuffled client-side); with loop off the slideshow stops at the end. Server data is fetched per page through the typed `hc` client; a small cache keyed by request avoids refetching on back-navigation. Global state is limited to: current library, the active profile (`stores/profile.svelte.ts`), tag types (with fields), theme, selection. Live updates (`/api/events`) invalidate the affected caches.
 
 ### 13.4 Themes
 

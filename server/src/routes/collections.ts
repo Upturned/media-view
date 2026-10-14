@@ -6,6 +6,7 @@ import {
   restoreCollection, setOrder, updateCollection,
 } from '../services/collections.ts';
 import { requireLibrary } from '../services/library.ts';
+import { requireMe } from '../services/profiles.ts';
 
 /** Collections (technical doc §12.6, milestone 6). Their images come from `/api/files?collection=`. */
 
@@ -27,7 +28,10 @@ export const collectionRoutes = new Hono()
     })),
     (c) => c.json({ collections: listCollections(requireLibrary(), c.req.valid('query')) }),
   )
-  .post('/', valid('json', z.object({ name, description: description.optional() })), (c) => c.json(createCollection(requireLibrary(), c.req.valid('json'))))
+  .post('/', valid('json', z.object({ name, description: description.optional() })), (c) => {
+    const lib = requireLibrary();
+    return c.json(createCollection(lib, c.req.valid('json'), requireMe(lib)));
+  })
   /** For the Add to collection dialog: how many of these images each collection already holds. */
   .post('/membership', valid('json', z.object({ ids })), (c) => c.json({ counts: membership(requireLibrary(), c.req.valid('json').ids) }))
   /** Undo a delete, from what DELETE returned. */
@@ -39,6 +43,7 @@ export const collectionRoutes = new Hono()
       description: description,
       coverFileId: z.number().int().positive().nullable(),
       createdAt: z.number().int(),
+      createdBy: z.number().int().positive().nullable().optional(),
       fileIds: z.array(z.number().int().positive()).max(100000),
     })),
     (c) => c.json(restoreCollection(requireLibrary(), c.req.valid('json'))),

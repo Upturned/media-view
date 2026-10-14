@@ -321,7 +321,7 @@ describe('thumbnails', () => {
 
 describe('duplicates', () => {
   const copy = (id: number, tags: number[], favorited = false): DuplicateCopy =>
-    ({ id, path: '', folderId: 1, tags: tags.map((x) => ({ id: x, typeId: 1, name: String(x) })), favorited, collections: [], description: null, addedAt: id });
+    ({ id, path: '', folderId: 1, tags: tags.map((x) => ({ id: x, typeId: 1, name: String(x) })), favorited, starredBy: [], collections: [], description: null, addedAt: id });
 
   it('suggests which copy to keep', () => {
     expect(suggestKeep([copy(1, []), copy(2, [])])).toEqual({ keepId: 1, reason: 'oldest' });

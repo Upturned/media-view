@@ -10,6 +10,7 @@ import { log } from '../lib/log.ts';
 import { listFields, moveValuesToType, setValues, valuesOf } from './fields.ts';
 import { thumbRef } from './folders.ts';
 import type { OpenLibrary } from './library.ts';
+import { tagLinks } from './profiles.ts';
 
 /** Tags, tag types, aliases, implications and merging (technical doc §10). */
 
@@ -202,6 +203,7 @@ export function tagDetail(lib: OpenLibrary, id: number): TagDetail {
     createdAt: t.created_at,
     implies: implies.map(ref),
     impliedBy: impliedBy.map(ref),
+    links: tagLinks(db, id),
   };
 }
 
@@ -537,7 +539,10 @@ export function mergeTags(lib: OpenLibrary, sourceIds: number[], targetId: numbe
       db.prepare('UPDATE tags SET description = COALESCE(description, ?), cover_file_id = COALESCE(cover_file_id, ?), updated_at = ? WHERE id = ?')
         .run(a.description, a.cover_file_id, Date.now(), targetId);
 
-      // 6. A goes (its remaining values and references cascade).
+      // 6. Profile links (docs/profiles.md §5): A's move to B, unless B already has someone in that role (B's stay).
+      db.prepare('UPDATE OR IGNORE profile_tags SET tag_id = ? WHERE tag_id = ?').run(targetId, a.id);
+
+      // 7. A goes (its remaining values, references and links cascade).
       db.prepare('DELETE FROM tags WHERE id = ?').run(a.id);
     }
     recomputeImplied(db, touched);

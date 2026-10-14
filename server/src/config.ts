@@ -7,6 +7,8 @@ export const APP_NAME = 'media-view';
 export interface AppConfig {
   lastLibrary: string | null;
   recentLibraries: string[];
+  /** The profile last used on this computer, per library: library id → profile uuid (docs/profiles.md §2). */
+  lastProfiles: Record<string, string>;
   port: number;
   ui: { theme: string };
 }
@@ -14,6 +16,7 @@ export interface AppConfig {
 const DEFAULTS: AppConfig = {
   lastLibrary: null,
   recentLibraries: [],
+  lastProfiles: {},
   port: 4321,
   ui: { theme: 'darkroom' },
 };

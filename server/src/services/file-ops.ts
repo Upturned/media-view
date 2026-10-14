@@ -12,6 +12,7 @@ import { fileDetail } from './files.ts';
 import { liveFolder, MAX_DESCRIPTION } from './folders.ts';
 import { scheduleDuplicateRefresh } from './issues.ts';
 import type { OpenLibrary } from './library.ts';
+import { STARRED_ANY } from './profiles.ts';
 import { recycleFiles } from './recycle.ts';
 import { copyFileTags } from './tags.ts';
 
@@ -25,7 +26,6 @@ interface OpFile {
   filename: string;
   ext: string;
   folder_id: number;
-  favorited: number;
   size: number;
   hash: string | null;
   width: number | null;
@@ -49,7 +49,7 @@ export interface MoveResult extends TransferResult {
 
 function liveFiles(lib: OpenLibrary, ids: number[]): OpFile[] {
   const get = lib.db.prepare(
-    `SELECT id, rel_path, filename, ext, folder_id, favorited, size, hash, width, height, description
+    `SELECT id, rel_path, filename, ext, folder_id, size, hash, width, height, description
      FROM files WHERE id = ? AND recycled = 0 AND missing_since IS NULL AND media_type = 'image'`,
   );
   return ids.map((id) => get.get(id) as OpFile | undefined).filter((f): f is OpFile => !!f);
@@ -70,9 +70,9 @@ export function categoryIdOf(lib: OpenLibrary, relPath: string): number {
     .pluck().get(relPath.split('/')[0]) as number;
 }
 
-/** The live image already at a path, if any. */
+/** The live image already at a path, if any; `favorited`: starred by anyone (docs/profiles.md §3.1). */
 function rowAt(lib: OpenLibrary, relPath: string): { id: number; favorited: number } | undefined {
-  return lib.db.prepare("SELECT id, favorited FROM files WHERE media_type = 'image' AND rel_path = ? AND recycled = 0")
+  return lib.db.prepare(`SELECT f.id, ${STARRED_ANY} AS favorited FROM files f WHERE f.media_type = 'image' AND f.rel_path = ? AND f.recycled = 0`)
     .get(relPath) as { id: number; favorited: number } | undefined;
 }
 

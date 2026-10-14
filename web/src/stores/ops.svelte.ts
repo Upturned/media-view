@@ -114,6 +114,24 @@ export async function recycleImages(files: { id: number; filename: string; favor
   }
   try {
     const r = await unwrap(client.api.files.recycle.$post({ json: { ids: files.filter((f) => !f.favorited).map((f) => f.id) } }));
+    // Starred by another profile (docs/profiles.md §3.1): kept, and only whoever starred them can unstar them.
+    if (r.starred.length) {
+      const who = r.starredBy.map((p) => p.name);
+      const names = who.length <= 1 ? (who[0] ?? 'someone') : `${who.slice(0, -1).join(', ')} and ${who.at(-1)}`;
+      if (!r.recycled) {
+        await ask({
+          tone: 'starred',
+          refusal: true,
+          title: r.starred.length === 1 ? `Starred by ${names}` : `These images are starred by ${names}`,
+          body: `Starred images are protected and won’t be recycled. Only whoever starred ${r.starred.length === 1 ? 'it' : 'them'} can unstar ${r.starred.length === 1 ? 'it' : 'them'}.`,
+          button: '',
+          foot: '',
+        });
+        return false;
+      }
+      toast(`Sent ${images(r.recycled)} to the Recycle Bin · kept ${images(r.starred.length)} starred by ${names}.`);
+      return true;
+    }
     toast(`Sent ${images(r.recycled)} to the Recycle Bin.`);
     return true;
   } catch (err) {

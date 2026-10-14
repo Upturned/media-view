@@ -12,7 +12,7 @@ import { closeLibrary, createLibrary, type OpenLibrary } from '../src/services/l
 import { reconcile } from '../src/services/reconcile.ts';
 import { deletePermanently, emptyBin, listBin, recycleFiles, recycleFolder, restore } from '../src/services/recycle.ts';
 import { hashPending } from '../src/workers/hasher.ts';
-import { fileByPath, folderByPath, issues, tempDir, tree } from './helpers.ts';
+import { fileByPath, folderByPath, issues, star, starred, tempDir, tree } from './helpers.ts';
 
 let lib: OpenLibrary;
 let t: ReturnType<typeof tree>;
@@ -49,7 +49,7 @@ async function expectQuietScan() {
 describe('moving and copying images', () => {
   it('moves images, keeping their ids, and undoes the move', async () => {
     const a = id('Fantasy/Portraits/a.png');
-    lib.db.prepare('UPDATE files SET favorited = 1 WHERE id = ?').run(a);
+    star(lib, a);
     const r = moveFiles(lib, [a, id('Fantasy/Portraits/b.png')], fid('Fantasy/Maps'));
 
     // a.png clashes with Maps/a.png: keep both.
@@ -61,7 +61,7 @@ describe('moving and copying images', () => {
     undoMove(lib, r.undo);
     expect(fileByPath(lib, 'Fantasy/Portraits/a.png')?.id).toBe(a);
     expect(exists('Fantasy/Maps/a (1).png')).toBe(false);
-    expect(lib.db.prepare('SELECT favorited FROM files WHERE id = ?').pluck().get(a)).toBe(1);
+    expect(starred(lib, a)).toBe(true);
   });
 
   it('skips or replaces on a clash; replacing recycles the old image, never a starred one', () => {
@@ -76,7 +76,7 @@ describe('moving and copying images', () => {
     expect(lib.db.prepare('SELECT recycled FROM files WHERE id = ?').pluck().get(old)).toBe(1);
 
     const now = id('Fantasy/Maps/a.png');
-    lib.db.prepare('UPDATE files SET favorited = 1 WHERE id = ?').run(now);
+    star(lib, now);
     t.file('Fantasy/Portraits/a.png', 'new a');
     return reconcile(lib).then(() => {
       const r = moveFiles(lib, [id('Fantasy/Portraits/a.png')], fid('Fantasy/Maps'), 'replace');
@@ -170,10 +170,10 @@ describe('folders', () => {
 describe('the Recycle Bin', () => {
   it('recycles images (never starred ones) and restores them losslessly', async () => {
     const [a, b] = [id('Fantasy/Portraits/a.png'), id('Fantasy/Portraits/b.png')];
-    lib.db.prepare('UPDATE files SET favorited = 1 WHERE id = ?').run(b);
+    star(lib, b);
     setFileDescription(lib, a, 'keep me');
 
-    expect(recycleFiles(lib, [a, b])).toEqual({ recycled: 1, starred: [b] });
+    expect(recycleFiles(lib, [a, b], lib.profileId!)).toMatchObject({ recycled: 1, starred: [b], mine: true });
     expect(exists('Fantasy/Portraits/a.png')).toBe(false);
     const [item] = listBin(lib);
     expect(item).toMatchObject({ entity: 'file', name: 'a.png', location: 'Fantasy\\Portraits', locationGone: false });
@@ -203,9 +203,9 @@ describe('the Recycle Bin', () => {
   it('recycles a folder with everything in it, frees its name, and restores it', async () => {
     const portraits = fid('Fantasy/Portraits');
     const a = id('Fantasy/Portraits/a.png');
-    lib.db.prepare('UPDATE files SET favorited = 1 WHERE id = ?').run(a);
-    expect(() => recycleFolder(lib, portraits)).toThrow(/1 starred image/);
-    lib.db.prepare('UPDATE files SET favorited = 0 WHERE id = ?').run(a);
+    star(lib, a);
+    expect(() => recycleFolder(lib, portraits, lib.profileId!)).toThrow(/1 starred image/);
+    star(lib, a, false);
 
     recycleFolder(lib, portraits);
     expect(exists('Fantasy/Portraits')).toBe(false);
