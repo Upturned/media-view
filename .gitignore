@@ -5,5 +5,5 @@ dist/
 coverage/
 /release/
 docs/**/*.pdf
-/testing/
-/testing/*
+testing/
+testing/*

@@ -178,15 +178,19 @@ describe('rule problems and wrong types', () => {
     expect(issue('loose_files')).toBeUndefined();
   });
 
-  it('moves a folder out of an album, next to it', async () => {
+  it('moves a folder out of an album, next to it — the app’s own move, not one made outside it', async () => {
     t.file('Fantasy/Portraits/Sketches/s.png', 's');
     await scan();
+    const before = id('Fantasy/Portraits/Sketches/s.png');
     const i = issue('nested_in_album')!;
     expect(i.details).toMatchObject({ path: 'Fantasy/Portraits/Sketches', moveOutTo: 'Fantasy' });
     await fixIssue(lib, i.id, { action: 'move-out' });
+    // The images' paths follow right away, before any scan.
+    expect(fileByPath(lib, 'Fantasy/Sketches/s.png')?.id).toBe(before);
     await settle();
-    expect(fileByPath(lib, 'Fantasy/Sketches/s.png')).toBeDefined();
+    expect(fileByPath(lib, 'Fantasy/Sketches/s.png')).toMatchObject({ id: before, folder_id: folderByPath(lib, 'Fantasy/Sketches')!.id });
     expect(issue('nested_in_album')).toBeUndefined();
+    expect(issue('external_move')).toBeUndefined();
   });
 
   it('confirms or changes a guessed folder kind', async () => {

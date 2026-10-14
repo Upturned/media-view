@@ -77,7 +77,8 @@ export function groupsOf(r: HealthReport): Group[] {
     key: 'changed', section: 'amber', title: 'Changed outside the app', kinds: ['external_move'], issues: changes,
     hint: 'images moved together are one item',
     sample: list(changes.map((i) => i.details.kind === 'external_move'
-      ? i.details.entity === 'folder' ? `${last(i.details.from)} → ${last(i.details.to)}` : plural(i.details.files.length, 'image') + ' moved'
+      ? i.details.entity === 'folder' ? `${last(i.details.from)} → ${last(i.details.to)}`
+        : `${i.details.files.length === 1 ? i.details.files[0]!.filename : plural(i.details.files.length, 'image')} → ${last(i.details.toFolder)}`
       : '')),
     fix: changes.length ? { label: `Keep all ${changes.length}`, does: `Keep ${plural(changes.length, 'change')} made outside the app (nothing moves)`, steps: [{ kind: 'external_move', action: 'keep' }] } : null,
   });
@@ -169,6 +170,33 @@ export function groupsOf(r: HealthReport): Group[] {
     });
   }
   return out;
+}
+
+export interface PathPart {
+  /** Unchanged start, with its trailing `\`. */
+  pre: string;
+  /** The part that changed (highlighted); '' on the side where a folder was only added or removed. */
+  hit: string;
+  /** Unchanged end, with its leading `\`. */
+  post: string;
+}
+
+/** WAS / NOW of a move (Windows paths): each split into the shared start, the part that changed and the shared end. */
+export function pathDiff(was: string, now: string): [PathPart, PathPart] {
+  const A = was.split('\\');
+  const B = now.split('\\');
+  let i = 0;
+  while (i < A.length && i < B.length && A[i] === B[i]) i++;
+  let j = 0;
+  while (j < A.length - i && j < B.length - i && A[A.length - 1 - j] === B[B.length - 1 - j]) j++;
+  const part = (S: string[]): PathPart => {
+    const pre = S.slice(0, i).join('\\');
+    const hit = S.slice(i, S.length - j).join('\\');
+    const post = S.slice(S.length - j).join('\\');
+    // With an empty middle, pre and post still need the `\` between them.
+    return { pre: pre + (pre && (hit || post) ? '\\' : ''), hit, post: (post && hit ? '\\' : '') + post };
+  };
+  return [part(A), part(B)];
 }
 
 /** Where a group's Review ▸ goes. */

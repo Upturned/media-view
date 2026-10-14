@@ -1,14 +1,15 @@
 import {
-  formatOf, parseQuery, type CollectionCount, type FileDetail, type FileItem, type GroupedFileItem, type SortKey, type TagRef,
+  formatOf, parseQuery, type CollectionCard, type CollectionCount, type FileDetail, type FileItem, type GroupedFileItem, type SortKey, type TagRef,
+  type TagSummary,
 } from '@media-view/shared';
 import { badRequest, notFound } from '../lib/errors.ts';
 import { emit } from '../lib/events.ts';
 import { log } from '../lib/log.ts';
 import { escapeLike, underPrefix } from '../lib/paths.ts';
-import { collectionsOfFile, folderPath, resolveCollection } from './collections.ts';
+import { collectionsOfFile, folderPath, listCollections, resolveCollection } from './collections.ts';
 import { folderDetail, thumbRef } from './folders.ts';
 import type { OpenLibrary } from './library.ts';
-import { resolveTerm, tagsOfFile } from './tags.ts';
+import { listTags, resolveTerm, tagsOfFile } from './tags.ts';
 
 /** Listing and querying image files with the search syntax (technical doc §11.2). */
 
@@ -182,6 +183,28 @@ function searchTerms(lib: OpenLibrary, query: string, parts: string[], params: u
     parts.push(alternatives.length ? `(${alternatives.join(' OR ')})` : '0');
     params.push(...anyOf);
   }
+}
+
+/**
+ * The tags (`#elf`, `character:elf`) and collections (`@refs`) a search names, other than the ones it
+ * leaves out (`-#…`): the Search page pins them at the top of their tabs, so a tag search also
+ * leads to the tag itself. Tags in the order of the most images; collections by name.
+ */
+export function searchedItems(lib: OpenLibrary, query: string): { tags: TagSummary[]; collections: CollectionCard[] } {
+  const keys = lib.db.prepare('SELECT key FROM tag_types').pluck().all() as string[];
+  const tagIds = new Set<number>();
+  const collectionIds = new Set<number>();
+  for (const t of parseQuery(query, keys)) {
+    if (t.kind === 'text' || t.op === 'never' || !t.name) continue;
+    if (t.kind === 'collection') {
+      const cid = resolveCollection(lib.db, t.name);
+      if (cid !== null) collectionIds.add(cid);
+    } else resolveTerm(lib.db, t.type, t.name).forEach((id) => tagIds.add(id));
+  }
+  return {
+    tags: tagIds.size ? listTags(lib, { ids: [...tagIds], sort: 'count' }) : [],
+    collections: collectionIds.size ? listCollections(lib, { ids: [...collectionIds] }) : [],
+  };
 }
 
 /**

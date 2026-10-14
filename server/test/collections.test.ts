@@ -5,7 +5,7 @@ import {
   addItems, collectionDetail, createCollection, deleteCollection, listCollections, membership, moveItems, removeItems,
   restoreCollection, setOrder, updateCollection,
 } from '../src/services/collections.ts';
-import { collectionCounts, fileDetail, listFiles, listGrouped, locateFile } from '../src/services/files.ts';
+import { collectionCounts, fileDetail, listFiles, listGrouped, locateFile, searchedItems } from '../src/services/files.ts';
 import { closeLibrary, createLibrary, type OpenLibrary } from '../src/services/library.ts';
 import { reconcile } from '../src/services/reconcile.ts';
 import { recycleFiles } from '../src/services/recycle.ts';
@@ -161,5 +161,23 @@ describe('collections in searches and grids', () => {
     expect(rows()).toEqual(['Court:c#1', 'Court:a#2*', 'Wallp:b#1', 'Wallp:a#2*', '-:d', '-:e']);
     expect(rows([wall])).toEqual(['Court:c#1', 'Court:a#2*', 'Wallp:a#2*', 'Wallp:b#1', '-:d', '-:e']);
     expect(listGrouped(lib, { sort: 'name', order: 'asc' }, [], 2, 3).total).toBe(6);
+  });
+});
+
+describe('what a search names', () => {
+  it('resolves its #tags and @collections, leaving out the excluded ones and plain words', () => {
+    const elf = createTag(lib, { name: 'elf' });
+    const cat = createTag(lib, { name: 'cat' });
+    createTag(lib, { name: 'elves and more' });
+    const refs = createCollection(lib, { name: 'Chapter 3 refs' });
+    const wall = createCollection(lib, { name: 'Wallpapers' });
+    changeFileTags(lib, [file('a'), file('b')], [elf.id], []);
+
+    const r = searchedItems(lib, '#elf -#cat @chapter_3_refs -@wallpapers portraits');
+    expect(r.tags.map((t) => [t.name, t.count])).toEqual([['elf', 2]]);
+    expect(r.collections.map((c) => c.name)).toEqual(['Chapter 3 refs']);
+    expect(searchedItems(lib, '~#cat ~@"Wallpapers"')).toMatchObject({ tags: [{ id: cat.id }], collections: [{ id: wall.id }] });
+    expect(searchedItems(lib, 'portraits #nope @nope')).toEqual({ tags: [], collections: [] });
+    expect(refs.id).toBeGreaterThan(0);
   });
 });

@@ -6,6 +6,7 @@
   import DropOverlay from '../components/DropOverlay.svelte';
   import FolderActions from '../components/FolderActions.svelte';
   import ImageBrowser from '../components/ImageBrowser.svelte';
+  import LibraryPickerDialog from '../components/LibraryPickerDialog.svelte';
   import { fmt } from '../media.ts';
   import { folderHref, href, navigate, router, useUp } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
@@ -26,6 +27,8 @@
   let notFound = $state(false);
   let starred = $state(0);
   let shown = $state<number | null>(null);
+  /** "+ From library" is open. */
+  let picking = $state(false);
 
   $effect(() => {
     void live.folders;
@@ -141,8 +144,12 @@
         {addTo}
         emptyText={isInbox ? 'The Inbox is empty.' : all ? 'No images under here yet.' : 'This album is empty.'}
         ontotal={(n) => (shown = n)}
+        onaddfromlibrary={!all && folder.kind === 'album' ? () => (picking = true) : undefined}
       />
     {/key}
+    {#if picking}
+      <LibraryPickerDialog target={{ kind: 'album', id: folder.id, name: folder.name }} onclose={() => (picking = false)} />
+    {/if}
     {#if drag.files && addTo}
       <DropOverlay target={diskPath} headline={'Drop to add\nthem here.'} body="Copied in, originals untouched. Folders are flattened into this album." />
     {/if}

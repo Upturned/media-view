@@ -36,7 +36,7 @@
     onpointerdown={(e) => e.stopPropagation()}>
     <span class="title">{menu.title}</span>
     {#each menu.items as item (item.label)}
-      <button role="menuitem" class:danger={item.danger} class:separated={item.separated}
+      <button role="menuitem" class:danger={item.danger} class:separated={item.separated} disabled={item.disabled}
         onclick={() => { closeMenu(); item.action(); }}>
         {item.label}
       </button>
@@ -78,7 +78,8 @@
     text-align: left;
     cursor: pointer;
   }
-  button:hover, button:focus-visible { background: var(--surface2); outline: none; }
+  button:hover:not(:disabled), button:focus-visible { background: var(--surface2); outline: none; }
+  button:disabled { color: var(--text2); opacity: 0.6; cursor: default; }
   button.separated { border-top: 1px solid var(--line); }
   button.danger { color: var(--red); }
 </style>

@@ -37,6 +37,7 @@
     searchable = true,
     emptyText = 'Nothing here yet.',
     ontotal,
+    onaddfromlibrary,
   }: {
     /** The folder (and whether to include everything under it), a tag, a collection; nothing = the whole library. */
     scope: { folder?: number; recursive?: boolean; tag?: number; favorites?: boolean; collection?: number; untagged?: boolean; fresh?: boolean };
@@ -57,6 +58,8 @@
     untaggedView?: boolean;
     emptyText?: string;
     ontotal?: (total: number) => void;
+    /** "+ From library": pick images already in the library (albums and collections). */
+    onaddfromlibrary?: () => void;
   } = $props();
 
   // ─── Preferences (remembered) ──────────────────────────────────────────────
@@ -127,8 +130,7 @@
     q: searchable ? search.q : undefined,
     name,
     sort,
-    // A collection's own order has no direction to flip.
-    order: sort === 'position' ? 'asc' : order,
+    order,
     seed: sort === 'random' ? seed : undefined,
     byFormat: group === 'format' || undefined,
   });
@@ -588,7 +590,8 @@
   // ─── Dragging: out of the grid (move), or within a collection (reorder) ────
 
   const filtered = $derived(favorites || !!name.trim() || (searchable && !!search.q.trim()));
-  const canReorder = $derived(inList && sort === 'position' && !filtered);
+  // Reordering shows where things land in the list's own order, first to last.
+  const canReorder = $derived(inList && sort === 'position' && order === 'asc' && !filtered);
   /** Images being reordered, in list order, and where they'd land. */
   let dragIds = $state<number[] | null>(null);
   let over = $state<number | 'end' | null>(null);
@@ -679,7 +682,10 @@
       return { text: slotLabel ? `release to place ${dragIds.length > 1 ? `${dragIds.length} images` : 'it'} at ${slotLabel} · esc cancels` : `moving ${dragIds.length} · aim between two frames`, tone: 'accent' };
     }
     if (sort !== 'position') {
-      return { text: `Sorted by ${sortLabel.toLowerCase()} · reordering works only in collection order`, tone: 'dim', action: { label: '↺ Collection order', run: () => (sort = 'position') } };
+      return { text: `Sorted by ${sortLabel.toLowerCase()} · reordering works only in collection order`, tone: 'dim', action: { label: '↺ Collection order', run: () => { sort = 'position'; order = 'asc'; } } };
+    }
+    if (order === 'desc') {
+      return { text: 'Last to first · reordering works only first to last', tone: 'dim', action: { label: '↑ First to last', run: () => (order = 'asc') } };
     }
     if (filtered) {
       return {
@@ -737,9 +743,8 @@
             <button class:on={sort === s.key} onclick={() => (sort = s.key)}>{s.label}</button>
           {/each}
         </div>
-        {#if sort !== 'position'}
-          <button class="segarrow" onclick={() => (order = order === 'asc' ? 'desc' : 'asc')} title={order === 'asc' ? 'Ascending' : 'Descending'}>{order === 'asc' ? '↑' : '↓'}</button>
-        {/if}
+        <button class="segarrow" onclick={() => (order = order === 'asc' ? 'desc' : 'asc')}
+          title={sort === 'position' ? (order === 'asc' ? 'First to last' : 'Last to first') : order === 'asc' ? 'Ascending' : 'Descending'}>{order === 'asc' ? '↑' : '↓'}</button>
       </div>
       <button class="tool fav" class:on={favorites} onclick={() => (favorites = !favorites)}>{favorites ? '★' : '☆'} Favorites</button>
       <input class="filter narrow" bind:value={nameInput} placeholder="name contains…" spellcheck="false" />
@@ -773,6 +778,7 @@
     {#if total}<button class="tool" onclick={tagAll} title="Add or remove tags on every image shown here (the filters apply)"># Tag all {fmt(total)}…</button>{/if}
     {#if untaggedView && stale.size}<button class="tool refresh" onclick={refresh} title="Take the tagged images out of this view">↻ Refresh · {fmt(stale.size)} done</button>{/if}
     {#if searchable}<button class="tool idx" class:on={showIndex} onclick={() => (showIndex = !showIndex)} title="Show or hide the index">Index</button>{/if}
+    {#if onaddfromlibrary}<button class="tool from-lib" onclick={onaddfromlibrary} title="Pick images already in the library: from the Inbox, or anywhere with a search">+ From library</button>{/if}
     {#if addTo}<button class="add" onclick={pickAndAdd}>+ Add images</button>{/if}
   </div>
   {#if unknownText}

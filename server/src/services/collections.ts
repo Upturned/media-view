@@ -98,6 +98,8 @@ export interface CollectionListQuery {
   q?: string;
   /** Only collections holding images with this tag, with how many (`tagged`). */
   tag?: number;
+  /** Only these collections (the ones a search names with `@`). */
+  ids?: number[];
   sort?: 'name' | 'count' | 'changed' | 'tagged';
   order?: 'asc' | 'desc';
   limit?: number;
@@ -111,6 +113,7 @@ export function listCollections(lib: OpenLibrary, opts: CollectionListQuery = {}
     where.push("c.name_norm LIKE '%' || ? || '%' ESCAPE '\\'");
     params.push(escapeLike(normTagName(opts.q)));
   }
+  if (opts.ids) where.push(opts.ids.length ? `c.id IN (${opts.ids.map(Number).join(',')})` : '0');
   const tagged = opts.tag !== undefined
     ? `(SELECT COUNT(*) FROM collection_items ci JOIN files f ON f.id = ci.file_id
         WHERE ci.collection_id = c.id AND ${LIVE_FILE} AND EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id = ${Number(opts.tag)}))`
