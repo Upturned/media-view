@@ -1053,6 +1053,8 @@ Not carried over: `category/filename` identity, lazy file rows, client-side filt
 
 - **Styles** — final theme model (style × variant, mapping of old themes, module-specific themes): see `docs/styles.md`.
 - **Search and Download** — planned after the Videos and Audio modules: see `docs/search-and-download.md`.
+- **AI features** — designed in `docs/ai.md` (phases, models, content policy), with hardware tiers in `docs/ai-hardware.md`. Phase 1 adds migration 008 and a `modelsDir` entry to the app config (§5.1). The safe-for-work view (`ai.md` §11.3) adds a *Not safe for work* mark on tags and needs no AI.
+- **Texts module** — sketched in `docs/text-writer.md`: stories are albums in `Texts/`, plus a new `chats` folder kind (§6.2). When it's built relative to Videos and Audio is still open.
 - **Search tabs** — Folders and Collections tabs use `GET /api/folders?q=` and `GET /api/collections?q=`; no per-tab counts.
 
 - **Keyboard shortcuts** — decided: the MVP set plus `S` (slideshow), `T` (type a tag; `Esc` leaves the field), `/` (search) and `F1` (help); in the viewer `Esc` goes fullscreen → slideshow → back to the previous page (tester feedback, 2026-10-04). See user guide §3.4 and §4.5. The Help dialog's *Shortcuts* tab lists them from the keymap registry, so it never drifts.

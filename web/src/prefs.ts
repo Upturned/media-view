@@ -44,7 +44,7 @@ export function browserPrefs(): Record<string, unknown> {
   for (const key of Object.keys(DEFAULTS)) {
     try {
       const raw = localStorage.getItem(key);
-      if (raw !== null) out[key] = JSON.parse(raw);
+      if (raw !== null) out[key] = key === 'grid.group' ? groupPref(JSON.parse(raw)) : JSON.parse(raw);
     } catch {
       // unreadable: left out
     }

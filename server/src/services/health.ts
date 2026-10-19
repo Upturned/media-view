@@ -1058,6 +1058,7 @@ function resolveDuplicate(lib: OpenLibrary, hash: string, keepId: number, merge:
         }
         db.prepare('UPDATE collections SET cover_file_id = ? WHERE cover_file_id = ?').run(keepId, c.id);
         db.prepare('UPDATE tags SET cover_file_id = ? WHERE cover_file_id = ?').run(keepId, c.id);
+        db.prepare('UPDATE profiles SET picture_file_id = ? WHERE picture_file_id = ?').run(keepId, c.id);
       }
     })();
   }

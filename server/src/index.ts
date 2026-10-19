@@ -59,7 +59,8 @@ server.on('error', (err: NodeJS.ErrnoException) => {
         openUrl(url);
         setTimeout(() => process.exit(0), 500);
       } else {
-        console.error(`Port ${port} is used by another program. Change "port" in ${path.join(appDataDir(), 'config.json')} and start again.`);
+        const where = process.env.PORT ? 'PORT in start.bat' : `"port" in ${path.join(appDataDir(), 'config.json')}`;
+        console.error(`Port ${port} is used by another program. Change ${where} and start again.`);
         process.exit(1);
       }
     });

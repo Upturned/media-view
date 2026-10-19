@@ -14,7 +14,7 @@ import { refreshDuplicates } from '../src/services/issues.ts';
 import { closeLibrary, createLibrary, openLibrary, type OpenLibrary } from '../src/services/library.ts';
 import {
   activeProfile, checkPassword, createProfile, deleteProfile, hashPassword, importPrefs, linkTag, listProfiles, lockProfile,
-  profileTags, setPassword, switchProfile, unlinkTag, updatePrefs, updateProfile, WRONG_PASSWORD_DELAY_MS,
+  profileInfo, profileTags, setPassword, switchProfile, unlinkTag, updatePrefs, updateProfile, WRONG_PASSWORD_DELAY_MS,
 } from '../src/services/profiles.ts';
 import { reconcile } from '../src/services/reconcile.ts';
 import { recycleFiles, recycleFolder } from '../src/services/recycle.ts';
@@ -88,6 +88,12 @@ describe('the first profile', () => {
     const me = lib.profileId!;
     expect(importPrefs(lib, me, { 'grid.cols': 8, theme: 'mochi' })).toEqual({ theme: 'darkroom', 'grid.cols': 8 });
     expect(importPrefs(lib, me, { 'grid.cols': 3 })).toEqual({ theme: 'darkroom', 'grid.cols': 8 });
+  });
+
+  it('drops values an older build saved that no longer fit, keeping the rest', async () => {
+    const res = await call('POST', '/api/profiles/me/import-prefs', { 'grid.group': true, 'grid.cols': 99, 'viewer.loop': false, junk: 1 });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ theme: 'darkroom', 'viewer.loop': false });
   });
 });
 
@@ -207,12 +213,14 @@ describe('stars', () => {
     const rubio = (await createProfile(lib, { name: 'Rubio' })).id;
     setFavorite(lib, me, [a], true);
     setFavorite(lib, rubio, [copy], true);
+    updateProfile(lib, rubio, { pictureFileId: copy });
     const issue = healthReport(lib).issues.find((i) => i.kind === 'duplicate')!;
     expect(issue.details).toMatchObject({ reason: 'two-starred' });
     await expect(fixIssue(lib, issue.id, { action: 'keep-one', keepId: a })).rejects.toThrow('Another copy is starred by Rubio');
     await fixIssue(lib, issue.id, { action: 'merge', keepId: a });
     expect(lib.db.prepare('SELECT profile_id FROM profile_favorites WHERE file_id = ? ORDER BY profile_id').pluck().all(a)).toEqual([me, rubio]);
     expect(starred(lib, copy)).toBe(false);
+    expect(profileInfo(lib, rubio).pictureFileId).toBe(a); // the picture follows too
   });
 });
 

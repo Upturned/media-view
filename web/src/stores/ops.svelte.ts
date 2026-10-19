@@ -64,8 +64,14 @@ export async function transfer(mode: 'move' | 'copy', ids: number[], dest: { id:
   };
   if (mode === 'move') {
     const r = await unwrap(client.api.files.move.$post({ json: { ids, folderId: dest.id, policy } }));
-    const extra = [r.renamed.length ? `${r.renamed.length} renamed` : '', r.skipped.length ? `${r.skipped.length} skipped` : '', r.replaced ? `${r.replaced} replaced` : '']
-      .filter(Boolean).join(' · ');
+    const busy = r.skipped.filter((s) => s.inUse).length;
+    const skipped = r.skipped.length - busy;
+    const extra = [
+      r.renamed.length ? `${r.renamed.length} renamed` : '',
+      skipped ? `${skipped} skipped` : '',
+      busy ? `${busy} open in another program, not moved` : '',
+      r.replaced ? `${r.replaced} replaced` : '',
+    ].filter(Boolean).join(' · ');
     const undo: ToastAction = {
       label: 'Undo',
       run: () => {

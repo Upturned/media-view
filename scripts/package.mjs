@@ -12,6 +12,9 @@
 //
 // node.exe is downloaded once (checked against nodejs.org's checksums) into release/.cache; the zip
 // itself never needs the internet. Libraries and %APPDATA%\media-view stay outside it.
+//
+// npm run package -- H: the same app as media-view-<version>-win-x64-H.zip, on port 2070 and with
+// its settings in a data\ folder next to start.bat, so it runs beside the normal copy.
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -31,7 +34,8 @@ if (process.platform !== 'win32' || process.arch !== 'x64') {
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-const name = `media-view-${pkg.version}-win-x64`;
+const variant = process.argv.slice(2).includes('H') ? 'H' : null;
+const name = `media-view-${pkg.version}-win-x64${variant ? `-${variant}` : ''}`;
 const releaseDir = path.join(ROOT, 'release');
 const out = path.join(releaseDir, name);
 const app = path.join(out, 'app');
@@ -103,6 +107,7 @@ fs.writeFileSync(path.join(out, 'start.bat'), [
   'rem Starts media-view and opens it in the browser. Close this window to stop it.',
   'cd /d "%~dp0"',
   'set MEDIA_VIEW_OPEN=1',
+  ...(variant === 'H' ? ['set PORT=2070', 'set MEDIA_VIEW_APPDATA=%~dp0data'] : []),
   '"%~dp0node.exe" "%~dp0app\\server.mjs"',
   'if errorlevel 1 pause',
   '',
@@ -117,7 +122,7 @@ fs.writeFileSync(path.join(out, 'reset-password.bat'), [
   '',
 ].join('\r\n'));
 fs.writeFileSync(path.join(out, 'README.txt'), [
-  `media-view ${pkg.version}`,
+  `media-view ${pkg.version}${variant ? ` (${variant})` : ''}`,
   '',
   'Double-click start.bat: the app opens in your browser. Keep its window open while you use it;',
   'closing the window stops media-view. Starting it again while it runs just opens the browser.',
@@ -125,7 +130,9 @@ fs.writeFileSync(path.join(out, 'README.txt'), [
   'Forgot a profile password? Double-click reset-password.bat.',
   '',
   'Nothing is installed. Your libraries stay where you made them, and the settings are in',
-  '%APPDATA%\\media-view (delete that folder to start fresh).',
+  variant === 'H'
+    ? 'the data folder next to start.bat (delete it to start fresh). This copy runs on port 2070.'
+    : '%APPDATA%\\media-view (delete that folder to start fresh).',
   '',
 ].join('\r\n'));
 

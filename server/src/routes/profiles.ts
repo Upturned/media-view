@@ -17,7 +17,7 @@ const password = z.string().max(200);
 const role = z.enum(['creator', 'subject']);
 const link = z.object({ tagId: z.number().int().positive(), role });
 
-const prefs = z.object({
+const prefFields = {
   'grid.cols': z.number().int().min(2).max(10),
   'grid.sort': z.enum(['name', 'modified', 'added', 'size', 'format', 'random', 'position']),
   'grid.order': z.enum(['asc', 'desc']),
@@ -27,7 +27,18 @@ const prefs = z.object({
   'viewer.loop': z.boolean(),
   'viewer.shuffle': z.boolean(),
   theme: z.string().min(1).max(50),
-}).partial().strip();
+};
+const prefs = z.object(prefFields).partial().strip();
+
+/** What an older build saved may not fit any more (`grid.group` was true / false): such values are dropped one by one. */
+const browserPrefs = z.record(z.string(), z.unknown()).transform((raw) => {
+  const out: Record<string, unknown> = {};
+  for (const [key, schema] of Object.entries(prefFields)) {
+    const r = schema.safeParse(raw[key]);
+    if (key in raw && r.success) out[key] = r.data;
+  }
+  return out as z.infer<typeof prefs>;
+});
 
 export const profileRoutes = new Hono()
   /** The picker: every profile, and which one is in use (null = none yet). */
@@ -64,7 +75,7 @@ export const profileRoutes = new Hono()
     return c.json(updatePrefs(lib, requireMe(lib), c.req.valid('json')));
   })
   /** One-time hand-over of the browser's saved preferences after the upgrade (docs/profiles.md §6.1). */
-  .post('/me/import-prefs', valid('json', prefs), (c) => {
+  .post('/me/import-prefs', valid('json', browserPrefs), (c) => {
     const lib = requireLibrary();
     return c.json(importPrefs(lib, requireMe(lib), c.req.valid('json')));
   })

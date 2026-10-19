@@ -55,7 +55,7 @@ export async function loadProfile(hasLibrary: boolean): Promise<void> {
     }
     let me = await unwrap(client.api.profiles.me.$get());
     // The first profile after the upgrade: this browser's saved preferences become its own, once.
-    if (me.prefs._import) me = { ...me, prefs: await unwrap(client.api.profiles.me['import-prefs'].$post({ json: browserPrefs() as ProfilePrefs })) };
+    if (me.prefs._import) me = { ...me, prefs: await unwrap(client.api.profiles.me['import-prefs'].$post({ json: browserPrefs() })) };
     Object.assign(profile, { me, locked: false });
     useProfilePrefs({ ...me.prefs }, savePref);
     applyTheme(me.prefs.theme ?? 'darkroom');

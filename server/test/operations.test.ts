@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import zlib from 'node:zlib';
 import sharp from 'sharp';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readMarker } from '../src/lib/markers.ts';
 import { bulkRename, copyFiles, moveFiles, renameFile, setFileDescription, undoMove } from '../src/services/file-ops.ts';
 import { createFolder, moveFolder, renameFolder, setFolderCover } from '../src/services/folders.ts';
@@ -32,11 +32,24 @@ beforeEach(async () => {
   await hashPending(lib);
 });
 
-afterEach(() => closeLibrary());
+afterEach(() => {
+  vi.restoreAllMocks();
+  closeLibrary();
+});
 
 const id = (rel: string) => fileByPath(lib, rel)!.id;
 const fid = (rel: string) => folderByPath(lib, rel)!.id;
 const exists = (rel: string) => fs.existsSync(t.abs(rel));
+
+/** Windows refusing renames that match, as when another program has the file open. */
+function lockWhere(match: (from: string, to: string) => boolean) {
+  vi.restoreAllMocks();
+  const real = fs.renameSync;
+  vi.spyOn(fs, 'renameSync').mockImplementation((from, to) => {
+    if (match(String(from), String(to))) throw Object.assign(new Error('EBUSY: resource busy or locked, rename'), { code: 'EBUSY' });
+    real(from, to);
+  });
+}
 
 /** After the app's own operations, a scan must find nothing to change or report. */
 async function expectQuietScan() {
@@ -96,6 +109,35 @@ describe('moving and copying images', () => {
     await expectQuietScan();
   });
 
+  it('skips an image another program has open and moves the rest', async () => {
+    const [a, b, c] = ['a', 'b', 'c'].map((n) => id(`Fantasy/Portraits/${n}.png`));
+    lockWhere((from) => from.endsWith('b.png'));
+    const r = moveFiles(lib, [a!, b!, c!], fid('Fantasy/Elves/Court'));
+    vi.restoreAllMocks();
+    expect(r).toMatchObject({ done: 2, skipped: [{ id: b, inUse: true }] });
+    expect(r.undo.map((u) => u.id)).toEqual([a, c]);
+    expect(fileByPath(lib, 'Fantasy/Portraits/b.png')?.id).toBe(b);
+    expect(exists('Fantasy/Elves/Court/c.png')).toBe(true);
+    await expectQuietScan();
+  });
+
+  it('recycles nothing for a replace that can’t happen', async () => {
+    const [a, old] = [id('Fantasy/Portraits/a.png'), id('Fantasy/Maps/a.png')];
+    // The incoming image is open elsewhere…
+    lockWhere((from) => from.endsWith(path.join('Portraits', 'a.png')));
+    expect(moveFiles(lib, [a], fid('Fantasy/Maps'), 'replace')).toMatchObject({ done: 0, replaced: 0, skipped: [{ id: a, inUse: true }] });
+    // …or the one it would replace is.
+    lockWhere((from) => from.endsWith(path.join('Maps', 'a.png')));
+    expect(moveFiles(lib, [a], fid('Fantasy/Maps'), 'replace')).toMatchObject({ done: 0, replaced: 0, skipped: [{ id: a, inUse: true }] });
+    vi.restoreAllMocks();
+
+    expect(listBin(lib)).toEqual([]);
+    expect(fileByPath(lib, 'Fantasy/Portraits/a.png')?.id).toBe(a);
+    expect(fileByPath(lib, 'Fantasy/Maps/a.png')?.id).toBe(old);
+    expect(fs.readdirSync(t.abs('Fantasy/Maps')).filter((n) => n.startsWith('~'))).toEqual([]);
+    await expectQuietScan();
+  });
+
   it('only accepts albums and the Inbox as targets', () => {
     expect(() => moveFiles(lib, [id('Fantasy/Portraits/a.png')], fid('Fantasy'))).toThrow(/album or the Inbox/);
     const r = moveFiles(lib, [id('Fantasy/Portraits/a.png')], null);
@@ -129,6 +171,23 @@ describe('renaming images', () => {
     expect(() => bulkRename(lib, [a!, b!], 'same', 1, 1)).toThrow(/unique/);
     expect(() => bulkRename(lib, [a!], 'ref_01', 1, 1)).toThrow(/already exists/);
     expect(fileByPath(lib, 'Fantasy/Portraits/ref_03.png')?.id).toBe(a); // untouched
+    await expectQuietScan();
+  });
+
+  it('puts every file back when Windows refuses a bulk rename partway', async () => {
+    const ids = ['a', 'b', 'c'].map((n) => id(`Fantasy/Portraits/${n}.png`));
+    const names = () => fs.readdirSync(t.abs('Fantasy/Portraits')).filter((n) => !n.startsWith('.')).sort();
+
+    // Refused on the way to the temporary names (the last file is open elsewhere)…
+    lockWhere((from) => from.endsWith('c.png'));
+    expect(() => bulkRename(lib, ids, 'ref_#', 1, 2)).toThrow(/another program/);
+    // …and on the way to the final ones.
+    lockWhere((_, to) => to.endsWith('ref_02.png'));
+    expect(() => bulkRename(lib, ids, 'ref_#', 1, 2)).toThrow(/another program/);
+    vi.restoreAllMocks();
+
+    expect(names()).toEqual(['a.png', 'b.png', 'c.png']);
+    expect(ids.map((i) => lib.db.prepare('SELECT filename FROM files WHERE id = ?').pluck().get(i))).toEqual(['a.png', 'b.png', 'c.png']);
     await expectQuietScan();
   });
 });

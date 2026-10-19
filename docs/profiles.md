@@ -272,12 +272,14 @@ The existing `POST /api/files/favorite` and `PATCH /api/files/:id { favorited }`
 
 ## 8. What AI needs from profiles
 
-Profiles come before AI because several AI decisions attach to *who*:
+Profiles come before AI because several AI decisions attach to *who*. Revised 2026-10-17 to match `ai.md` §11.
 
-- **Content settings are per profile.** NSFW *on* is opt-in with a one-time adult confirmation (future-features §7.2), stored in the profile's `prefs`. A new profile starts with NSFW off. With a password, one person's opt-in can't be switched on by someone else in the app. Hard limits (real people without consent, minors) apply to every profile and aren't settings at all.
-- **Your own likeness.** The consent doc (§4.1) makes consent to your own likeness "a setting; no form needed". That setting lives on the profile, and the profile's *subject* links say which tags (and so which images and faces) are you.
+- **Show NSFW, per profile** (`ai.md` §11.3). A safe-for-work view, not a lock: with it off, images carrying a tag marked *Not safe for work* (directly or implied) are left out of grids, search, random, slideshows and viewer navigation, and the AI writes non-explicit text for that profile. Off for new profiles; turning it on the first time asks for a one-time confirmation, stored with its date. A field of its own with its own route, not inside `prefs`; no password needed beyond the profile's own. Needs no AI, so it can be built before `ai.md` phase 1.
+- **The hard limit** (minors) applies to every profile and isn't a setting at all (`ai.md` §11.1).
+- **Profile names** are matched like real-person tags: a generation prompt naming a profile is blocked (`ai.md` §11.1).
+- **Your own likeness** isn't needed for now: nothing planned uses reference images. The profile's *subject* links only feed *Featuring you*. Revisit only if generating similar images (A12) is built from the image itself (`ai.md` §11.6).
 - **Who asked.** AI jobs record the requesting profile in their trace and log line (future-features §8.1), and generated files can record it with their provenance (review §4.2 point 7).
-- **Consent records** for other people stay attached to their *Model* tag (consent doc §4.1), not to profiles: the people being photographed usually aren't app users.
+- **Consent records** are dropped (`ai.md` §11.2): face recognition is a plain opt-in per library.
 
 ---
 
