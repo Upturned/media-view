@@ -80,7 +80,7 @@ Files ignored by git (`node_modules/`, `dist/`, `release/`, `testing/`) are per 
    - **AI data (embeddings, suggestions, rejections) builds up** in a library that the normal app can't show or clean up.
 
    Use the ~12k test library for the AI branch. It's the same library the phase 1 spike runs on (`ai.md` §9 step 0), and it's large enough to show real indexing times.
-4. **Web dev port.** Vite's port is fixed at 2080 (`web/vite.config.ts`, `strictPort`), and the server allows that origin by a constant (`server/src/index.ts`, `DEV_WEB_PORT`). Two dev setups can't run at once until both read a `WEB_PORT` variable. A small change; make it on `jedi` so both lines get it with the next merge. Until then, run one line in dev and the other as a packaged build (`npm run package`), which serves the web app from its own port and has no Vite.
+4. **Web dev port.** *(Done 2026-10-20.)* Vite (`web/vite.config.ts`) and the server's allowed dev origin (`server/src/index.ts`, `DEV_WEB_PORT`) both read `WEB_PORT`, defaulting to 2080, so two dev setups can run at once.
 5. **Models folder.** Outside both libraries and outside the repo (models are gigabytes; they must never reach git). Its path goes in the AI build's own config.
 
 ### 4.3 Starting the AI build
