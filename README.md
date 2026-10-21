@@ -9,6 +9,9 @@ npm install
 npm run dev      # server on :4321 + Vite on http://localhost:2080 (hot reload)
 ```
 
+`PORT` and `WEB_PORT` change the two ports, and `MEDIA_VIEW_APPDATA` moves the app data folder, so a
+second copy (another worktree) can run at the same time.
+
 Production-style: `npm run build` then `npm start` → http://localhost:4321.
 
 ## Package
