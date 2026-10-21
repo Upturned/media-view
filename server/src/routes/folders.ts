@@ -6,6 +6,7 @@ import {
   setFolderCover, setFolderDescription,
 } from '../services/folders.ts';
 import { requireLibrary } from '../services/library.ts';
+import { requireMe } from '../services/profiles.ts';
 import { recycleFolder } from '../services/recycle.ts';
 
 const id = z.object({ id: z.coerce.number().int().positive() });
@@ -53,6 +54,7 @@ export const folderRoutes = new Hono()
   .post('/:id/move', valid('param', id), valid('json', z.object({ parentId: z.number().int().positive().nullable() })), (c) =>
     c.json(moveFolder(requireLibrary(), c.req.valid('param').id, c.req.valid('json').parentId)))
   .post('/:id/recycle', valid('param', id), (c) => {
-    recycleFolder(requireLibrary(), c.req.valid('param').id);
+    const lib = requireLibrary();
+    recycleFolder(lib, c.req.valid('param').id, requireMe(lib));
     return c.json({ ok: true });
   });

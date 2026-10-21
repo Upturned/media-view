@@ -5,7 +5,7 @@ import { readMarker } from '../src/lib/markers.ts';
 import { closeLibrary, createLibrary, type OpenLibrary } from '../src/services/library.ts';
 import { reconcile } from '../src/services/reconcile.ts';
 import { hashPending } from '../src/workers/hasher.ts';
-import { fileByPath, folderByPath, issues, tempDir, tree } from './helpers.ts';
+import { fileByPath, folderByPath, issues, star, starred, tempDir, tree } from './helpers.ts';
 
 let lib: OpenLibrary;
 let t: ReturnType<typeof tree>;
@@ -195,7 +195,7 @@ describe('reconciliation: changes made outside the app', () => {
     await scan();
     const album = folderByPath(lib, 'Fantasy/Portraits')!;
     const file = fileByPath(lib, 'Fantasy/Portraits/a.png')!;
-    lib.db.prepare('UPDATE files SET favorited = 1 WHERE id = ?').run(file.id);
+    star(lib, file.id);
 
     fs.renameSync(t.abs('Fantasy/Portraits'), path.join(lib.root, 'away'));
     const gone = await scan();
@@ -206,7 +206,8 @@ describe('reconciliation: changes made outside the app', () => {
     fs.renameSync(path.join(lib.root, 'away'), t.abs('Fantasy/Portraits'));
     await scan();
     expect(folderByPath(lib, 'Fantasy/Portraits')).toMatchObject({ id: album.id, missing_since: null });
-    expect(lib.db.prepare('SELECT favorited, missing_since FROM files WHERE id = ?').get(file.id)).toEqual({ favorited: 1, missing_since: null });
+    expect(starred(lib, file.id)).toBe(true);
+    expect(lib.db.prepare('SELECT missing_since FROM files WHERE id = ?').get(file.id)).toEqual({ missing_since: null });
     expect(issues(lib, 'missing_file')).toEqual([]);
     expect(issues(lib, 'missing_folder')).toEqual([]);
   });

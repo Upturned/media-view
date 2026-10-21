@@ -16,6 +16,8 @@
   import { href, navigate, router } from '../router.svelte.ts';
   import { ask } from '../stores/confirm.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
+  import { openMenu } from '../stores/menu.svelte.ts';
+  import { linkTag, profile, ROLE_LABEL, unlinkTag } from '../stores/profile.svelte.ts';
   import { openOps } from '../stores/ops.svelte.ts';
   import { inkFor, typeColor, typeOf } from '../stores/tags.svelte.ts';
   import { toast, toastError } from '../stores/toasts.svelte.ts';
@@ -33,6 +35,22 @@
   let picking = $state<string | null>(null);
 
   // ── Loading ──
+  /** Link or unlink this tag as the profile in use (docs/profiles.md §5): one profile per role. */
+  function thisIsMe(e: MouseEvent) {
+    const p = page;
+    const me = profile.me;
+    if (!p || !me) return;
+    openMenu(e, 'This is me', (['creator', 'subject'] as const).map((role) => {
+      const holder = p.links.find((l) => l.role === role)?.profile;
+      const mine = holder?.id === me.id;
+      return {
+        label: mine ? `✓ ${role === 'creator' ? 'Creator' : 'Subject'} · ${ROLE_LABEL[role]} (unlink)` : holder ? `${role === 'creator' ? 'Creator' : 'Subject'} · linked to ${holder.name}` : `${role === 'creator' ? 'Creator' : 'Subject'} · ${ROLE_LABEL[role]}`,
+        disabled: !!holder && !mine,
+        action: () => void (mine ? unlinkTag(p.id, role) : linkTag(p.id, role)).then(load).catch(toastError),
+      };
+    }));
+  }
+
   async function load() {
     try {
       page = await unwrap(client.api.tags[':id'].page.$get({ param: { id: String(id) } }));
@@ -45,6 +63,7 @@
 
   $effect(() => {
     void live.files;
+    void live.profile;
     // While editing, the draft stays as it is; the page reloads after saving or discarding.
     if (!editing) void load();
   });
@@ -199,12 +218,16 @@
         </div>
         <h1 class="display name">{page.name}</h1>
         {#if page.aliases.length}<span class="aka">also known as {#each page.aliases as a, i (a)}{#if i}, {/if}<b>{a}</b>{/each}</span>{/if}
+        {#if page.links.length}
+          <span class="aka linked">linked to {#each page.links as l, i (l.role)}{#if i}, {/if}<a href={href(`/profile/${l.profile.id}`)}><b>{l.profile.name}</b></a> · {l.role}{/each}</span>
+        {/if}
         <div class="bottom">
           <div class="stat"><b>{fmt(page.count)}</b>{page.count === 1 ? word('image') : word('images')}</div>
           {#if lists.length}<div class="stat"><b>{fmt(lists.length)}</b>{lists.length === 1 ? 'list' : 'lists'}</div>{/if}
           <span class="edited">page edited {edited(page.updatedAt)}</span>
           <div class="actions">
             <button class="hbtn" onclick={() => openOps({ kind: 'edit-tag', tagId: page!.id })}>Edit tag</button>
+            {#if profile.me}<button class="hbtn" title="Link this tag to your profile" onclick={thisIsMe}>This is me ▸</button>{/if}
             <button class="hbtn primary" onclick={startEditing} title="Edit page (E)">✎ Edit page</button>
           </div>
         </div>
@@ -397,6 +420,8 @@
   .name { font-size: clamp(48px, 7.5vw, 112px); line-height: 0.82; overflow-wrap: anywhere; }
   .aka { font-size: 15px; color: var(--text2); }
   .aka b { color: var(--text); font-weight: 400; }
+  .linked a { text-decoration: none; }
+  .linked a:hover b { text-decoration: underline; }
   .bottom { display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap; margin-top: auto; }
   .stat { display: flex; flex-direction: column; gap: 2px; font: 11px var(--font-mono); color: var(--text2); text-transform: uppercase; }
   .stat b { font: 700 40px/1 var(--font-display); color: var(--text); }

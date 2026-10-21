@@ -113,7 +113,7 @@ Empty folders tell you what they can hold: *"This drawer is empty — add an alb
 The app keeps a record of every folder and every image in your library, and that record is what it trusts. This means:
 
 - **Nothing is forgotten by accident.** If a folder is deleted or goes missing outside the app, media-view still knows it existed — what kind it was, its description, its cover — and offers to recreate it. If its images come back, their tags come back with them.
-- **Moves and renames are recognized.** Each image is recognized by its content, and each folder carries a small hidden marker file (`.category`, `.subcategory`, `.album` or `.inbox`) with its identity. So when a picture or folder is moved or renamed, its tags, favorite star and description stay with it.
+- **Moves and renames are recognized.** Each image is recognized by its content, and each folder carries a small hidden marker file (`.category`, `.subcategory`, `.album` or `.inbox`) with its identity. So when a picture or folder is moved or renamed, its tags, favorite stars and description stay with it.
 - **…but changes made outside the app are confirmed with you.** Moves and renames done in the app are simply done. If a folder or images are moved or renamed **in Windows Explorer**, the app follows them (so everything keeps working) and lists the change on Library Health, where you choose **Keep** or **Undo** (see §4.15).
 - **Duplicates are spotted.** Identical images stored in more than one place are detected automatically.
 
@@ -394,9 +394,11 @@ All your collections, each as a numbered contact strip: its cover, the next few 
 
 ### 4.12 Favorites
 
-All your starred images from across the library, in one grid, with the usual sorting, filtering, tag sidebar and bulk actions. Open it from **Favorites** in the top bar or the **★ Favorites** button on the Library page.
+All the images **you** starred from across the library (each profile has its own stars, §4.19), in one grid, with the usual sorting, filtering, tag sidebar and bulk actions. Open it from **Favorites** in the top bar or the **★ Favorites** button on the Library page.
 
 It's a view, not a folder: starring an image doesn't move or copy it — it stays in its album, and unstarring it takes it off this page.
+
+Stars also protect images, for everyone: an image anyone starred is never recycled or replaced. If someone else starred it, the app says who, and only they can unstar it.
 
 ### 4.13 Random
 
@@ -446,10 +448,11 @@ A maintenance page that compares your library folder with what the app remembers
 ### 4.16 Settings
 
 - **Library** — see which library is open, **Open library…** to switch to another folder, or **New library…** to start one. Recent libraries are listed for quick switching.
+- **Profiles** — every profile of this library (§4.19). Yours can be renamed, get a picture or a password; the others can be switched to or deleted. **New profile…** makes another.
 - **Theme** — see §4.18.
 - **Grids** — what album, tag and search grids open with: columns (2–10), sort and direction, grouping (none, by collection or by format), and whether the index is shown. Changing them on a grid changes them here too.
 - **Slideshow** — how long each image stays (2–30 s), what happens at the end (*Start over* or *Stop*) and the order (*The list's order* or *Shuffle*). The viewer's own slideshow controls change them too.
-- Grid and slideshow settings are kept by the browser you use the app in.
+- Grid and slideshow settings, and the theme, belong to your profile: each person sharing the library has their own.
 
 ### 4.17 Help
 
@@ -467,6 +470,18 @@ This version comes with one style, **Darkroom**: dark, sharp and restrained, so 
 Other styles are being considered — **Mochi**, **Scriptorium** and **Sticker Riot**. Click the theme button in the top bar (or go to Settings) and choose **Check styles** to see a preview of each one. The previews are only for looking; they don't change the app.
 
 When more styles are available, the same button will open a theme picker with a mini preview of each one.
+
+### 4.19 Profiles
+
+Several people can share a library, each with their own **profile**: a name, a picture, their own stars (Favorites), grid and slideshow settings and theme, and the tags that are *them*. Images, tags, the wiki and collections are shared — they describe the files, and the files are the same for everyone.
+
+- **Starting the app.** With one profile and no password, the app opens straight in, as before. With several, it opens the profile last used on this computer — unless that one has a password, or none was used here yet: then it shows **Who's using media-view?**, a card per profile. Click one to open it (with its password, if it has one), or **+ New profile**.
+- **The profile menu.** Your picture (or initials) at the right end of the top bar: **Your profile**, **Switch profile…**, **Lock** (only with a password: back to the cards) and **Settings**.
+- **Your profile page.** **Images by me** lists the images tagged with the tags linked to you as **creator** (your artist name, your studio, your pen name); **Featuring you**, the ones linked as **subject** (you as a model, your self-portrait tag, a character you play). Your favorites are there too. **Link a tag…** adds one; you can also link a tag from its wiki page (**This is me ▸**) or from any tag's right-click menu. A tag can be linked to one profile per role. Other profiles' pages can be viewed, but not their favorites.
+- **Rename…**, **Picture…** (any image in the library, shown as a square — or your initials on a color you pick) and **Password…** change your own profile. To change another profile, switch to it.
+- **Collections** are shared. With more than one profile, a collection's page says who created it.
+- **Passwords** keep others from using media-view as you. They don't hide your images: anyone with access to this computer can still open the library folder. Forgot one? Double-click **reset-password.bat** next to start.bat: it asks for the library folder and the profile, and clears that profile's password.
+- **Deleting a profile** (Settings → Profiles) removes its stars, tag links and settings — never images, tags or collections. The last profile, and the one in use, can't be deleted.
 
 ---
 

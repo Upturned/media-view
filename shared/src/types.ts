@@ -162,6 +162,8 @@ export interface TagDetail extends TagSummary {
   createdAt: number;
   implies: TagRef[];
   impliedBy: TagRef[];
+  /** The profiles this tag is linked to (docs/profiles.md §5). */
+  links: ProfileLink[];
 }
 
 export interface TagSuggestion extends TagRef {
@@ -265,6 +267,8 @@ export interface CollectionDetail extends CollectionCard {
   /** The chosen cover, or null when it's the first image. */
   coverFileId: number | null;
   createdAt: number;
+  /** The profile that made it (null when unknown, or that profile was deleted). */
+  createdBy: ProfileRef | null;
   /** Where the list's images live (albums and the Inbox), most first. */
   albums: { id: number; name: string; path: string; count: number }[];
 }
@@ -276,6 +280,7 @@ export interface CollectionSnapshot {
   description: string | null;
   coverFileId: number | null;
   createdAt: number;
+  createdBy?: number | null;
   fileIds: number[];
 }
 
@@ -323,7 +328,9 @@ export interface DuplicateCopy {
   folderId: number;
   /** Manual tags (implied ones follow them). */
   tags: TagRef[];
+  /** Starred by anyone (stars protect images, docs/profiles.md §3.1). */
   favorited: boolean;
+  starredBy: ProfileRef[];
   collections: CollectionRef[];
   description: string | null;
   addedAt: number;
@@ -335,7 +342,7 @@ export type DuplicateReason = 'only-tagged' | 'oldest' | 'starred' | 'different-
 export type IssueDetails =
   /** One item for the folder and everything in it: `folders` missing folders inside, `images` images. */
   | { kind: 'missing_folder'; folderId: number; path: string; folderKind: FolderKind; name: string; images: number; folders: number }
-  | { kind: 'missing_file'; fileId: number; path: string; filename: string; thumb: ThumbRef | null; tags: TagRef[]; favorited: boolean; collections: number }
+  | { kind: 'missing_file'; fileId: number; path: string; filename: string; thumb: ThumbRef | null; tags: TagRef[]; favorited: boolean; starredBy: ProfileRef[]; collections: number }
   | { kind: 'external_move'; entity: 'folder'; folderId: number; name: string; from: string; to: string }
   | {
     kind: 'external_move';
@@ -347,7 +354,7 @@ export type IssueDetails =
   | {
     kind: 'ambiguous_move';
     file: { id: number; path: string; thumb: ThumbRef | null };
-    candidates: { id: number; path: string; tags: TagRef[]; favorited: boolean; collections: number; description: string | null }[];
+    candidates: { id: number; path: string; tags: TagRef[]; favorited: boolean; starredBy: ProfileRef[]; collections: number; description: string | null }[];
   }
   /** `subfolders`: live folders inside it — with none, the folder itself can become an album. */
   | { kind: 'loose_files'; folderId: number | null; path: string; count: number; paths: string[]; subfolders: number; topLevel: boolean }
@@ -411,4 +418,66 @@ export interface FixResult {
   message: string;
   /** For fixes that only dismiss an issue (Keep, Keep as new, Confirm): bring it back. */
   reopen?: { kind: IssueKind; subject: string; payload: string };
+}
+
+// ─── Profiles (docs/profiles.md) ─────────────────────────────────────────────
+
+export interface ProfileRef {
+  id: number;
+  name: string;
+}
+
+/** What a tag linked to a profile says about them: their work (*Images by me*) or them (*Featuring you*). */
+export type ProfileRole = 'creator' | 'subject';
+
+export interface ProfileInfo extends ProfileRef {
+  uuid: string;
+  /** Background of the initials when there's no picture. */
+  color: string;
+  pictureFileId: number | null;
+  /** The picture's thumbnail, or null (initials). */
+  picture: ThumbRef | null;
+  hasPassword: boolean;
+  /** The profile in use. */
+  active: boolean;
+  lastUsedAt: number | null;
+}
+
+/** Per-profile preferences (docs/profiles.md §3). `_import`: the browser still has to hand over its saved ones. */
+export interface ProfilePrefs {
+  'grid.cols'?: number;
+  'grid.sort'?: SortKey;
+  'grid.order'?: 'asc' | 'desc';
+  'grid.group'?: 'none' | 'collection' | 'format';
+  'grid.index'?: boolean;
+  'viewer.interval'?: number;
+  'viewer.loop'?: boolean;
+  'viewer.shuffle'?: boolean;
+  theme?: string;
+  _import?: true;
+}
+
+/** The profile in use, with its preferences. */
+export interface ActiveProfile extends ProfileInfo {
+  prefs: ProfilePrefs;
+  /** How many profiles the library has (the picker and Lock only matter with more than one, or a password). */
+  profileCount: number;
+}
+
+/** A tag linked to a profile. */
+export interface ProfileTag extends TagRef {
+  typeKey: string;
+  role: ProfileRole;
+}
+
+/** Who a tag is linked to (the wiki's *Linked to* line). */
+export interface ProfileLink {
+  profile: ProfileRef;
+  role: ProfileRole;
+}
+
+/** The profile switch state (`GET /api/profiles`): `active` null = the picker. */
+export interface ProfileList {
+  profiles: ProfileInfo[];
+  active: number | null;
 }

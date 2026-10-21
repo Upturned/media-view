@@ -16,7 +16,8 @@
     "test": "vitest run",
     "check": "tsc -p server --noEmit && npm run check -w web",
     "docs:pdf": "node docs/build-pdf.js",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "profile:reset-password": "node --import tsx server/src/cli/reset-password.ts"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",

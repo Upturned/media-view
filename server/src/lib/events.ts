@@ -6,6 +6,10 @@ export type AppEvent =
   | { type: 'files-changed' }
   | { type: 'folders-changed' }
   | { type: 'library-changed' }
+  /** Another profile was opened, or the app was locked: every tab reloads (docs/profiles.md §7.1). */
+  | { type: 'profile-changed' }
+  /** The profile in use, or its links, changed (name, picture, linked tags): the profile's data reloads. */
+  | { type: 'profile-updated' }
   /** Library Health issues changed (the top-bar badge reloads). */
   | { type: 'health-changed' }
   /** Viewer copies (TIFF) being made in the background; total 0 when finished. */

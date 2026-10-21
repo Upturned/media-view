@@ -11,6 +11,7 @@
   import { href, navigate, router } from '../router.svelte.ts';
   import { deleteCollection } from '../stores/collections.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
+  import { profile } from '../stores/profile.svelte.ts';
   import { drag, importDrop } from '../stores/imports.svelte.ts';
   import { openOps } from '../stores/ops.svelte.ts';
   import { useSearchContext } from '../stores/search.svelte.ts';
@@ -126,6 +127,7 @@
             <div class="stat"><b>{fmt(d.count)}</b>{d.count === 1 ? 'image' : 'images'}</div>
             <div class="stat"><b>{fmt(d.albums.length)}</b>{d.albums.length === 1 ? 'album' : 'albums'}</div>
             <div class="stat"><b>{since}</b>since last change</div>
+            {#if d.createdBy && profile.list.length > 1}<div class="stat" title="Collections are shared; this one was made by {d.createdBy.name}"><b>{d.createdBy.name}</b>created by</div>{/if}
           </div>
         </div>
         {#if d.description}<p class="desc">{d.description}</p>{/if}

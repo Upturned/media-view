@@ -5,7 +5,8 @@
 
 export type RouteName =
   | 'hub' | 'images' | 'folder' | 'album' | 'all' | 'viewer' | 'search' | 'tags' | 'tag-types' | 'tag' | 'wiki' | 'favorites'
-  | 'collections' | 'collection' | 'health' | 'health-review' | 'health-untagged' | 'health-grid' | 'recycle' | 'settings' | 'not-found';
+  | 'collections' | 'collection' | 'health' | 'health-review' | 'health-untagged' | 'health-grid' | 'recycle' | 'settings'
+  | 'profiles' | 'profile' | 'not-found';
 
 const ROUTES: [pattern: string, name: RouteName][] = [
   ['/', 'hub'],
@@ -28,6 +29,8 @@ const ROUTES: [pattern: string, name: RouteName][] = [
   ['/health/untagged/grid', 'health-grid'],
   ['/recycle', 'recycle'],
   ['/settings', 'settings'],
+  ['/profiles', 'profiles'],
+  ['/profile/:id', 'profile'],
 ];
 
 export interface Route {
@@ -125,6 +128,7 @@ export function routeUp(r: Route): string | null {
     case 'health-review': case 'health-untagged': return '/health';
     case 'health-grid': return '/health/untagged';
     case 'search': case 'tags': case 'collections': case 'favorites': case 'recycle': case 'health': case 'settings': return '/images';
+    case 'profile': case 'profiles': return '/';
     default: return null;
   }
 }

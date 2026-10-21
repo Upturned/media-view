@@ -1,6 +1,6 @@
 import {
   collectionNameProblem, displayTagName, normTagName,
-  type CollectionCard, type CollectionDetail, type CollectionSnapshot, type FileCollection, type ThumbRef,
+  type CollectionCard, type CollectionDetail, type CollectionSnapshot, type FileCollection, type ProfileRef, type ThumbRef,
 } from '@media-view/shared';
 import type { DB } from '../db/connection.ts';
 import { badRequest, conflict, notFound } from '../lib/errors.ts';
@@ -23,6 +23,7 @@ interface CollectionRow {
   cover_file_id: number | null;
   created_at: number;
   updated_at: number;
+  created_by: number | null;
 }
 
 const LIVE_FILE = "f.recycled = 0 AND f.missing_since IS NULL AND f.media_type = 'image'";
@@ -34,7 +35,7 @@ function changed(): void {
 }
 
 function row(db: DB, id: number): CollectionRow {
-  const c = db.prepare('SELECT id, name, description, cover_file_id, created_at, updated_at FROM collections WHERE id = ?').get(id) as CollectionRow | undefined;
+  const c = db.prepare('SELECT id, name, description, cover_file_id, created_at, updated_at, created_by FROM collections WHERE id = ?').get(id) as CollectionRow | undefined;
   if (!c) throw notFound('COLLECTION_NOT_FOUND', 'This collection no longer exists.');
   return c;
 }
@@ -141,7 +142,9 @@ export function collectionDetail(lib: OpenLibrary, id: number): CollectionDetail
   const c = row(db, id);
   const count = db.prepare(`SELECT COUNT(*) FROM collection_items ci JOIN files f ON f.id = ci.file_id WHERE ci.collection_id = ? AND ${LIVE_FILE}`).pluck().get(id) as number;
   const lastAdded = db.prepare('SELECT MAX(added_at) FROM collection_items WHERE collection_id = ?').pluck().get(id) as number | null;
-  return { ...card(db, c, { count, last_added: lastAdded }), coverFileId: c.cover_file_id, createdAt: c.created_at, albums: albumsOf(db, id) };
+  const createdBy = c.created_by === null ? null
+    : (db.prepare('SELECT id, name FROM profiles WHERE id = ?').get(c.created_by) as ProfileRef | undefined) ?? null;
+  return { ...card(db, c, { count, last_added: lastAdded }), coverFileId: c.cover_file_id, createdAt: c.created_at, createdBy, albums: albumsOf(db, id) };
 }
 
 /** The collections an image is on, by name, with its place in each (the viewer's Collections panel). */
@@ -191,13 +194,14 @@ export function membership(lib: OpenLibrary, fileIds: number[]): { id: number; c
 
 // ─── Writing ─────────────────────────────────────────────────────────────────
 
-export function createCollection(lib: OpenLibrary, input: { name: string; description?: string | null }): CollectionDetail {
+/** A new collection, made by `me` (shown as *Created by*, docs/profiles.md §3). */
+export function createCollection(lib: OpenLibrary, input: { name: string; description?: string | null }, me?: number): CollectionDetail {
   const { db } = lib;
   const name = validName(input.name);
   assertNameFree(db, name);
   const now = Date.now();
-  const id = db.prepare('INSERT INTO collections (name, name_norm, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
-    .run(name, normTagName(name), validDescription(input.description), now, now).lastInsertRowid as number;
+  const id = db.prepare('INSERT INTO collections (name, name_norm, description, created_at, updated_at, created_by) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(name, normTagName(name), validDescription(input.description), now, now, me ?? null).lastInsertRowid as number;
   changed();
   return collectionDetail(lib, id);
 }
@@ -236,7 +240,7 @@ export function deleteCollection(lib: OpenLibrary, id: number): CollectionSnapsh
   db.prepare('DELETE FROM collections WHERE id = ?').run(id);
   log('info', 'collections', 'deleted', { id, name: c.name, items: fileIds.length });
   changed();
-  return { id, name: c.name, description: c.description, coverFileId: c.cover_file_id, createdAt: c.created_at, fileIds };
+  return { id, name: c.name, description: c.description, coverFileId: c.cover_file_id, createdAt: c.created_at, createdBy: c.created_by, fileIds };
 }
 
 /** Undo a delete: the same id when it's still free (so links keep working), the same order and cover. */
@@ -247,8 +251,9 @@ export function restoreCollection(lib: OpenLibrary, snap: CollectionSnapshot): C
   const id = db.transaction(() => {
     const free = !db.prepare('SELECT 1 FROM collections WHERE id = ?').get(snap.id);
     const now = Date.now();
-    const newId = db.prepare('INSERT INTO collections (id, name, name_norm, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(free ? snap.id : null, name, normTagName(name), validDescription(snap.description), snap.createdAt, now).lastInsertRowid as number;
+    const by = snap.createdBy != null && db.prepare('SELECT 1 FROM profiles WHERE id = ?').get(snap.createdBy) ? snap.createdBy : null;
+    const newId = db.prepare('INSERT INTO collections (id, name, name_norm, description, created_at, updated_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(free ? snap.id : null, name, normTagName(name), validDescription(snap.description), snap.createdAt, now, by).lastInsertRowid as number;
     const existing = db.prepare('SELECT id FROM files WHERE id = ?').pluck();
     const ins = db.prepare('INSERT INTO collection_items (collection_id, file_id, position, added_at) VALUES (?, ?, ?, ?)');
     let pos = 0;

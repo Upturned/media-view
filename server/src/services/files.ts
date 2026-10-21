@@ -9,6 +9,7 @@ import { escapeLike, underPrefix } from '../lib/paths.ts';
 import { collectionsOfFile, folderPath, listCollections, resolveCollection } from './collections.ts';
 import { folderDetail, thumbRef } from './folders.ts';
 import type { OpenLibrary } from './library.ts';
+import { setStars, starredByMe } from './profiles.ts';
 import { listTags, resolveTerm, tagsOfFile } from './tags.ts';
 
 /** Listing and querying image files with the search syntax (technical doc §11.2). */
@@ -18,6 +19,8 @@ export interface FileQuery {
   folder?: number;
   /** With `folder`: everything under it, not only its direct images. */
   recursive?: boolean;
+  /** The profile in use: its stars mark images (`favorited`) and make up Favorites (docs/profiles.md §3). */
+  me?: number;
   favorites?: boolean;
   /** File name contains (case-insensitive). */
   name?: string;
@@ -62,7 +65,9 @@ interface FileRow {
   seen: number;
 }
 
-const COLUMNS = 'f.id, f.filename, f.ext, f.size, f.mtime, f.added_at, f.favorited, f.width, f.height, f.hash, f.rel_path, f.folder_id, f.description, f.origin, f.seen';
+/** The grid's columns; `favorited` is `me`'s star. */
+const columns = (me: number | undefined) =>
+  `f.id, f.filename, f.ext, f.size, f.mtime, f.added_at, ${starredByMe(me)} AS favorited, f.width, f.height, f.hash, f.rel_path, f.folder_id, f.description, f.origin, f.seen`;
 
 function toItem(r: FileRow): FileItem {
   return {
@@ -105,7 +110,7 @@ function where(lib: OpenLibrary, q: FileQuery): Where {
       params.push(q.folder, folder.rel_path);
     }
   }
-  if (q.favorites) parts.push('f.favorited = 1');
+  if (q.favorites) parts.push(starredByMe(q.me));
   if (q.name?.trim()) {
     parts.push("f.filename LIKE '%' || ? || '%' ESCAPE '\\'");
     params.push(escapeLike(q.name.trim()));
@@ -309,7 +314,7 @@ export function listFiles(lib: OpenLibrary, q: FileQuery, offset = 0, limit = PA
     ? `, ${placeIn(String(Number(q.collection)))} AS position, (SELECT rel_path FROM folders WHERE id = f.folder_id) AS folder_path`
     : '';
   const rows = lib.db.prepare(
-    `SELECT ${COLUMNS}${extra} FROM files f WHERE ${w.sql} ORDER BY ${orderBy(q)} LIMIT ? OFFSET ?`,
+    `SELECT ${columns(q.me)}${extra} FROM files f WHERE ${w.sql} ORDER BY ${orderBy(q)} LIMIT ? OFFSET ?`,
   ).all(...w.params, limit, Math.max(0, offset)) as (FileRow & { position?: number; folder_path?: string | null })[];
   return {
     items: rows.map((r) => (r.position !== undefined ? { ...toItem(r), position: r.position, where: folderPath(r.folder_path ?? '') } : toItem(r))),
@@ -332,7 +337,7 @@ export function listGrouped(
   const total = lib.db.prepare(`SELECT COUNT(*) FROM ${from}`).pluck().get(...w.params) as number;
   const rev = reversed.map(Number).filter(Number.isInteger).join(',') || 'NULL';
   const rows = lib.db.prepare(
-    `SELECT ${COLUMNS}, c.id AS group_id, c.name AS group_name, CASE WHEN c.id IS NULL THEN NULL ELSE ${placeIn('c.id')} END AS position,
+    `SELECT ${columns(q.me)}, c.id AS group_id, c.name AS group_name, CASE WHEN c.id IS NULL THEN NULL ELSE ${placeIn('c.id')} END AS position,
             (SELECT COUNT(*) FROM collection_items WHERE file_id = f.id) AS listed
      FROM ${from}
      ORDER BY c.id IS NULL, c.name COLLATE NOCASE, c.id, CASE WHEN c.id IN (${rev}) THEN -ci.position ELSE ci.position END, ${orderBy(q)}
@@ -351,14 +356,14 @@ export function listGrouped(
 }
 
 /** Grid items for these ids, in the order given (missing or recycled ones left out). */
-export function fileItems(lib: OpenLibrary, ids: number[]): FileItem[] {
-  const get = lib.db.prepare(`SELECT ${COLUMNS} FROM files f WHERE f.id = ? AND f.recycled = 0`);
+export function fileItems(lib: OpenLibrary, ids: number[], me?: number): FileItem[] {
+  const get = lib.db.prepare(`SELECT ${columns(me)} FROM files f WHERE f.id = ? AND f.recycled = 0`);
   return ids.map((id) => get.get(id) as FileRow | undefined).filter((r): r is FileRow => !!r).map(toItem);
 }
 
 /** Name, star and folder of each id, in the order given (for actions on a selection that isn't all loaded). */
-export function briefFiles(lib: OpenLibrary, ids: number[]): { id: number; filename: string; favorited: boolean; folderId: number }[] {
-  const get = lib.db.prepare('SELECT id, filename, favorited, folder_id FROM files WHERE id = ? AND recycled = 0');
+export function briefFiles(lib: OpenLibrary, ids: number[], me?: number): { id: number; filename: string; favorited: boolean; folderId: number }[] {
+  const get = lib.db.prepare(`SELECT f.id, f.filename, ${starredByMe(me)} AS favorited, f.folder_id FROM files f WHERE f.id = ? AND f.recycled = 0`);
   return ids
     .map((id) => get.get(id) as { id: number; filename: string; favorited: number; folder_id: number } | undefined)
     .filter((r) => !!r)
@@ -397,8 +402,8 @@ export function randomFile(lib: OpenLibrary, q: FileQuery, exclude?: number): nu
   return pick(exclude ? 'AND f.id <> ?' : '', exclude ? [exclude] : []) ?? pick('', []) ?? null;
 }
 
-export function fileDetail(lib: OpenLibrary, id: number): FileDetail {
-  const row = lib.db.prepare(`SELECT ${COLUMNS} FROM files f WHERE f.id = ? AND f.recycled = 0`).get(id) as FileRow | undefined;
+export function fileDetail(lib: OpenLibrary, id: number, me?: number): FileDetail {
+  const row = lib.db.prepare(`SELECT ${columns(me)} FROM files f WHERE f.id = ? AND f.recycled = 0`).get(id) as FileRow | undefined;
   if (!row) throw notFound('FILE_NOT_FOUND', 'This image no longer exists.');
   const folder = folderDetail(lib, row.folder_id);
   return {
@@ -412,9 +417,9 @@ export function fileDetail(lib: OpenLibrary, id: number): FileDetail {
   };
 }
 
-export function setFavorite(lib: OpenLibrary, ids: number[], favorited: boolean): number {
-  const update = lib.db.prepare('UPDATE files SET favorited = ? WHERE id = ? AND recycled = 0');
-  const changed = lib.db.transaction(() => ids.reduce((n, id) => n + update.run(favorited ? 1 : 0, id).changes, 0))();
+/** Star or unstar images as `me` (each profile has its own stars, docs/profiles.md §3). */
+export function setFavorite(lib: OpenLibrary, me: number, ids: number[], favorited: boolean): number {
+  const changed = setStars(lib.db, me, ids, favorited);
   if (ids.length > 1) log('info', 'files', favorited ? 'bulk favorite' : 'bulk unfavorite', { ids, changed });
   emit({ type: 'files-changed' });
   return changed;

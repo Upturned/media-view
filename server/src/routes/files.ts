@@ -7,7 +7,8 @@ import {
 } from '../services/files.ts';
 import { bulkRename, copyFiles, moveFiles, renameFile, setFileDescription, undoMove } from '../services/file-ops.ts';
 import { importPath, importStream, logImport } from '../services/import.ts';
-import { requireLibrary } from '../services/library.ts';
+import { requireLibrary, type OpenLibrary } from '../services/library.ts';
+import { requireMe } from '../services/profiles.ts';
 import { recycleFiles } from '../services/recycle.ts';
 import { changeFileTags, tagCoverage } from '../services/tags.ts';
 
@@ -30,6 +31,12 @@ const fileQuery = z.object({
   byFormat: flag,
 });
 
+/** The open library, and a list query as the profile in use sees it (its stars, its Favorites). */
+function asMe<T extends object>(q: T): [OpenLibrary, T & { me: number }] {
+  const lib = requireLibrary();
+  return [lib, { ...q, me: requireMe(lib) }];
+}
+
 const id = z.object({ id: z.coerce.number().int().positive() });
 const ids = z.array(z.number().int().positive()).min(1).max(10000);
 /** An album or the Inbox; null = the Inbox. */
@@ -47,21 +54,25 @@ export const fileRoutes = new Hono()
       rev: z.string().regex(/^\d+(,\d+)*$/).optional(),
     })),
     (c) => {
-      const { offset, limit, group, rev, ...q } = c.req.valid('query');
-      if (group === 'collection') return c.json(listGrouped(requireLibrary(), q, rev ? rev.split(',').map(Number) : [], offset, limit));
-      return c.json(listFiles(requireLibrary(), q, offset, limit));
+      const { offset, limit, group, rev, ...query } = c.req.valid('query');
+      const [lib, q] = asMe(query);
+      if (group === 'collection') return c.json(listGrouped(lib, q, rev ? rev.split(',').map(Number) : [], offset, limit));
+      return c.json(listFiles(lib, q, offset, limit));
     },
   )
   /** Group by format: how many of the matching images each format has (the group headers). */
-  .get('/format-counts', valid('query', fileQuery), (c) => c.json(formatCounts(requireLibrary(), c.req.valid('query'))))
+  .get('/format-counts', valid('query', fileQuery), (c) => c.json(formatCounts(...asMe(c.req.valid('query')))))
   /** How many of the matching images each collection holds (the index, group headers). */
   .get('/collection-counts', valid('query', fileQuery.extend({ by: z.enum(['count', 'name']).default('count') })), (c) => {
     const { by, ...q } = c.req.valid('query');
-    return c.json(collectionCounts(requireLibrary(), q, by));
+    return c.json(collectionCounts(...asMe(q), by));
   })
-  .post('/brief', valid('json', z.object({ ids })), (c) => c.json({ files: briefFiles(requireLibrary(), c.req.valid('json').ids) }))
+  .post('/brief', valid('json', z.object({ ids })), (c) => {
+    const lib = requireLibrary();
+    return c.json({ files: briefFiles(lib, c.req.valid('json').ids, requireMe(lib)) });
+  })
   /** Tag counts over the matching images (the tag sidebar). */
-  .get('/tag-counts', valid('query', fileQuery), (c) => c.json({ tags: tagCounts(requireLibrary(), c.req.valid('query')) }))
+  .get('/tag-counts', valid('query', fileQuery), (c) => c.json({ tags: tagCounts(...asMe(c.req.valid('query'))) }))
   /** Add and remove tags on images (ids from the tag input; implied tags follow). */
   .post('/tags', valid('json', z.object({ ids, add: z.array(z.number().int().positive()).max(1000).default([]), remove: z.array(z.number().int().positive()).max(1000).default([]) })), (c) => {
     const { ids: list, add, remove } = c.req.valid('json');
@@ -71,20 +82,21 @@ export const fileRoutes = new Hono()
   .post('/tag-coverage', valid('json', z.object({ ids })), (c) => c.json({ tags: tagCoverage(requireLibrary(), c.req.valid('json').ids) }))
   .get('/names', valid('query', z.object({ folder: z.coerce.number().int().positive() })), (c) =>
     c.json({ names: folderFileNames(requireLibrary(), c.req.valid('query').folder) }))
-  .get('/ids', valid('query', fileQuery), (c) => c.json({ ids: listFileIds(requireLibrary(), c.req.valid('query')) }))
+  .get('/ids', valid('query', fileQuery), (c) => c.json({ ids: listFileIds(...asMe(c.req.valid('query'))) }))
   /** The tags and collections a search names (the Search page pins them on its tabs). */
   .get('/searched', valid('query', z.object({ q: z.string().max(2000) })), (c) => c.json(searchedItems(requireLibrary(), c.req.valid('query').q)))
   .get('/locate', valid('query', fileQuery.extend({ id: z.coerce.number().int().positive() })), (c) => {
     const { id: fileId, ...q } = c.req.valid('query');
-    return c.json({ position: locateFile(requireLibrary(), q, fileId) });
+    return c.json({ position: locateFile(...asMe(q), fileId) });
   })
   .get('/random', valid('query', fileQuery.extend({ exclude: z.coerce.number().int().positive().optional() })), (c) => {
     const { exclude, ...q } = c.req.valid('query');
-    return c.json({ id: randomFile(requireLibrary(), q, exclude) });
+    return c.json({ id: randomFile(...asMe(q), exclude) });
   })
   .post('/favorite', valid('json', z.object({ ids, favorited: z.boolean() })), (c) => {
     const { ids: list, favorited } = c.req.valid('json');
-    return c.json({ changed: setFavorite(requireLibrary(), list, favorited) });
+    const lib = requireLibrary();
+    return c.json({ changed: setFavorite(lib, requireMe(lib), list, favorited) });
   })
   .post('/move', valid('json', z.object({ ids, folderId: targetId, policy })), (c) => {
     const { ids: list, folderId, policy: p } = c.req.valid('json');
@@ -107,7 +119,10 @@ export const fileRoutes = new Hono()
       return c.json(bulkRename(requireLibrary(), list, pattern, start, digits));
     },
   )
-  .post('/recycle', valid('json', z.object({ ids })), (c) => c.json(recycleFiles(requireLibrary(), c.req.valid('json').ids)))
+  .post('/recycle', valid('json', z.object({ ids })), (c) => {
+    const lib = requireLibrary();
+    return c.json(recycleFiles(lib, c.req.valid('json').ids, requireMe(lib)));
+  })
   /** One file from the picker (the client loops, so it can show progress and cancel). */
   .post('/import', valid('json', z.object({ folderId: targetId.optional(), path: z.string().min(1).max(2000) })), async (c) => {
     const { folderId, path } = c.req.valid('json');
@@ -131,7 +146,10 @@ export const fileRoutes = new Hono()
       return c.json({ ok: true });
     },
   )
-  .get('/:id', valid('param', id), (c) => c.json(fileDetail(requireLibrary(), c.req.valid('param').id)))
+  .get('/:id', valid('param', id), (c) => {
+    const lib = requireLibrary();
+    return c.json(fileDetail(lib, c.req.valid('param').id, requireMe(lib)));
+  })
   .patch(
     '/:id',
     valid('param', id),
@@ -140,9 +158,10 @@ export const fileRoutes = new Hono()
       const lib = requireLibrary();
       const fileId = c.req.valid('param').id;
       const change = c.req.valid('json');
-      if (change.favorited !== undefined) setFavorite(lib, [fileId], change.favorited);
+      const me = requireMe(lib);
+      if (change.favorited !== undefined) setFavorite(lib, me, [fileId], change.favorited);
       if (change.description !== undefined) setFileDescription(lib, fileId, change.description);
       if (change.name !== undefined) renameFile(lib, fileId, change.name);
-      return c.json(fileDetail(lib, fileId));
+      return c.json(fileDetail(lib, fileId, me));
     },
   );

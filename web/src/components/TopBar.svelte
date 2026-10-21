@@ -1,12 +1,16 @@
 <script lang="ts">
-  import { href, router } from '../router.svelte.ts';
+  import { href, navigate, router } from '../router.svelte.ts';
   import { live } from '../stores/events.svelte.ts';
   import { badgeOf, health, loadHealthSummary } from '../stores/health.svelte.ts';
   import { library } from '../stores/library.svelte.ts';
+  import { openMenu } from '../stores/menu.svelte.ts';
+  import { lock, profile } from '../stores/profile.svelte.ts';
+  import { toastError } from '../stores/toasts.svelte.ts';
   import { openRandom, randomScope } from '../stores/random.svelte.ts';
   import { openDialog } from '../stores/ui.svelte.ts';
   import { fmt } from '../media.ts';
   import { word } from '../themes/index.ts';
+  import Avatar from './Avatar.svelte';
   import SearchBox from './SearchBox.svelte';
 
   /** Random (milestone 8): from the list on screen, else the whole library. */
@@ -44,6 +48,18 @@
     const t = setTimeout(() => (tiffDone = null), 3000);
     return () => clearTimeout(t);
   });
+
+  /** The profile menu (docs/profiles.md §4.2), on click and right-click of the avatar. */
+  function profileMenu(e: MouseEvent) {
+    const me = profile.me;
+    if (!me) return;
+    openMenu(e, me.name, [
+      { label: 'Your profile', action: () => navigate(`/profile/${me.id}`) },
+      { label: 'Switch profile…', action: () => navigate('/profiles') },
+      ...(me.hasPassword ? [{ label: 'Lock', action: () => void lock().catch(toastError) }] : []),
+      { label: 'Settings', separated: true, action: () => navigate('/settings') },
+    ]);
+  }
 
   /** The module the page belongs to, next to the logo (Images is the only one so far). */
   const module = $derived(
@@ -93,6 +109,11 @@
   {/if}
   <button class="theme" title="Check styles" onclick={() => openDialog('styles')}><span class="swatch"></span>Darkroom</button>
   <button class="help" title="Help (F1)" onclick={() => openDialog('help')}>?</button>
+  {#if profile.me}
+    <button class="me" class:active={router.route.name === 'profile' || router.route.name === 'profiles'} title="{profile.me.name} · profile menu" onclick={profileMenu} oncontextmenu={profileMenu}>
+      <Avatar p={profile.me} size={30} />
+    </button>
+  {/if}
 </header>
 
 <style>
@@ -212,4 +233,7 @@
     cursor: pointer;
   }
   .help:hover { background: var(--surface); }
+  .me { display: grid; place-items: center; width: 56px; padding: 0; border: none; border-left: 1px solid var(--line); background: none; cursor: pointer; }
+  .me:hover, .me.active { background: var(--surface); }
+  .me.active :global(.avatar) { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>

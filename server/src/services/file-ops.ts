@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { FileDetail } from '@media-view/shared';
-import { badRequest, conflict, notFound } from '../lib/errors.ts';
+import { AppError, badRequest, conflict, notFound } from '../lib/errors.ts';
 import { emit } from '../lib/events.ts';
 import { expectChange } from '../lib/expected.ts';
 import { log } from '../lib/log.ts';
@@ -12,7 +12,8 @@ import { fileDetail } from './files.ts';
 import { liveFolder, MAX_DESCRIPTION } from './folders.ts';
 import { scheduleDuplicateRefresh } from './issues.ts';
 import type { OpenLibrary } from './library.ts';
-import { recycleFiles } from './recycle.ts';
+import { STARRED_ANY } from './profiles.ts';
+import { recycleFiles, restore } from './recycle.ts';
 import { copyFileTags } from './tags.ts';
 
 /** Moving, copying and renaming images (technical doc §8.4, §7.3; design M3 · 01–03). */
@@ -25,7 +26,6 @@ interface OpFile {
   filename: string;
   ext: string;
   folder_id: number;
-  favorited: number;
   size: number;
   hash: string | null;
   width: number | null;
@@ -37,7 +37,8 @@ export interface TransferResult {
   done: number;
   /** Saved under another name to avoid a clash. */
   renamed: { id: number; from: string; to: string }[];
-  skipped: { id: number; name: string; reason: string }[];
+  /** `inUse`: another program had it open, so Windows refused (a retry may work). */
+  skipped: { id: number; name: string; reason: string; inUse?: true }[];
   /** Existing images replaced (sent to the Recycle Bin). */
   replaced: number;
 }
@@ -49,7 +50,7 @@ export interface MoveResult extends TransferResult {
 
 function liveFiles(lib: OpenLibrary, ids: number[]): OpFile[] {
   const get = lib.db.prepare(
-    `SELECT id, rel_path, filename, ext, folder_id, favorited, size, hash, width, height, description
+    `SELECT id, rel_path, filename, ext, folder_id, size, hash, width, height, description
      FROM files WHERE id = ? AND recycled = 0 AND missing_since IS NULL AND media_type = 'image'`,
   );
   return ids.map((id) => get.get(id) as OpFile | undefined).filter((f): f is OpFile => !!f);
@@ -70,15 +71,15 @@ export function categoryIdOf(lib: OpenLibrary, relPath: string): number {
     .pluck().get(relPath.split('/')[0]) as number;
 }
 
-/** The live image already at a path, if any. */
+/** The live image already at a path, if any; `favorited`: starred by anyone (docs/profiles.md §3.1). */
 function rowAt(lib: OpenLibrary, relPath: string): { id: number; favorited: number } | undefined {
-  return lib.db.prepare("SELECT id, favorited FROM files WHERE media_type = 'image' AND rel_path = ? AND recycled = 0")
+  return lib.db.prepare(`SELECT f.id, ${STARRED_ANY} AS favorited FROM files f WHERE f.media_type = 'image' AND f.rel_path = ? AND f.recycled = 0`)
     .get(relPath) as { id: number; favorited: number } | undefined;
 }
 
 /**
  * Decide the name an image gets in `dir` under a clash policy. Returns null to skip.
- * Replace sends the existing image to the Recycle Bin — nothing is overwritten for good.
+ * Replace names the image it would replace (`replaces`); the caller recycles it with replaceWith().
  */
 function resolveName(
   lib: OpenLibrary,
@@ -88,12 +89,12 @@ function resolveName(
   taken: Set<string>,
   result: TransferResult,
   fileId: number,
-): string | null {
+): { name: string; replaces?: number } | null {
   const dirAbs = toAbsolute(lib.moduleRoot('images'), dirRel);
   const free = !taken.has(wanted.toLowerCase()) && !fs.existsSync(path.join(dirAbs, wanted));
   if (free) {
     taken.add(wanted.toLowerCase());
-    return wanted;
+    return { name: wanted };
   }
   if (policy === 'skip') {
     result.skipped.push({ id: fileId, name: wanted, reason: `“${wanted}” already exists there.` });
@@ -102,17 +103,41 @@ function resolveName(
   if (policy === 'replace') {
     const existing = rowAt(lib, `${dirRel}/${wanted}`);
     if (existing && !existing.favorited && !taken.has(wanted.toLowerCase())) {
-      recycleFiles(lib, [existing.id]);
-      result.replaced++;
       taken.add(wanted.toLowerCase());
-      return wanted;
+      return { name: wanted, replaces: existing.id };
     }
     // A starred image (or a file the app doesn't know) is never replaced: keep both instead.
   }
   const { base, ext } = splitExt(wanted);
   const name = uniqueName(dirAbs, base, ext, taken);
   result.renamed.push({ id: fileId, from: wanted, to: name });
-  return name;
+  return { name };
+}
+
+/** Where an incoming image waits beside the one it replaces. */
+const stagedPath = (root: string, dirRel: string, fileId: number, name: string) =>
+  toAbsolute(root, `${dirRel}/~mv-incoming-${fileId}${splitExt(name).ext}`);
+
+/**
+ * Replace image `oldId` at `to` with the file staged beside it. The old image goes to the Recycle
+ * Bin only once the new one is surely there — nothing is overwritten for good, and nothing is
+ * recycled for a file that couldn't come — and it comes back if the last step fails.
+ */
+function replaceWith(lib: OpenLibrary, oldId: number, staged: string, to: string): void {
+  recycleFiles(lib, [oldId]);
+  // Starred meanwhile, so it stayed: never overwrite it.
+  if (fs.existsSync(to)) throw conflict('NAME_TAKEN', `“${path.basename(to)}” is starred now, so it wasn’t replaced.`);
+  try {
+    renameWithRetry(staged, to);
+  } catch (err) {
+    const rid = lib.db.prepare("SELECT id FROM recycle_items WHERE entity = 'file' AND entity_id = ? ORDER BY id DESC").pluck().get(oldId) as number;
+    try {
+      restore(lib, rid);
+    } catch (restoreErr) {
+      log('error', 'files', 'replace: could not restore the replaced image', { id: oldId, error: String(restoreErr) });
+    }
+    throw err;
+  }
 }
 
 /** Move images into an album (or the Inbox). Tags, stars and collections stay attached. */
@@ -124,32 +149,54 @@ export function moveFiles(lib: OpenLibrary, ids: number[], targetId: number | nu
   const taken = new Set<string>();
   const update = lib.db.prepare('UPDATE files SET rel_path = ?, filename = ?, folder_id = ?, category_id = ? WHERE id = ?');
 
-  for (const f of liveFiles(lib, ids)) {
-    const wanted = names?.get(f.id) ?? f.filename;
-    if (f.rel_path.toLowerCase() === `${target.rel_path}/${wanted}`.toLowerCase()) {
-      result.skipped.push({ id: f.id, name: f.filename, reason: 'Already there.' });
-      continue;
+  try {
+    for (const f of liveFiles(lib, ids)) {
+      const wanted = names?.get(f.id) ?? f.filename;
+      if (f.rel_path.toLowerCase() === `${target.rel_path}/${wanted}`.toLowerCase()) {
+        result.skipped.push({ id: f.id, name: f.filename, reason: 'Already there.' });
+        continue;
+      }
+      const pick = resolveName(lib, target.rel_path, wanted, policy, taken, result, f.id);
+      if (!pick) continue;
+      const { name, replaces } = pick;
+      const from = toAbsolute(root, f.rel_path);
+      const to = toAbsolute(root, `${target.rel_path}/${name}`);
+      const staged = replaces ? stagedPath(root, target.rel_path, f.id, name) : to;
+      expectChange(from, staged, to);
+      try {
+        renameWithRetry(from, staged);
+        if (replaces) {
+          try {
+            replaceWith(lib, replaces, staged, to);
+          } catch (err) {
+            renameWithRetry(staged, from);
+            throw err;
+          }
+          result.replaced++;
+        }
+      } catch (err) {
+        // One busy file doesn't stop the rest: it stays where it is and is reported.
+        if (!(err instanceof AppError && err.code === 'IN_USE')) throw err;
+        taken.delete(name.toLowerCase());
+        result.skipped.push({ id: f.id, name: f.filename, reason: err.message, inUse: true });
+        continue;
+      }
+      try {
+        update.run(`${target.rel_path}/${name}`, name, target.id, categoryId, f.id);
+      } catch (err) {
+        fs.renameSync(to, from);
+        throw err;
+      }
+      result.undo.push({ id: f.id, folderId: f.folder_id, filename: f.filename });
+      result.done++;
     }
-    const name = resolveName(lib, target.rel_path, wanted, policy, taken, result, f.id);
-    if (!name) continue;
-    const from = toAbsolute(root, f.rel_path);
-    const to = toAbsolute(root, `${target.rel_path}/${name}`);
-    expectChange(from, to);
-    renameWithRetry(from, to);
-    try {
-      update.run(`${target.rel_path}/${name}`, name, target.id, categoryId, f.id);
-    } catch (err) {
-      fs.renameSync(to, from);
-      throw err;
+  } finally {
+    // Also when something else fails partway: what did move must show up in the grid.
+    if (result.done > 0) {
+      log('info', 'files', 'move', { ids, to: target.rel_path, done: result.done, renamed: result.renamed.length, replaced: result.replaced });
+      emit({ type: 'files-changed' });
+      emit({ type: 'folders-changed' });
     }
-    result.undo.push({ id: f.id, folderId: f.folder_id, filename: f.filename });
-    result.done++;
-  }
-
-  if (result.done > 0) {
-    log('info', 'files', 'move', { ids, to: target.rel_path, done: result.done, renamed: result.renamed.length, replaced: result.replaced });
-    emit({ type: 'files-changed' });
-    emit({ type: 'folders-changed' });
   }
   return result;
 }
@@ -182,11 +229,22 @@ export async function copyFiles(lib: OpenLibrary, ids: number[], targetId: numbe
   );
 
   for (const f of liveFiles(lib, ids)) {
-    const name = resolveName(lib, target.rel_path, f.filename, policy, taken, result, f.id);
-    if (!name) continue;
+    const pick = resolveName(lib, target.rel_path, f.filename, policy, taken, result, f.id);
+    if (!pick) continue;
+    const { name, replaces } = pick;
     const to = toAbsolute(root, `${target.rel_path}/${name}`);
-    expectChange(to);
-    await fs.promises.copyFile(toAbsolute(root, f.rel_path), to, fs.constants.COPYFILE_EXCL);
+    const staged = replaces ? stagedPath(root, target.rel_path, f.id, name) : to;
+    expectChange(staged, to);
+    await fs.promises.copyFile(toAbsolute(root, f.rel_path), staged, fs.constants.COPYFILE_EXCL);
+    if (replaces) {
+      try {
+        replaceWith(lib, replaces, staged, to);
+      } catch (err) {
+        fs.rmSync(staged, { force: true });
+        throw err;
+      }
+      result.replaced++;
+    }
     const st = fs.statSync(to);
     try {
       const id = insert.run(
@@ -270,20 +328,51 @@ export function bulkRename(lib: OpenLibrary, ids: number[], pattern: string, sta
   // Two phases, so swaps (a → b, b → a) work: first to temporary names, then to the final ones.
   const changing = files.map((f, i) => ({ f, name: names[i]!, dirRel: f.rel_path.slice(0, f.rel_path.lastIndexOf('/')) }))
     .filter((x) => x.name !== x.f.filename);
-  const temp = (x: (typeof changing)[number]) => toAbsolute(root, `${x.dirRel}/~mv-rename-${x.f.id}${splitExt(x.f.filename).ext}`);
+  type Change = (typeof changing)[number];
+  const original = (x: Change) => toAbsolute(root, x.f.rel_path);
+  const temp = (x: Change) => toAbsolute(root, `${x.dirRel}/~mv-rename-${x.f.id}${splitExt(x.f.filename).ext}`);
+  const final = (x: Change) => toAbsolute(root, `${x.dirRel}/${x.name}`);
+
+  // If Windows refuses a rename partway, everything already renamed goes back, so the disk matches
+  // the database again (left on temporary names, Health would report them as moved outside the app).
+  const parked: Change[] = [];
+  const placed: Change[] = [];
+  const back = (id: number, from: string, to: string) => {
+    try {
+      renameWithRetry(from, to);
+    } catch (err) {
+      log('error', 'files', 'bulk rename: could not put a file back', { id, from, to, error: String(err) });
+    }
+  };
+  const putBack = (err: unknown): never => {
+    for (const x of placed.reverse()) back(x.f.id, final(x), temp(x));
+    for (const x of parked) back(x.f.id, temp(x), original(x));
+    throw err;
+  };
+
   for (const x of changing) {
-    expectChange(toAbsolute(root, x.f.rel_path), temp(x), toAbsolute(root, `${x.dirRel}/${x.name}`));
-    renameWithRetry(toAbsolute(root, x.f.rel_path), temp(x));
+    expectChange(original(x), temp(x), final(x));
+    try {
+      renameWithRetry(original(x), temp(x));
+    } catch (err) {
+      putBack(err);
+    }
+    parked.push(x);
   }
   const update = lib.db.prepare('UPDATE files SET rel_path = ?, filename = ? WHERE id = ?');
-  lib.db.transaction(() => {
-    // The DB's paths are unique too: park the rows on their temporary names first.
-    for (const x of changing) update.run(`${x.dirRel}/~mv-rename-${x.f.id}${splitExt(x.f.filename).ext}`, x.f.filename, x.f.id);
-    for (const x of changing) {
-      fs.renameSync(temp(x), toAbsolute(root, `${x.dirRel}/${x.name}`));
-      update.run(`${x.dirRel}/${x.name}`, x.name, x.f.id);
-    }
-  })();
+  try {
+    lib.db.transaction(() => {
+      // The DB's paths are unique too: park the rows on their temporary names first.
+      for (const x of changing) update.run(`${x.dirRel}/~mv-rename-${x.f.id}${splitExt(x.f.filename).ext}`, x.f.filename, x.f.id);
+      for (const x of changing) {
+        renameWithRetry(temp(x), final(x));
+        placed.push(x);
+        update.run(`${x.dirRel}/${x.name}`, x.name, x.f.id);
+      }
+    })();
+  } catch (err) {
+    putBack(err); // the transaction rolled back: the rows have their old names again
+  }
 
   log('info', 'files', 'bulk rename', { ids, pattern, start, digits, renamed: changing.length });
   emit({ type: 'files-changed' });

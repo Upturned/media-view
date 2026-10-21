@@ -28,6 +28,7 @@
   import { connectEvents, live } from './stores/events.svelte.ts';
   import { installDragTracking } from './stores/imports.svelte.ts';
   import { library, refreshLibrary } from './stores/library.svelte.ts';
+  import { checkSwitched, loadProfile, profile, refreshProfiles } from './stores/profile.svelte.ts';
   import { loadTagTypes } from './stores/tags.svelte.ts';
   import { toast } from './stores/toasts.svelte.ts';
   import { openDialog, ui } from './stores/ui.svelte.ts';
@@ -40,6 +41,8 @@
     HealthGrid: () => import('./pages/HealthGrid.svelte'),
     HealthReview: () => import('./pages/HealthReview.svelte'),
     HealthUntagged: () => import('./pages/HealthUntagged.svelte'),
+    Profile: () => import('./pages/Profile.svelte'),
+    ProfilePicker: () => import('./pages/ProfilePicker.svelte'),
     RecycleBin: () => import('./pages/RecycleBin.svelte'),
     TagTypes: () => import('./pages/TagTypes.svelte'),
     Settings: () => import('./pages/Settings.svelte'),
@@ -60,10 +63,29 @@
     void live.scanning;
     const t = setTimeout(() => {
       refreshLibrary()
-        .then(() => (library.info ? loadTagTypes() : undefined))
+        .then(() => (library.info && profile.me ? loadTagTypes() : undefined))
         .catch((err: Error) => toast(err.message, 'error'));
     }, 150);
     return () => clearTimeout(t);
+  });
+
+  // The profiles follow the open library: loaded when it opens or changes (docs/profiles.md §7.3).
+  let profileOf: string | null | undefined;
+  $effect(() => {
+    if (!library.loaded) return;
+    const id = library.info?.id ?? null;
+    if (id === profileOf) return;
+    profileOf = id;
+    loadProfile(id !== null)
+      .then(() => (profile.me ? loadTagTypes() : undefined))
+      .catch((err: Error) => toast(err.message, 'error'));
+  });
+  // A rename, a new profile, links: refreshed in place. A switch or a lock in another tab: reload if it's this tab's profile.
+  $effect(() => {
+    if (live.profile) refreshProfiles().catch(() => undefined);
+  });
+  $effect(() => {
+    if (live.switched) void checkSwitched();
   });
 
   $effect(() => registerKeys('global', [
@@ -79,18 +101,20 @@
     },
   ]));
 
-  /** Without a library, every page except Settings shows the welcome screen. */
+  /** Without a library, every page except Settings shows the welcome screen; without a profile, the picker. */
   const page = $derived(
-    !library.info && router.route.name !== 'settings' ? 'welcome' : router.route.name,
+    !library.info ? (router.route.name !== 'settings' ? 'welcome' : 'settings')
+    : profile.locked ? 'profiles'
+    : router.route.name,
   );
 </script>
 
-{#if page !== 'viewer'}
+{#if page !== 'viewer' && (!library.info || (profile.loaded && !profile.locked))}
   <TopBar />
 {/if}
 
 <main>
-  {#if !library.loaded}
+  {#if !library.loaded || (library.info && !profile.loaded)}
     <!-- first load -->
   {:else if page === 'welcome'}
     <Lazy load={pages.Welcome} />
@@ -134,6 +158,10 @@
     <Lazy load={pages.RecycleBin} />
   {:else if page === 'settings'}
     <Lazy load={pages.Settings} />
+  {:else if page === 'profiles'}
+    <Lazy load={pages.ProfilePicker} />
+  {:else if page === 'profile'}
+    {#key router.route.params.id}<Lazy load={pages.Profile} />{/key}
   {:else}
     <NotFound />
   {/if}

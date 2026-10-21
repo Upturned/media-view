@@ -1,9 +1,9 @@
 ## Favorites
 
-Every starred image in your library, wherever it lives, in one grid — with the usual sorting, the tag index and the selection bar.
+Every image **you** starred (each profile has its own stars), wherever it lives, in one grid — with the usual sorting, the tag index and the selection bar.
 
 - Star an image with ★ in the viewer, from the right-click menu, or for a selection in the yellow bar. Unstar it and it leaves this page.
 - Starring doesn't move or copy anything: the image stays in its album.
-- Starred images are protected — they can't be recycled until you unstar them.
+- Starred images are protected — they can't be recycled until you unstar them. That goes for everyone's stars: an image another profile starred can't be recycled either, and only they can unstar it.
 - **Group: Collection** splits the grid by the collections the images are on.
 - **Keyboard:** the arrows move a white ring between frames (it shows after the first key and hides when you move the mouse); Enter opens, Space selects, Shift + arrows extends the selection, Backspace goes up a level.

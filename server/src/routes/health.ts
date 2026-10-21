@@ -6,6 +6,7 @@ import {
   untrackedAction,
 } from '../services/health.ts';
 import { requireLibrary } from '../services/library.ts';
+import { requireMe } from '../services/profiles.ts';
 
 /** Library Health (technical doc §12.7, milestone 7). */
 
@@ -64,7 +65,8 @@ export const healthRoutes = new Hono()
     })),
     (c) => {
       const q = c.req.valid('query');
-      return c.json(untaggedImages(requireLibrary(), { ...q, fresh: q.fresh === '1', left: q.left === '1' }));
+      const lib = requireLibrary();
+      return c.json(untaggedImages(lib, { ...q, fresh: q.fresh === '1', left: q.left === '1', me: requireMe(lib) }));
     },
   )
   /** Mark as seen (clears NEW) or Leave untagged (off the list): some images, or all of them. */

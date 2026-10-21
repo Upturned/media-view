@@ -3,13 +3,18 @@
 //   release/media-view-<version>-win-x64.zip
 //     node.exe            the Node.js this script runs on (same version: the native modules match it)
 //     start.bat           starts the server and opens the browser
+//     reset-password.bat  clears a forgotten profile password (docs/profiles.md §4.6)
 //     app/server.mjs      the server, bundled into one file
+//     app/reset-password.mjs  the reset-password command, bundled the same way
 //     app/web/dist/       the built web app
 //     app/migrations/     database migrations
 //     app/node_modules/   only the native modules (better-sqlite3, sharp) and what they need
 //
 // node.exe is downloaded once (checked against nodejs.org's checksums) into release/.cache; the zip
 // itself never needs the internet. Libraries and %APPDATA%\media-view stay outside it.
+//
+// npm run package -- H: the same app as media-view-<version>-win-x64-H.zip, on port 2070 and with
+// its settings in a data\ folder next to start.bat, so it runs beside the normal copy.
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -29,7 +34,8 @@ if (process.platform !== 'win32' || process.arch !== 'x64') {
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-const name = `media-view-${pkg.version}-win-x64`;
+const variant = process.argv.slice(2).includes('H') ? 'H' : null;
+const name = `media-view-${pkg.version}-win-x64${variant ? `-${variant}` : ''}`;
 const releaseDir = path.join(ROOT, 'release');
 const out = path.join(releaseDir, name);
 const app = path.join(out, 'app');
@@ -44,9 +50,9 @@ execFileSync(process.execPath, [path.join(ROOT, 'node_modules', 'vite', 'bin', '
 fs.cpSync(path.join(ROOT, 'web', 'dist'), path.join(app, 'web', 'dist'), { recursive: true });
 
 step('Bundling the server');
-await build({
-  entryPoints: [path.join(ROOT, 'server', 'src', 'index.ts')],
-  outfile: path.join(app, 'server.mjs'),
+const bundle = (entry, outfile) => build({
+  entryPoints: [path.join(ROOT, 'server', 'src', entry)],
+  outfile: path.join(app, outfile),
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -58,6 +64,8 @@ await build({
   legalComments: 'linked',
   logLevel: 'warning',
 });
+await bundle('index.ts', 'server.mjs');
+await bundle(path.join('cli', 'reset-password.ts'), 'reset-password.mjs');
 fs.cpSync(path.join(ROOT, 'server', 'src', 'db', 'migrations'), path.join(app, 'migrations'), { recursive: true });
 fs.writeFileSync(path.join(app, 'package.json'), `${JSON.stringify({ name: 'media-view', version: pkg.version, releaseDate: pkg.releaseDate, private: true, type: 'module' }, null, 2)}\n`);
 
@@ -99,18 +107,32 @@ fs.writeFileSync(path.join(out, 'start.bat'), [
   'rem Starts media-view and opens it in the browser. Close this window to stop it.',
   'cd /d "%~dp0"',
   'set MEDIA_VIEW_OPEN=1',
+  ...(variant === 'H' ? ['set PORT=2070', 'set MEDIA_VIEW_APPDATA=%~dp0data'] : []),
   '"%~dp0node.exe" "%~dp0app\\server.mjs"',
   'if errorlevel 1 pause',
   '',
 ].join('\r\n'));
+fs.writeFileSync(path.join(out, 'reset-password.bat'), [
+  '@echo off',
+  'title media-view: reset a password',
+  'rem Clears a forgotten profile password. Asks for the library folder and the profile.',
+  'cd /d "%~dp0"',
+  '"%~dp0node.exe" "%~dp0app\\reset-password.mjs" %*',
+  'pause',
+  '',
+].join('\r\n'));
 fs.writeFileSync(path.join(out, 'README.txt'), [
-  `media-view ${pkg.version}`,
+  `media-view ${pkg.version}${variant ? ` (${variant})` : ''}`,
   '',
   'Double-click start.bat: the app opens in your browser. Keep its window open while you use it;',
   'closing the window stops media-view. Starting it again while it runs just opens the browser.',
   '',
+  'Forgot a profile password? Double-click reset-password.bat.',
+  '',
   'Nothing is installed. Your libraries stay where you made them, and the settings are in',
-  '%APPDATA%\\media-view (delete that folder to start fresh).',
+  variant === 'H'
+    ? 'the data folder next to start.bat (delete it to start fresh). This copy runs on port 2070.'
+    : '%APPDATA%\\media-view (delete that folder to start fresh).',
   '',
 ].join('\r\n'));
 

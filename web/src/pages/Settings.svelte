@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { SortKey } from '@media-view/shared';
   import LibraryActions from '../components/LibraryActions.svelte';
+  import ProfilesSettings from '../components/ProfilesSettings.svelte';
   import { segmented } from '../kbd.svelte.ts';
   import { DEFAULTS, INTERVALS, pref, store, type PrefKey } from '../prefs.ts';
   import { library } from '../stores/library.svelte.ts';
@@ -36,9 +37,11 @@
     <LibraryActions />
   </section>
 
+  {#if library.info}<ProfilesSettings />{/if}
+
   <section class="panel">
     <h2 class="label">Grids</h2>
-    <p class="muted intro">What album, tag and search grids open with. Changing them on a grid changes them here too.</p>
+    <p class="muted intro">What album, tag and search grids open with, for your profile. Changing them on a grid changes them here too.</p>
     <div class="row">
       <span class="key">Columns</span>
       <div class="seg" use:segmented>

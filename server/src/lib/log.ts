@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -29,8 +30,18 @@ export function getLogDir(): string | null {
   return dir;
 }
 
+/**
+ * Who a request is made by, while a library has more than one profile (docs/profiles.md §7.1): lines
+ * logged while handling it carry `profile: { uuid, name }`. Background work (scans, hashing) runs outside it.
+ */
+export interface LogContext {
+  profile?: { uuid: string; name: string };
+}
+export const logContext = new AsyncLocalStorage<LogContext>();
+
 export function log(level: LogLevel, area: string, msg: string, data?: unknown): void {
-  const line = JSON.stringify(data === undefined ? { ts: Date.now(), level, area, msg } : { ts: Date.now(), level, area, msg, data });
+  const profile = logContext.getStore()?.profile;
+  const line = JSON.stringify({ ts: Date.now(), level, area, msg, ...(profile ? { profile } : {}), ...(data === undefined ? {} : { data }) });
   buffer.push(line);
   if (level === 'error') console.error(`[${area}] ${msg}`, data ?? '');
   timer ??= setTimeout(flush, FLUSH_DELAY_MS);

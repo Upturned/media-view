@@ -8,6 +8,7 @@ Everything about one tag: its description, its images, how it relates to other t
 - **Related tags** are the ones most often on the same images, with the share of this tag's images that also have them.
 - **Info** shows the type's custom fields; empty ones are hidden.
 - **Edit tag** changes the name, type, aliases and implications, merges or deletes the tag.
+- **This is me ▸** links the tag to your profile, as **Creator** (its images show under *Images by me*) or **Subject** (*Featuring you*); choose it again to unlink. A tag has one profile per role: **linked to** under the name says whose it is.
 
 ### Editing
 
